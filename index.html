@@ -1,0 +1,1175 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7a1717">
+<title>中国人民银行金昌市分行离退休干部电子期刊｜第一期</title>
+<style>
+:root{
+  --page-w:460px;--page-h:650px;--paper:#fffaf0;--ink:#3b2d26;--red:#8d1f1c;--gold:#c99b48;
+  --turn:720ms;--mobile-turn:260ms
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","Microsoft YaHei",serif;color:var(--ink);background:#211c18}
+body{overflow-x:hidden}
+button,a{font:inherit}
+button{cursor:pointer}
+a{color:#8b241e;text-decoration:none}
+a:hover{text-decoration:underline}
+.app{min-height:100vh;padding:18px 14px 86px;background:radial-gradient(circle at 20% 12%,rgba(205,161,83,.14),transparent 24%),radial-gradient(circle at 82% 88%,rgba(142,28,28,.16),transparent 32%),linear-gradient(145deg,#352d27,#1d1917 65%,#141210)}
+.topbar{max-width:1120px;margin:0 auto 13px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#f8ead0}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{width:34px;height:34px;border:1px solid rgba(255,239,210,.38);border-radius:50%;display:grid;place-items:center;color:#f2c873;flex:0 0 auto}
+.brand strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;margin-top:2px;color:rgba(255,239,215,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{display:flex;gap:7px;flex:0 0 auto}
+.actions button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff1d6;border-radius:10px;padding:8px 10px}
+.actions button:hover{background:rgba(255,255,255,.12)}
+.actions .music-toggle{min-width:86px;transition:background .2s,border-color .2s,color .2s}
+.actions .music-toggle.on{background:rgba(201,155,72,.22);border-color:rgba(242,200,115,.46);color:#ffe7ad}
+.actions .music-toggle.off{background:rgba(255,255,255,.05);color:rgba(255,241,214,.68)}
+.reader{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:center;gap:14px;min-height:var(--page-h)}
+.arrow{width:44px;height:64px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#f8ead3;font-size:28px}
+.arrow:hover{background:rgba(255,255,255,.14)}
+.arrow:disabled{opacity:.22;cursor:not-allowed}
+.stage{position:relative;width:calc(var(--page-w)*2);height:var(--page-h);perspective:2400px;filter:drop-shadow(0 25px 26px rgba(0,0,0,.35));user-select:none;contain:layout paint;touch-action:pan-y}
+.stage:after{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:rgba(72,44,28,.2);box-shadow:-7px 0 16px rgba(0,0,0,.1),7px 0 16px rgba(0,0,0,.1);z-index:20;pointer-events:none}
+.slot,.turner,.swipe-layer{position:absolute;top:0;width:var(--page-w);height:var(--page-h);transform-style:preserve-3d}
+.slot.left{left:0}
+.slot.right{left:var(--page-w)}
+.turner{left:var(--page-w);z-index:50;display:none;transform-origin:left center;transition:transform var(--turn) cubic-bezier(.22,.66,.2,1);will-change:transform}
+.turner.prev{left:0;transform-origin:right center;transform:rotateY(-180deg)}
+.turner.next.anim{transform:rotateY(-180deg)}
+.turner.prev.anim{transform:rotateY(0)}
+.face{position:absolute;inset:0;backface-visibility:hidden;overflow:hidden}
+.face.back{transform:rotateY(180deg)}
+.turner:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 60%,rgba(0,0,0,.18));backface-visibility:hidden}
+.swipe-layer{display:none;left:0;z-index:60;will-change:transform;backface-visibility:hidden;transform:translate3d(0,0,0);filter:drop-shadow(0 12px 18px rgba(0,0,0,.18))}
+.page{position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper);border:1px solid rgba(88,57,37,.17);box-shadow:inset 0 0 38px rgba(110,77,48,.055);backface-visibility:hidden}
+.page.blank{background:linear-gradient(90deg,#eadfca,#fff8e9)}
+.texture{position:absolute;inset:0;background-image:radial-gradient(rgba(115,76,43,.12) .55px,transparent .55px);background-size:8px 8px;opacity:.25;pointer-events:none}
+.inner{height:100%;padding:31px 35px 32px;position:relative;z-index:2;overflow:hidden}
+.pageno{position:absolute;bottom:12px;right:20px;color:#9a8879;font-size:11px;z-index:3}
+.kicker{font-size:11px;color:#a47b4d;letter-spacing:.17em;margin-bottom:7px}
+.page h2{font-size:24px;line-height:1.3;color:#7e1c19;margin:0 0 12px;letter-spacing:.03em}
+.page h3{font-size:15px;line-height:1.5;margin:0 0 5px;color:#66352e}
+.body,.cardline p{font-size:13.3px;line-height:1.72;text-align:justify;margin:0}
+.body.small{font-size:12.7px}
+.body.xsmall{font-size:11.8px;line-height:1.58}
+.lead{font-size:15px;line-height:1.82;margin:0}
+.quote{margin:13px 0;padding:12px 14px;border-left:3px solid var(--gold);background:rgba(191,145,66,.08);font-size:12.8px;line-height:1.68}
+.article{border-top:1px solid rgba(109,73,48,.18);padding-top:10px;margin-top:8px}
+.readmore{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;border:0;border-bottom:1px solid rgba(139,36,30,.38);background:transparent;color:#8b241e;padding:0 0 2px}
+.readmore:hover{color:#621611}
+.illu{height:132px;margin:4px 0 13px}
+.illu svg{width:100%;height:100%}
+.cover{background:linear-gradient(155deg,#a52a24,#7c1716 46%,#42100f);color:#fff4dc}
+.cover .texture{opacity:.1}
+.cover .inner{padding:40px 38px}
+.covercopy{position:relative;z-index:3}
+.cover-kicker{font-size:13px;letter-spacing:.16em;color:#f7dca7}
+.cover-pub{font-size:12px;letter-spacing:.24em;color:#f0c875;margin-top:8px}
+.cover-title{font-size:35px;line-height:1.25;font-weight:700;letter-spacing:.07em;margin-top:34px;text-shadow:0 2px 12px rgba(0,0,0,.22)}
+.cover-rule{width:70px;height:3px;background:#e6ba63;margin:24px 0 14px}
+.cover-sub{font-size:13px;color:#ffe4b1;line-height:1.8}
+.coverart{position:absolute;left:0;right:0;bottom:0;height:210px;opacity:.93}
+.coverart .illu{height:100%;margin:0}
+.coverart svg{border-radius:0}
+.toc{display:grid;gap:8px;margin-top:15px}
+.toc button{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid rgba(121,79,49,.16);background:rgba(255,255,255,.5);border-radius:12px;padding:10px 12px;color:#4b342a}
+.toc button:hover{background:#fff}
+.toc button b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#8f201d;color:#fff6df;font-size:11px}
+.toc button span{display:flex;flex-direction:column}
+.toc strong{font-size:13px}
+.toc small{color:#8a7566;margin-top:2px}
+.cardline{display:grid;grid-template-columns:25px 1fr;gap:9px;border-top:1px solid rgba(108,73,48,.16);padding-top:9px;margin-top:9px}
+.cardline .n{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#8e1c1c;color:white;font-size:11px}
+.cardline.green .n{background:#4f7c68}
+.cardline p{font-size:11.8px;line-height:1.58}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px}
+.chips span{font-size:10.5px;border:1px solid #d3e6d9;background:#eef6f0;color:#416d59;border-radius:999px;padding:5px 8px}
+.chips .warn{background:#fff2e7;border-color:#ecd0b6;color:#8b4b26}
+.health{background:linear-gradient(180deg,#fbfff9,#fffaf0)}
+.health h2{color:#356954}
+.theory{background:linear-gradient(180deg,#fffaf2,#fffdf9)}
+.safety{background:linear-gradient(180deg,#fffdf8,#f9f2e8)}
+.news{background:linear-gradient(180deg,#fffaf1,#fff)}
+.discipline{background:linear-gradient(155deg,#fff9ed,#f7e9d1)}
+.video-wrap{margin-top:18px}
+.discipline-video{display:block;width:100%;aspect-ratio:16/9;border-radius:14px;background:#1f1b18;box-shadow:0 10px 24px rgba(69,39,24,.16)}
+.video-caption{text-align:center;font-size:10.5px;color:#826f61;margin-top:7px}
+.closing{background:linear-gradient(155deg,#8f201d,#571514);color:#fff3dc}
+.closing h2{color:#ffe3a2}
+.closing .body{color:#fff0da}
+.closing .quote{background:rgba(255,255,255,.07);border-left-color:#e6bc68}
+.closing .blessing{font-size:20px;color:#ffe3a2;font-weight:700;margin:16px 0}
+.closing .illu{height:145px}
+.toolbar{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100;width:min(760px,calc(100% - 24px));display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 11px;border-radius:16px;background:rgba(28,22,19,.9);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);color:#f7ead2;box-shadow:0 14px 28px rgba(0,0,0,.28)}
+.tools{display:flex;gap:6px}
+.tool{border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#f9ecd8;padding:8px 10px}
+.tool:hover{background:rgba(255,255,255,.14)}
+.meta{min-width:0}
+.metatop{display:flex;justify-content:space-between;gap:10px;font-size:10.5px;color:rgba(255,238,215,.72);margin-bottom:5px}
+.bar{height:4px;background:rgba(255,255,255,.14);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:#dfb45d;transition:width .3s}
+.drawer,.modal{position:fixed;inset:0;z-index:150;background:rgba(10,8,7,.62);display:none;align-items:center;justify-content:center;padding:16px}
+.drawer.open,.modal.open{display:flex}
+.panel{width:min(720px,100%);max-height:82vh;overflow:auto;background:#fffaf0;border-radius:20px;padding:17px;box-shadow:0 25px 60px rgba(0,0,0,.34)}
+.panelhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;position:sticky;top:-17px;background:#fffaf0;padding:4px 0 10px;z-index:3}
+.panelhead strong{color:#65231f}
+.panelhead button{border:0;background:#ede1d1;border-radius:8px;padding:7px 10px}
+.drawer{align-items:flex-end}
+.drawer .panel{border-radius:20px 20px 14px 14px}
+.drawerlist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.drawerlist button{border:1px solid #eadcc9;background:#fff;border-radius:11px;padding:10px;text-align:left;color:#50372c}
+.drawerlist button.active{border-color:#a4372f;background:#fff4ec}
+.drawerlist b{display:block;font-size:12.5px}
+.drawerlist span{font-size:10.5px;color:#8b786a}
+.article-modal-body{padding:4px 3px 8px}
+.article-modal-body .sub{font-size:12px;color:#9a7b61;margin-bottom:10px}
+.article-modal-body p{font-size:14px;line-height:1.85;text-align:justify;margin:0 0 13px;color:#40332c}
+.article-modal-body .source-note{font-size:11px;color:#9a887a;border-top:1px solid #eadcc9;padding-top:10px}
+.article-modal-body .open-original{display:inline-flex;margin-top:12px;background:#8e1c1c;color:#fff7e6;border-radius:10px;padding:9px 13px;text-decoration:none}
+.music-panel{max-width:470px}
+.music-status{font-size:13px;color:#6f5a4b;line-height:1.7;margin:8px 0 14px}
+.music-actions{display:flex;flex-wrap:wrap;gap:8px}
+.music-actions button{border:1px solid #e3d3bd;background:#fff;border-radius:10px;padding:9px 12px;color:#5a4033}
+.music-actions button.primary{background:#8e1c1c;color:#fff;border-color:#8e1c1c}
+.music-help{font-size:11px;color:#907c6c;line-height:1.65;margin-top:12px;padding-top:10px;border-top:1px solid #eadcc9}
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-8px);opacity:0;z-index:200;background:rgba(34,27,23,.9);color:#fff5e4;border-radius:999px;padding:8px 13px;font-size:11px;transition:.22s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media(max-width:980px){
+  :root{--page-w:400px;--page-h:566px}
+  .inner{padding:25px 28px}
+  .page h2{font-size:21px}
+  .body,.cardline p{font-size:11.7px}
+  .body.small{font-size:11.3px}
+  .body.xsmall{font-size:10.7px}
+  .lead{font-size:13px}
+  .cover-title{font-size:31px}
+  .arrow{display:none}
+  .illu{height:108px}
+}
+@media(max-width:760px){
+  :root{--page-w:min(92vw,430px);--page-h:calc(var(--page-w)*1.42)}
+  .app{padding:10px 8px 92px}
+  .brand strong{font-size:13px}
+  .brand small{display:none}
+  .actions button{padding:7px 8px;font-size:12px}
+  .reader{min-height:var(--page-h)}
+  .stage{width:var(--page-w);height:var(--page-h);filter:drop-shadow(0 18px 20px rgba(0,0,0,.32));overflow:hidden;border-radius:2px}
+  .stage:after{display:none}
+  .slot.left{display:none}
+  .slot.right{left:0}
+  .turner{display:none!important}
+  .swipe-layer{left:0}
+  .inner{padding:5.7% 6.2% 7%}
+  .cover .inner{padding:8% 7.5%}
+  .cover-kicker{font-size:clamp(11px,3vw,13px)}
+  .cover-pub{font-size:clamp(10px,2.7vw,12px)}
+  .cover-title{font-size:clamp(27px,8.3vw,37px)}
+  .coverart{height:34%}
+  .page h2{font-size:clamp(19px,5.6vw,24px)}
+  .body,.cardline p{font-size:clamp(10.4px,3vw,12.7px);line-height:1.57}
+  .body.small{font-size:clamp(10.1px,2.86vw,11.9px)}
+  .body.xsmall{font-size:clamp(9.7px,2.68vw,11.3px);line-height:1.52}
+  .lead{font-size:clamp(11.8px,3.4vw,14.8px)}
+  .illu{height:19%;margin-bottom:8px}
+  .cardline{padding-top:7px;margin-top:7px}
+  .quote{margin:8px 0;padding:9px 10px;font-size:clamp(10.3px,2.95vw,12.3px)}
+  .discipline-video{border-radius:10px}
+  .video-caption{font-size:10px}
+  .drawerlist{grid-template-columns:1fr}
+  .desktop-only{display:none}
+  .toolbar{grid-template-columns:auto 1fr auto;padding:8px 9px}
+  .tool{padding:8px 9px}
+  .modal{align-items:flex-end;padding:10px}
+  .modal .panel{max-height:88vh;border-radius:18px 18px 12px 12px}
+  .article-modal-body p{font-size:13px;line-height:1.78}
+}
+
+/* ===== v2：PC大屏、反向翻页修复、可替换图片 ===== */
+.turner.prev{
+  left:0;
+  transform-origin:right center;
+  transform:rotateY(0deg);
+}
+.turner.prev.anim{
+  transform:rotateY(180deg);
+}
+.turner.prev:after{
+  background:linear-gradient(270deg,transparent 58%,rgba(0,0,0,.2));
+}
+
+.editable-illu{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+}
+.editable-illu .custom-img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 50%;
+  transform:scale(1);
+  transform-origin:50% 50%;
+  will-change:transform;
+}
+.img-edit-trigger{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:8;
+  border:1px solid rgba(255,255,255,.68);
+  background:rgba(44,34,28,.78);
+  color:#fff8eb;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:10.5px;
+  line-height:1;
+  opacity:.16;
+  transition:opacity .18s, transform .18s, background .18s;
+  backdrop-filter:blur(8px);
+}
+.editable-illu:hover .img-edit-trigger,
+.img-edit-trigger:focus{
+  opacity:1;
+  transform:translateY(-1px);
+  background:rgba(66,44,34,.92);
+}
+.image-panel{max-width:520px}
+.image-preview{
+  height:190px;
+  border:1px solid #e5d8c6;
+  border-radius:14px;
+  overflow:hidden;
+  background:#f3eadc;
+  margin-bottom:13px;
+  position:relative;
+}
+.image-preview img{
+  width:100%;height:100%;display:block;object-fit:cover;object-position:50% 50%;
+}
+.image-preview .empty{
+  height:100%;display:grid;place-items:center;color:#8f7b6c;font-size:12px;text-align:center;padding:20px
+}
+.image-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.image-field label{
+  display:block;
+  font-size:11px;
+  color:#7f6a5a;
+  margin-bottom:5px;
+}
+.image-field select,
+.image-field input[type="range"]{
+  width:100%;
+}
+.image-field select{
+  border:1px solid #dfd0bd;
+  border-radius:9px;
+  background:#fff;
+  padding:8px 9px;
+  color:#50382e;
+}
+.image-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.image-buttons button{
+  border:1px solid #e1d1bc;
+  background:#fff;
+  color:#553d32;
+  border-radius:10px;
+  padding:9px 12px;
+}
+.image-buttons .primary{
+  background:#8e1c1c;
+  border-color:#8e1c1c;
+  color:#fff;
+}
+.image-status{
+  margin-top:10px;
+  min-height:18px;
+  font-size:11px;
+  color:#8c7869;
+  line-height:1.55;
+}
+
+@media(min-width:761px){
+  .app{
+    height:100vh;
+    min-height:0;
+    overflow:hidden;
+    padding:8px 10px 68px;
+  }
+  .topbar{
+    max-width:none;
+    height:38px;
+    margin:0 50px 4px;
+  }
+  .reader{
+    max-width:none;
+    min-height:0;
+    height:calc(100vh - 118px);
+    gap:10px;
+  }
+  .stage{
+    width:calc(100vw - 128px);
+    height:calc(100vh - 118px);
+    aspect-ratio:auto;
+  }
+  .slot,.turner{
+    width:50%;
+    height:100%;
+  }
+  .slot.right,.turner{left:50%}
+  .turner.prev{left:0}
+  .arrow{
+    width:44px;
+    height:74px;
+    flex:0 0 44px;
+  }
+  .toolbar{
+    bottom:8px;
+    width:min(820px,calc(100% - 150px));
+  }
+  .inner{
+    padding:4.2% 6.2% 4.5%;
+  }
+  .illu{
+    height:21%;
+  }
+  .cover .inner{
+    padding:5.3% 6.5%;
+  }
+  .coverart{
+    height:34%;
+  }
+}
+
+@media(min-width:1200px){
+  .page h2{font-size:clamp(25px,1.55vw,34px)}
+  .page h3{font-size:clamp(15px,1vw,20px)}
+  .body{font-size:clamp(13.5px,.82vw,16.5px);line-height:1.72}
+  .body.small{font-size:clamp(12.7px,.76vw,15.5px)}
+  .body.xsmall{font-size:clamp(11.7px,.69vw,14px);line-height:1.62}
+  .lead{font-size:clamp(15px,.92vw,19px)}
+  .quote{font-size:clamp(12.8px,.78vw,15.5px);line-height:1.7}
+  .cardline p{font-size:clamp(11.8px,.72vw,14.5px);line-height:1.6}
+  .cover-title{font-size:clamp(36px,2.6vw,54px)}
+  .cover-kicker{font-size:clamp(13px,.86vw,17px)}
+  .cover-pub{font-size:clamp(12px,.76vw,15px)}
+  .cover-sub{font-size:clamp(13px,.82vw,16px)}
+}
+
+@media(max-width:760px){
+  .img-edit-trigger{
+    opacity:.78;
+    right:6px;
+    bottom:6px;
+    padding:5px 7px;
+    font-size:9.5px;
+  }
+  .image-grid{grid-template-columns:1fr}
+  .image-preview{height:160px}
+}
+
+/* ===== 响应式字号：按实际书页尺寸等比缩放，不改变原有版面结构 ===== */
+:root{--page-font-base:13.3px}
+.page{font-size:var(--page-font-base)}
+.page .pageno{font-size:.827em}
+.page .kicker{font-size:.827em}
+.page h2{font-size:1.805em}
+.page h3{font-size:1.128em}
+.page .body,.page .cardline p{font-size:1em}
+.page .body.small{font-size:.955em}
+.page .body.xsmall{font-size:.887em}
+.page .lead{font-size:1.128em}
+.page .quote{font-size:.962em}
+.page .readmore{font-size:.865em}
+.page .cover-kicker{font-size:.977em}
+.page .cover-pub{font-size:.902em}
+.page .cover-title{font-size:2.632em}
+.page .cover-sub{font-size:.977em}
+.page .toc button b{font-size:.827em}
+.page .toc strong{font-size:.977em}
+.page .toc small{font-size:.827em}
+.page .cardline .n{font-size:.827em}
+.page .cardline p{font-size:.887em}
+.page .chips span{font-size:.789em}
+.page .video-caption{font-size:.789em}
+.page.closing .blessing{font-size:1.504em}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">刊</div>
+      <div>
+        <strong>中国人民银行金昌市分行离退休干部电子期刊 · 第一期</strong>
+        <small>3D仿真翻页H5 · 深学铸魂固初心 精管护航安伏夏</small>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="musicTop" class="music-toggle on" type="button" aria-pressed="true" title="背景音乐开关">♫ 音乐：开</button>
+      <button id="tocTop" type="button">目录</button>
+      <button id="full" type="button">全屏</button>
+    </div>
+  </header>
+
+  <main class="reader">
+    <button class="arrow" id="prevA" type="button" aria-label="上一页">‹</button>
+    <section class="stage" id="stage" aria-label="电子期刊阅读器">
+      <div class="slot left" id="left"></div>
+      <div class="slot right" id="right"></div>
+      <div class="turner next" id="turner">
+        <div class="face front" id="front"></div>
+        <div class="face back" id="back"></div>
+      </div>
+      <div class="swipe-layer" id="swipeLayer"></div>
+    </section>
+    <button class="arrow" id="nextA" type="button" aria-label="下一页">›</button>
+  </main>
+</div>
+
+<div class="toolbar">
+  <div class="tools">
+    <button class="tool" id="prev" type="button" aria-label="上一页">‹</button>
+    <button class="tool" id="next" type="button" aria-label="下一页">›</button>
+  </div>
+  <div class="meta">
+    <div class="metatop"><span id="label">封面</span><span id="count">1 / 19</span></div>
+    <div class="bar"><i id="prog"></i></div>
+  </div>
+  <div class="tools">
+    <button class="tool desktop-only" id="home" type="button">封面</button>
+    <button class="tool" id="toc" type="button">☰</button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="panel">
+    <div class="panelhead"><strong>目录导航</strong><button id="closeDrawer" type="button">关闭</button></div>
+    <div class="drawerlist" id="drawerList"></div>
+  </div>
+</div>
+
+<div class="modal" id="articleModal" aria-hidden="true">
+  <div class="panel">
+    <div class="panelhead"><strong id="articleTitle">链接内容</strong><button id="closeArticle" type="button">关闭</button></div>
+    <div class="article-modal-body" id="articleBody"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="imageModal" aria-hidden="true">
+  <div class="panel image-panel">
+    <div class="panelhead">
+      <strong>图片上传与位置调整</strong>
+      <button id="closeImage" type="button">关闭</button>
+    </div>
+    <div class="image-preview" id="imagePreview">
+      <div class="empty">当前使用期刊默认插画<br>点击“上传图片”即可替换</div>
+    </div>
+    <div class="image-grid">
+      <div class="image-field">
+        <label for="imageFit">显示方式</label>
+        <select id="imageFit">
+          <option value="cover">填充区域（推荐）</option>
+          <option value="contain">完整显示</option>
+        </select>
+      </div>
+      <div class="image-field">
+        <label for="imageZoom">缩放 <span id="imageZoomValue">100%</span></label>
+        <input id="imageZoom" type="range" min="100" max="250" value="100" step="1">
+      </div>
+      <div class="image-field">
+        <label for="imageX">水平位置 <span id="imageXValue">50%</span></label>
+        <input id="imageX" type="range" min="0" max="100" value="50" step="1">
+      </div>
+      <div class="image-field">
+        <label for="imageY">垂直位置 <span id="imageYValue">50%</span></label>
+        <input id="imageY" type="range" min="0" max="100" value="50" step="1">
+      </div>
+    </div>
+    <div class="image-buttons">
+      <button class="primary" id="chooseImage" type="button">上传图片</button>
+      <button id="resetImage" type="button">恢复默认插画</button>
+    </div>
+    <div class="image-status" id="imageStatus">修改会应用到当前图片位置，并尝试保存在当前浏览器中。</div>
+  </div>
+</div>
+
+<div class="modal" id="musicModal" aria-hidden="true">
+  <div class="panel music-panel">
+    <div class="panelhead"><strong>背景音乐</strong><button id="closeMusic" type="button">关闭</button></div>
+    <div class="music-status" id="musicStatus">尚未配置背景音乐。</div>
+    <div class="music-actions">
+      <button type="button" class="primary" id="playMusic">播放</button>
+      <button type="button" id="chooseMusic">选择音乐</button>
+    </div>
+    <div class="music-help">
+      正式部署时，可将背景音乐命名为 <strong>bgm.mp3</strong> 并放入 <strong>assets/music/</strong> 文件夹。
+      浏览器通常会限制网页自动播放音乐，因此建议由读者点击“♫ 音乐”后开始播放。
+    </div>
+  </div>
+</div>
+
+<input type="file" id="musicFile" accept="audio/*" hidden>
+<input type="file" id="imageFile" accept="image/*" hidden>
+<audio id="bgm" loop preload="auto" src="assets/music/bgm.mp3"></audio>
+<div class="toast" id="toast"></div>
+
+<div id="templates" hidden><template data-title="封面"><article class="page cover"><div class="texture"></div><div class="inner"><div class="covercopy">
+    <div class="cover-kicker">中国人民银行金昌市分行</div>
+    <div class="cover-pub">离退休干部电子期刊 · 第一期</div>
+    <div class="cover-title">深学铸魂固初心<br>精管护航安伏夏</div>
+    <div class="cover-rule"></div>
+    <div class="cover-sub">时政要闻 · 理论学习 · 风险管控 · 防暑养生 · 纪律提醒</div>
+    </div><div class="coverart"><div class="illu"><svg viewBox="0 0 420 155" role="img" aria-label="晚霞、飞鸟与山峦插画"><circle cx="328" cy="43" r="34" fill="#e7bd69"/><path d="M0 101Q78 67 152 104T300 88T420 72V155H0Z" fill="#3d1110" opacity=".65"/><path d="M0 128Q92 102 174 132T420 105V155H0Z" fill="#250b0a"/><g fill="none" stroke="#f6d89c" stroke-width="2"><path d="M72 53q9-8 18 0q9-8 18 0"/><path d="M132 35q7-6 14 0q7-6 14 0"/></g></svg></div></div></div></article></template><template data-title="卷首语"><article class="page "><div class="texture"></div><div class="inner"><div class="kicker">桑榆生辉 · 初心常在</div><h2>岁月映初心，桑榆亦生辉</h2><p class="lead">岁月映初心，桑榆亦生辉。广大离退休干部是党和国家的宝贵财富，是新时代发展的见证者、参与者、奉献者。老有所学、老有所安、老有所乐、老有所康，是老同志晚年生活的美好追求，也是我们老干部服务工作的核心目标。</p><div class="quote">为持续加强离退休干部思想政治建设，引导老同志紧跟时事、坚守思想底线，常态化做好风险排查、行为引导与高温健康关怀，本期电子期刊聚焦时政要闻、理论学习、风险管控、暑季防暑养生、纪律提醒五大板块，推送权威时政要点、理论知识、安全防范指南、高温养生提示，廉洁纪律提示，陪伴各位老同志常学常新、平安康健、安享盛夏晚年。</div></div><span class="pageno">01</span></article></template><template data-title="目录"><article class="page "><div class="texture"></div><div class="inner"><div class="kicker">CONTENTS</div><h2>本期导读</h2><p class="body">点击目录条目可直接跳转。</p><div class="toc"><button type="button" data-jump="3"><b>01</b><span><strong>时政会议</strong><small>常览国事 · 初心永驻</small></span></button><button type="button" data-jump="6"><b>02</b><span><strong>理论学习</strong><small>坚守初心 · 永葆本色</small></span></button><button type="button" data-jump="9"><b>03</b><span><strong>平安守护</strong><small>防范风险 · 安享晚年</small></span></button><button type="button" data-jump="13"><b>04</b><span><strong>健康生活</strong><small>防暑养生 · 安然度夏</small></span></button><button type="button" data-jump="17"><b>05</b><span><strong>纪律提醒</strong><small>晚年自律 · 守好底线</small></span></button></div></div><span class="pageno">02</span></article></template><template data-title="时政会议｜科技强国"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">时政会议｜常览国事 初心永驻</div><h2>科技自立自强</h2><div class="article"><h3>2026年7月8日｜国家科学技术奖励大会等会议</h3><p class="body small">一、2026年7月8日，国家科学技术奖励大会、两院院士大会、中国科协第十一次全国代表大会在北京隆重召开。中共中央总书记、国家主席、中央军委主席习近平出席大会，为国家最高科学技术奖获得者等颁奖并发表重要讲话。他强调，“十五五”时期是科技强国建设的关键攻坚期。必须抓住历史机遇，迎接时代挑战，加快推进高水平科技自立自强，向着到2035年建成科技强国的目标坚定迈进，扎扎实实以科技创新支撑和引领中国式现代化。</p><button type="button" class="readmore popup-link" data-article="news1">查看链接内容 <span>↗</span></button></div></div><span class="pageno">03</span></article></template><template data-title="时政会议｜人工智能"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">聚焦人工智能全球治理</div><h2>以人为本 · 向上向善</h2><div class="article"><h3>2026年7月17日｜2026世界人工智能大会暨人工智能全球治理高级别会议</h3><p class="body xsmall">二、2026年7月17日，2026世界人工智能大会暨人工智能全球治理高级别会议在上海世界会客厅隆重开幕，习近平总书记出席开幕式并发表题为《携手构建公正合理的全球人工智能治理体系》的重要主旨讲话。讲话立足全球科技变革和产业发展大势，精准研判人工智能发展新形势、新机遇、新挑战，系统提出全球人工智能治理四点重要意见，深刻阐释以人为本、向上向善的人工智能发展核心理念，全面部署人工智能科技创新、产业融合、安全治理、开放合作、普惠共享重点工作，科学回答了人工智能发展的时代课题，为我国人工智能产业高质量发展、完善全球人工智能治理体系、赋能千行百业转型升级、助力数字中国建设提供了根本性、全局性、战略性指引。</p><button type="button" class="readmore popup-link" data-article="news2">查看链接内容 <span>↗</span></button></div></div><span class="pageno">04</span></article></template><template data-title="时政会议｜基础教育"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">基础教育扩优提质</div><h2>立德树人 · 健康第一</h2><div class="article"><h3>2026年7月22日｜全国基础教育工作会议</h3><p class="body xsmall">三、2026年7月22日，全国基础教育工作会议在京召开。习近平强调，新征程上，要以新时代中国特色社会主义思想为指导，全面贯彻党的教育方针，落实立德树人根本任务，坚持不懈用党的创新理论铸魂育人，培养德智体美劳全面发展的社会主义建设者和接班人。要遵循教育规律，落实健康第一教育理念，提升教育教学质量，促进广大学生身心健康、成长成才。要适应人民群众新期盼，推进基础教育扩优提质，牢牢守住教育公平底线。要弘扬教育家精神，加强师德师风建设，培养造就高素质专业化教师队伍。各级党委和政府要切实扛起政治责任，优化办学资源配置，深化教育综合改革，推动学校、家庭、社会同向发力，不断开创基础教育高质量发展新局面。</p><button type="button" class="readmore popup-link" data-article="news3">查看链接内容 <span>↗</span></button></div></div><span class="pageno">05</span></article></template><template data-title="理论学习｜四有标准"><article class="page theory"><div class="texture"></div><div class="inner"><div class="kicker">理论学习｜坚守初心 永葆本色</div><h2>心中有党 · 有民 · 有责 · 有戒</h2><p class="body small">一、7月1日出版的第13期《求是》杂志重新发表习近平总书记重要文章《做焦裕禄式的县委书记》。文章立足党的执政根基和基层治理全局，深刻阐释县一级工作的特殊地位和时代价值，系统阐明新时代县委书记“心中有党、心中有民、心中有责、心中有戒”的“四有”标准，深刻回答了新时代基层干部如何坚守初心使命、践行正确政绩观、担当履职尽责的重大课题，立意高远、思想深邃、指导性极强，是加强新时代基层干部队伍建设、推进基层治理现代化、纵深推进全面从严治党的纲领性文献，为各级党组织和广大党员干部修身立德、干事创业提供了根本遵循。</p><button type="button" class="readmore popup-link" data-article="theory1">查看链接内容 <span>↗</span></button></div><span class="pageno">06</span></article></template><template data-title="理论学习｜正确政绩观"><article class="page theory"><div class="texture"></div><div class="inner"><div class="kicker">专题学习</div><h2>以坚强党性树立和践行正确政绩观</h2><p class="lead">二、深入学习贯彻习近平总书记关于树立和践行正确政绩观的重要论述：坚强党性树立和践行正确政绩观</p><div class="quote">树立和践行正确政绩观，关键在党性。把为民造福作为重要价值取向，把公心、公义和实干贯穿履职尽责全过程。</div><button type="button" class="readmore popup-link" data-article="theory2">查看链接内容 <span>↗</span></button></div><span class="pageno">07</span></article></template><template data-title="理论学习｜习近平党建思想"><article class="page theory"><div class="texture"></div><div class="inner"><div class="kicker">新增专题｜终版内容</div><h2>深入学习贯彻习近平党建思想</h2><p class="lead">三、深入学习贯彻习近平党建思想，不断开辟百年大党管党治党、兴党强党新境界——学习《习近平党建文选》第一卷、第二卷</p><div class="quote">围绕《习近平党建文选》第一卷、第二卷开展学习，深化理论武装，进一步增强管党治党、兴党强党的思想自觉和行动自觉。</div><button type="button" class="readmore popup-link" data-article="theory3">查看链接内容 <span>↗</span></button></div><span class="pageno">08</span></article></template><template data-title="平安守护｜风险解读①"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">平安守护｜防范风险 安享晚年</div><h2>常见异常行为风险解读</h2><p class="body small">随着生活环境和社会环境的变化，部分离退休老干部在晚年生活中，易受外界信息、陌生人员、不良风气影响，出现各类异常行为倾向，不仅影响身心健康，还可能造成财产损失、权益受损。结合老干部生活实际，梳理常见风险行为，提醒各位老同志高度警惕、主动规避：</p><div class="cardline "><div class="n">1</div><div><h3>1.金融理财盲目跟风行为</h3><p>部分老同志闲暇时间较多，对各类投资理财、养老项目、高额回报产品缺乏辨别能力，容易轻信陌生人推销、网络虚假理财广告，盲目参与高风险投资、非法集资、虚拟货币交易等活动，存在大额财产被骗风险。同时，个别老同志存在私下借贷、替他人担保、大额转账给陌生平台等异常资金行为，极易陷入经济纠纷。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>2.轻信谣言盲目传谣行为</h3><p>老年群体对网络信息辨别能力较弱，容易轻信微信群、短视频平台传播的虚假时政信息、养生谣言、社会谣言，未经核实随意转发、传播不实言论，不仅容易误导他人，还可能触碰网络言论底线，造成不良社会影响。</p></div></div></div><span class="pageno">09</span></article></template><template data-title="平安守护｜风险解读②"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">风险识别</div><h2>陌生社交与情绪风险</h2><div class="cardline "><div class="n">3</div><div><h3>3.陌生社交轻信盲从行为</h3><p>退休后社交圈相对单一，部分老同志孤独感较强，容易轻信陌生网友、上门推销人员、虚假公益人员，随意透露个人身份证、银行卡、家庭住址、医保社保等隐私信息，参与陌生组织的聚会、讲座、免费领取礼品等活动，陷入传销、诈骗、非法组织圈套。</p></div></div><div class="cardline "><div class="n">4</div><div><h3>4.情绪消极封闭偏激行为</h3><p>部分老同志因身体病痛、独居生活、心态落差等原因，出现长期情绪低落、自我封闭、固执偏激、抵触沟通等状态，不愿参与集体活动，拒绝家人和工作人员关怀疏导，长期消极情绪易引发心理问题、家庭矛盾。</p></div></div></div><span class="pageno">10</span></article></template><template data-title="平安守护｜防范指南①"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">异常行为管控与自我防范</div><h2>筑牢思想与财产安全防线</h2><div class="cardline "><div class="n">1</div><div><h3>强化理论武装，筑牢思想防线</h3><p>1.强化理论武装，筑牢思想防线。常态化参与支部学习、主题党课、老干部座谈会，主动学习时政知识、法律法规、反诈知识，树立正确的价值观、财富观、消费观，明辨是非对错，自觉远离各类不良风气和违规活动，从思想上杜绝各类风险隐患。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>严守行为底线，规范日常言行</h3><p>2.严守行为底线，规范日常言行。自觉遵守法律法规和社会公序良俗，不信谣、不传谣、不造谣，理性看待网络信息，不随意转发未经官方核实的内容。日常言行端正得体，不参与任何非法组织、违规聚会、高风险活动，坚守党员干部纪律底线。</p></div></div><div class="cardline "><div class="n">3</div><div><h3>提升防范意识，守护财产安全</h3><p>3.提升防范意识，守护财产安全。牢记“高额回报必是陷阱、陌生链接绝不点击、陌生转账绝不操作”。不参与任何非法集资、虚假理财、养老诈骗项目，不轻易透露个人隐私和资金信息，遇到投资理财、公益捐赠、医保报销、法院办案等陌生信息，第一时间告知家人或单位工作人员核实。</p></div></div></div><span class="pageno">11</span></article></template><template data-title="平安守护｜温情帮扶"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">异常行为管控与自我防范</div><h2>阳光心态 · 精准守护</h2><div class="cardline "><div class="n">4</div><div><h3>保持阳光心态，积极融入生活</h3><p>4.保持阳光心态，积极融入生活。主动走出家门，积极参与单位组织的文体活动、学习活动、志愿服务活动，丰富晚年精神文化生活。保持乐观开朗的心态，遇到情绪困扰、生活难题、心理压力时，主动与家人、老同事、工作人员沟通倾诉，及时疏导负面情绪。</p></div></div><div class="cardline "><div class="n">5</div><div><h3>依托温情帮扶，实现精准守护</h3><p>5.依托温情帮扶，实现精准守护。单位将常态化开展离退休干部走访慰问、谈心谈话、风险排查工作，动态掌握老同志思想状态、生活状况、日常行为。对存在消极情绪、异常言行、风险倾向的老同志，开展一对一暖心疏导、精准帮扶，及时化解各类安全隐患，用心用情做好老干部服务保障工作。</p></div></div></div><span class="pageno">12</span></article></template><template data-title="健康生活｜合理起居"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">健康生活｜防暑养生 安然度夏</div><h2>合理起居 · 规避高温时段</h2><p class="body small">盛夏高温高湿，老年人心肺负担加重，是心脑血管疾病、中暑、肠胃病高发期，结合老同志身体特点，整理专属高温养生防护提示，平稳度过三伏暑天。</p><div class="chips"><span>10:00—16:00尽量避晒</span><span>空调建议不低于26℃</span><span>午间静养约30分钟</span></div><div class="cardline green"><div class="n">1</div><div><h3>错峰出行避暴晒</h3><p>1.错峰出行避暴晒：上午10时至下午16时气温最高，尽量不外出采购、散步、办事；如需出门戴好宽檐帽、薄长袖、遮阳伞，避开阳光直射。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>科学调控室温</h3><p>2.科学调控室温：空调温度设置不低于26℃，室内外温差不宜过大，每隔2小时开窗通风；睡觉不开空调直吹头肩，夜间适当加盖薄毯，防止风寒侵入关节。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>保证静心午休</h3><p>3.保证静心午休：暑热易耗心气，午间静养30分钟，不宜久睡；清晨早起透气，正午闭门避暑，减少身体能量消耗。</p></div></div></div><span class="pageno">13</span></article></template><template data-title="健康生活｜补水膳食"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">补水膳食</div><h2>清热护肠胃 · 切勿贪凉</h2><div class="cardline green"><div class="n">1</div><div><h3>少量多次补充温水</h3><p>1.少量多次补充温水：不要等到口渴再喝水，单次慢饮200ml左右，少喝冰水、浓茶、含糖饮料；可常备绿豆汤、冬瓜汤、淡酸梅汤，常温饮用，切勿冰镇。高血压、肾病老人遵从医嘱控制饮水量。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>饮食清淡忌油腻</h3><p>2.饮食清淡忌油腻：减少肥肉、辛辣、卤制食物，多吃冬瓜、丝瓜、苦瓜、荷叶、莲子等清热祛湿食材；隔夜凉菜、熟食极易滋生细菌，尽量现做现吃，防止夏季腹泻肠胃炎。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>切勿贪凉暴食</h3><p>3.切勿贪凉暴食：少吃冰西瓜、雪糕、冰镇瓜果，寒凉食物易刺激血管收缩，诱发血压波动；每餐七分饱，减轻夏日脾胃运化压力。</p></div></div></div><span class="pageno">14</span></article></template><template data-title="健康生活｜适度运动"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">运动防暑</div><h2>适度运动 · 严防中暑风险</h2><div class="chips"><span>清晨6—8点</span><span>傍晚日落之后</span><span class="warn">气温超35℃停止户外锻炼</span></div><div class="cardline green"><div class="n">1</div><div><h3>运动选早晚凉爽时段</h3><p>1.运动选早晚凉爽时段：清晨6-8点、傍晚日落之后，开展慢走、八段锦、太极舒缓锻炼，时长控制在20分钟以内，周身微热即可，严禁大汗淋漓。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>高温天停止户外锻炼</h3><p>2.高温天停止户外锻炼：闷热无风、气温超35℃时居家拉伸，不要硬撑外出；随身常备藿香正气水、清凉油，出现头晕、心慌、乏力立刻到阴凉处平躺休息。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>牢记中暑预警信号</h3><p>3.牢记中暑预警信号：恶心胸闷、浑身发烫、四肢发软为轻症中暑前兆，及时补水降温；若意识模糊、体温骤升，务必第一时间联系家属送医。</p></div></div></div><span class="pageno">15</span></article></template><template data-title="健康生活｜慢病与居家"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">慢病防护与情志调节</div><h2>守指标 · 调情志 · 保安全</h2><div class="cardline green"><div class="n">1</div><div><h3>严控基础病指标</h3><p>1.严控基础病指标：高温会升高血压、加快心率，每日早晚安静状态下监测血压血糖，谨遵医嘱按时服药，不可擅自停药减药。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>戒躁静心防上火</h3><p>2.戒躁静心防上火：暑热易心烦易怒，情绪激动极易诱发心脑血管急症；多读书练字、静心饮茶，减少争执动怒，保持心气平和。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>谨慎辨别夏季养生保健品</h3><p>3.谨慎辨别夏季养生保健品：警惕街头、微信群推销的高价防暑特效药、降压偏方，不盲目购买，身体不适优先咨询正规医师。</p></div></div><div class="quote"><strong>居家安全：</strong>1.高温天气电器负荷大，及时关闭闲置空调、电扇，避免线路老化短路；独居老人手机常备电，保证随时能联系家人。<br>2.地面擦拭后及时擦干，夏季出汗手脚易打滑，卫生间全程保持干燥，防止跌倒摔伤。</div></div><span class="pageno">16</span></article></template><template data-title="纪律提醒｜视频"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">离退休纪律提醒</div><h2>晚年自律准则</h2><div class="video-wrap">
+        <video class="discipline-video" controls playsinline webkit-playsinline preload="metadata">
+          <source src="assets/video/discipline.mp4" type="video/mp4">
+          您的浏览器不支持视频播放。
+        </video>
+        <div class="video-caption">纪律提醒视频 · 点击播放键观看</div>
+      </div>
+      <div class="quote">离岗不离党、退休不褪色。始终保持纪律意识、规矩意识，自觉维护党员干部良好形象。</div></div><span class="pageno">17</span></article></template><template data-title="尾刊寄语"><article class="page closing"><div class="texture"></div><div class="inner"><div class="kicker">EPILOGUE</div><h2>莫道桑榆晚，为霞尚满天</h2><p class="body">莫道桑榆晚，为霞尚满天。衷心希望各位离退休老干部始终保持终身研读时政、深耕理论的学习热情，坚守遵纪守法的行为自觉，顺应时节科学调养身心，不断夯实思想根基、筑牢安全防线、安然度过盛夏，在勤学、自律、平安、康健中安享幸福晚年。</p><div class="quote">下一步，我们将持续推送时政资讯、丰富理论学习载体、常态化开展安全科普与夏季防暑健康宣教服务，全方位做好离退休干部思想引领、关爱帮扶、风险防控各项工作，用心用情守护老同志的美好生活。</div><p class="blessing">祝愿全体老干部身体健康、阖家幸福、清凉安康！</p><div class="illu"><svg viewBox="0 0 420 155" role="img" aria-label="晚霞、飞鸟与山峦插画"><circle cx="328" cy="43" r="34" fill="#e7bd69"/><path d="M0 101Q78 67 152 104T300 88T420 72V155H0Z" fill="#3d1110" opacity=".65"/><path d="M0 128Q92 102 174 132T420 105V155H0Z" fill="#250b0a"/><g fill="none" stroke="#f6d89c" stroke-width="2"><path d="M72 53q9-8 18 0q9-8 18 0"/><path d="M132 35q7-6 14 0q7-6 14 0"/></g></svg></div></div><span class="pageno">18</span></article></template></div>
+<script>
+(() => {
+  const pages = [...document.querySelectorAll('#templates template')].map(t => ({title:t.dataset.title, html:t.innerHTML.trim()}));
+  const articles = {"news1": {"title": "国家科学技术奖励大会、两院院士大会、中国科协第十一次全国代表大会", "subtitle": "2026年7月8日", "url": "https://mp.weixin.qq.com/s/Ze0U5W1xvWSjY3oixJXDtQ", "paras": ["一、2026年7月8日，国家科学技术奖励大会、两院院士大会、中国科协第十一次全国代表大会在北京隆重召开。中共中央总书记、国家主席、中央军委主席习近平出席大会，为国家最高科学技术奖获得者等颁奖并发表重要讲话。他强调，“十五五”时期是科技强国建设的关键攻坚期。必须抓住历史机遇，迎接时代挑战，加快推进高水平科技自立自强，向着到2035年建成科技强国的目标坚定迈进，扎扎实实以科技创新支撑和引领中国式现代化。"], "source_note": "内容摘要依据终版期刊整理。"}, "news2": {"title": "2026世界人工智能大会暨人工智能全球治理高级别会议", "subtitle": "2026年7月17日", "url": "https://mp.weixin.qq.com/s/IU6cJ3THyUJyWxG1AWhJ2A", "paras": ["二、2026年7月17日，2026世界人工智能大会暨人工智能全球治理高级别会议在上海世界会客厅隆重开幕，习近平总书记出席开幕式并发表题为《携手构建公正合理的全球人工智能治理体系》的重要主旨讲话。讲话立足全球科技变革和产业发展大势，精准研判人工智能发展新形势、新机遇、新挑战，系统提出全球人工智能治理四点重要意见，深刻阐释以人为本、向上向善的人工智能发展核心理念，全面部署人工智能科技创新、产业融合、安全治理、开放合作、普惠共享重点工作，科学回答了人工智能发展的时代课题，为我国人工智能产业高质量发展、完善全球人工智能治理体系、赋能千行百业转型升级、助力数字中国建设提供了根本性、全局性、战略性指引。"], "source_note": "内容摘要依据终版期刊整理。"}, "news3": {"title": "全国基础教育工作会议", "subtitle": "2026年7月22日", "url": "https://mp.weixin.qq.com/s/fMZnWtmTSLvaEgDzl2duxA", "paras": ["三、2026年7月22日，全国基础教育工作会议在京召开。习近平强调，新征程上，要以新时代中国特色社会主义思想为指导，全面贯彻党的教育方针，落实立德树人根本任务，坚持不懈用党的创新理论铸魂育人，培养德智体美劳全面发展的社会主义建设者和接班人。要遵循教育规律，落实健康第一教育理念，提升教育教学质量，促进广大学生身心健康、成长成才。要适应人民群众新期盼，推进基础教育扩优提质，牢牢守住教育公平底线。要弘扬教育家精神，加强师德师风建设，培养造就高素质专业化教师队伍。各级党委和政府要切实扛起政治责任，优化办学资源配置，深化教育综合改革，推动学校、家庭、社会同向发力，不断开创基础教育高质量发展新局面。"], "source_note": "内容摘要依据终版期刊整理。"}, "theory1": {"title": "《做焦裕禄式的县委书记》", "subtitle": "《求是》杂志第13期重新发表", "url": "https://mp.weixin.qq.com/s/qJZ6umGSURpXgR1FsV1uig", "paras": ["一、7月1日出版的第13期《求是》杂志重新发表习近平总书记重要文章《做焦裕禄式的县委书记》。文章立足党的执政根基和基层治理全局，深刻阐释县一级工作的特殊地位和时代价值，系统阐明新时代县委书记“心中有党、心中有民、心中有责、心中有戒”的“四有”标准，深刻回答了新时代基层干部如何坚守初心使命、践行正确政绩观、担当履职尽责的重大课题，立意高远、思想深邃、指导性极强，是加强新时代基层干部队伍建设、推进基层治理现代化、纵深推进全面从严治党的纲领性文献，为各级党组织和广大党员干部修身立德、干事创业提供了根本遵循。", "学习要点：县一级在党和国家治理体系中处于承上启下的重要位置，县委是执政兴国的一线指挥部。学习文章要把牢理想信念、为民情怀、责任担当和纪律意识，把“四有”标准落实到修身立德和履职尽责中。"], "source_note": "弹窗摘要结合终版期刊内容整理。"}, "theory2": {"title": "以坚强党性树立和践行正确政绩观", "subtitle": "深入学习贯彻习近平总书记关于树立和践行正确政绩观的重要论述", "url": "https://mp.weixin.qq.com/s/Zs_xY0nqizMz1Pwp41OtFA", "paras": ["正确政绩观是党员、干部履职尽责、创造政绩的重要思想基础。树立和践行正确政绩观，关键在党性，核心是正确处理公与私、小我与大我的关系，把为党和人民做事作为权力使用的根本出发点。", "学习中要坚定理想信念、提高思想觉悟，常思“我是谁、为了谁、依靠谁”，把人民立场贯穿干事创业全过程；坚持一心为公、事事出于公心，做到依法用权、秉公用权、廉洁用权，以实干实绩回应群众期盼。"], "source_note": "弹窗为离线学习摘要，便于H5内直接阅读；原网页入口仍予保留。"}, "theory3": {"title": "深入学习贯彻习近平党建思想，不断开辟百年大党管党治党、兴党强党新境界", "subtitle": "学习《习近平党建文选》第一卷、第二卷", "url": "https://mp.weixin.qq.com/s/LBlGMJO5hLJ8-JyR3WaG2g", "paras": ["《习近平党建文选》第一卷、第二卷集中反映新时代党的建设理论创新和实践创新成果，为系统学习领会习近平党建思想提供了权威教材。", "学习中应围绕新时代党的建设重大理论和实践问题，深化党的理论武装，持续推进全面从严治党，把学习成果转化为坚定理想信念、锤炼党性修养、严守纪律规矩和发挥党员先锋模范作用的思想自觉与行动自觉。"], "source_note": "弹窗为离线学习摘要，原网页入口仍予保留。"}};
+  const left = document.getElementById('left');
+  const right = document.getElementById('right');
+  const turn = document.getElementById('turner');
+  const front = document.getElementById('front');
+  const back = document.getElementById('back');
+  const swipeLayer = document.getElementById('swipeLayer');
+
+  // Scale typography from the actual rendered page size.
+  // Baseline: 460 × 650 px. The clamp prevents text from becoming
+  // too small to read or too large to disturb the established layout.
+  function updateResponsiveTypography(){
+    const rect = stage.getBoundingClientRect();
+    if(!rect.width || !rect.height) return;
+    const pageWidth = matchMedia('(max-width:760px)').matches ? rect.width : rect.width / 2;
+    const scale = Math.max(.78, Math.min(1.24, Math.min(pageWidth / 460, rect.height / 650)));
+    document.documentElement.style.setProperty('--page-font-base', `${(13.3 * scale).toFixed(2)}px`);
+  }
+  const label = document.getElementById('label');
+  const count = document.getElementById('count');
+  const prog = document.getElementById('prog');
+  const prevs = [document.getElementById('prev'), document.getElementById('prevA')];
+  const nexts = [document.getElementById('next'), document.getElementById('nextA')];
+  const drawer = document.getElementById('drawer');
+  const list = document.getElementById('drawerList');
+  const toast = document.getElementById('toast');
+
+  const articleModal = document.getElementById('articleModal');
+  const articleTitle = document.getElementById('articleTitle');
+  const articleBody = document.getElementById('articleBody');
+
+  const musicModal = document.getElementById('musicModal');
+  const bgm = document.getElementById('bgm');
+  const musicFile = document.getElementById('musicFile');
+  const musicStatus = document.getElementById('musicStatus');
+  const playMusic = document.getElementById('playMusic');
+
+  const imageModal = document.getElementById('imageModal');
+  const imagePreview = document.getElementById('imagePreview');
+  const imageFile = document.getElementById('imageFile');
+  const imageFit = document.getElementById('imageFit');
+  const imageZoom = document.getElementById('imageZoom');
+  const imageX = document.getElementById('imageX');
+  const imageY = document.getElementById('imageY');
+  const imageZoomValue = document.getElementById('imageZoomValue');
+  const imageXValue = document.getElementById('imageXValue');
+  const imageYValue = document.getElementById('imageYValue');
+  const imageStatus = document.getElementById('imageStatus');
+
+  let imageEdits = {};
+  try{
+    imageEdits = JSON.parse(localStorage.getItem('pbcJinchangPeriodicalImageEditsV2') || '{}') || {};
+  }catch(_){
+    imageEdits = {};
+  }
+  let activeImageSlot = null;
+
+  let mobile = matchMedia('(max-width:760px)').matches;
+  let mi = 0;
+  let spread = 0;
+  let busy = false;
+
+  let pointer = {
+    active:false, sx:0, sy:0, x:0, startedAt:0, dragging:false, direction:0, target:-1, raf:0
+  };
+
+  const blank = '<article class="page blank"></article>';
+  const get = i => (i >= 0 && i < pages.length) ? pages[i].html : blank;
+  const maxSpread = Math.ceil((pages.length - 1) / 2);
+  const inds = s => s === 0 ? {l:-1, r:0} : {l:2*s-1, r:2*s};
+  const idx = () => mobile ? mi : Math.min(inds(spread).r, pages.length - 1);
+
+
+  function saveImageEdits(){
+    try{
+      localStorage.setItem('pbcJinchangPeriodicalImageEditsV2', JSON.stringify(imageEdits));
+      imageStatus.textContent = '图片设置已保存到当前浏览器。';
+    }catch(_){
+      imageStatus.textContent = '图片已应用到本次浏览，但文件较大，浏览器本地存储空间可能不足；刷新后可能需要重新上传。';
+    }
+  }
+
+  function imageStyle(edit){
+    return {
+      fit: edit?.fit || 'cover',
+      zoom: Number(edit?.zoom || 100),
+      x: Number(edit?.x ?? 50),
+      y: Number(edit?.y ?? 50)
+    };
+  }
+
+  function applyImageToElement(el, slot){
+    const edit = imageEdits[slot];
+    if(edit && edit.dataUrl){
+      el.innerHTML = '<img class="custom-img" alt="用户自定义配图">';
+      const img = el.querySelector('.custom-img');
+      const s = imageStyle(edit);
+      img.src = edit.dataUrl;
+      img.style.objectFit = s.fit;
+      img.style.objectPosition = `${s.x}% ${s.y}%`;
+      img.style.transform = `scale(${s.zoom / 100})`;
+      img.style.transformOrigin = `${s.x}% ${s.y}%`;
+    }
+  }
+
+  function decorateImages(root, pageIndex){
+    if(!root || pageIndex < 0) return;
+    root.querySelectorAll('.illu').forEach((el, imageIndex) => {
+      const slot = `page-${pageIndex}-image-${imageIndex}`;
+      el.dataset.imageSlot = slot;
+      el.classList.add('editable-illu');
+      applyImageToElement(el, slot);
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'img-edit-trigger';
+      button.textContent = imageEdits[slot]?.dataUrl ? '调整图片' : '替换图片';
+      button.addEventListener('click', e => {
+        e.stopPropagation();
+        openImageEditor(slot);
+      });
+      el.appendChild(button);
+    });
+  }
+
+  function refreshEditedImage(slot){
+    document.querySelectorAll(`.editable-illu[data-image-slot="${slot}"]`).forEach(el => {
+      const button = el.querySelector('.img-edit-trigger');
+      const edit = imageEdits[slot];
+      if(edit?.dataUrl){
+        let img = el.querySelector('.custom-img');
+        if(!img){
+          el.querySelectorAll('svg').forEach(n => n.remove());
+          img = document.createElement('img');
+          img.className = 'custom-img';
+          img.alt = '用户自定义配图';
+          el.insertBefore(img, button || null);
+        }
+        const s = imageStyle(edit);
+        img.src = edit.dataUrl;
+        img.style.objectFit = s.fit;
+        img.style.objectPosition = `${s.x}% ${s.y}%`;
+        img.style.transform = `scale(${s.zoom / 100})`;
+        img.style.transformOrigin = `${s.x}% ${s.y}%`;
+        if(button) button.textContent = '调整图片';
+      }
+    });
+  }
+
+  function updateImagePreview(){
+    const edit = imageEdits[activeImageSlot];
+    const s = imageStyle(edit);
+    imageFit.value = s.fit;
+    imageZoom.value = s.zoom;
+    imageX.value = s.x;
+    imageY.value = s.y;
+    imageZoomValue.textContent = `${s.zoom}%`;
+    imageXValue.textContent = `${s.x}%`;
+    imageYValue.textContent = `${s.y}%`;
+
+    if(edit?.dataUrl){
+      imagePreview.innerHTML = '<img alt="当前自定义图片预览">';
+      const img = imagePreview.querySelector('img');
+      img.src = edit.dataUrl;
+      img.style.objectFit = s.fit;
+      img.style.objectPosition = `${s.x}% ${s.y}%`;
+      img.style.transform = `scale(${s.zoom / 100})`;
+      img.style.transformOrigin = `${s.x}% ${s.y}%`;
+    }else{
+      imagePreview.innerHTML = '<div class="empty">当前使用期刊默认插画<br>点击“上传图片”即可替换</div>';
+    }
+  }
+
+  function openImageEditor(slot){
+    activeImageSlot = slot;
+    updateImagePreview();
+    imageStatus.textContent = imageEdits[slot]?.dataUrl
+      ? '拖动滑块即可实时调整图片显示位置。'
+      : '当前使用默认插画，上传图片后即可调整。';
+    imageModal.classList.add('open');
+    imageModal.setAttribute('aria-hidden','false');
+  }
+
+  function closeImageEditor(){
+    imageModal.classList.remove('open');
+    imageModal.setAttribute('aria-hidden','true');
+    activeImageSlot = null;
+  }
+
+  function updateActiveImageSetting(){
+    if(!activeImageSlot || !imageEdits[activeImageSlot]?.dataUrl) return;
+    const edit = imageEdits[activeImageSlot];
+    edit.fit = imageFit.value;
+    edit.zoom = Number(imageZoom.value);
+    edit.x = Number(imageX.value);
+    edit.y = Number(imageY.value);
+    refreshEditedImage(activeImageSlot);
+    updateImagePreview();
+    saveImageEdits();
+  }
+
+  function meta(){
+    const i = idx();
+    label.textContent = pages[i]?.title || '电子期刊';
+    count.textContent = `${i + 1} / ${pages.length}`;
+    prog.style.width = `${(i + 1) / pages.length * 100}%`;
+    const atStart = mobile ? mi === 0 : spread === 0;
+    const atEnd = mobile ? mi >= pages.length - 1 : spread >= maxSpread;
+    prevs.forEach(b => b.disabled = atStart);
+    nexts.forEach(b => b.disabled = atEnd);
+    [...list.children].forEach((b,n) => b.classList.toggle('active', n === i));
+  }
+
+  function bind(root=document){
+    root.querySelectorAll('[data-jump]').forEach(b => {
+      if(b.dataset.bound) return;
+      b.dataset.bound = '1';
+      b.addEventListener('click', () => go(+b.dataset.jump));
+    });
+    root.querySelectorAll('[data-article]').forEach(b => {
+      if(b.dataset.articleBound) return;
+      b.dataset.articleBound = '1';
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openArticle(b.dataset.article);
+      });
+    });
+  }
+
+  function render(){
+    if(mobile){
+      left.innerHTML = '';
+      right.innerHTML = get(mi);
+      decorateImages(right, mi);
+    }else{
+      const d = inds(spread);
+      left.innerHTML = get(d.l);
+      right.innerHTML = get(d.r);
+      decorateImages(left, d.l);
+      decorateImages(right, d.r);
+    }
+    bind();
+    meta();
+  }
+
+  function say(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(say.t);
+    say.t = setTimeout(() => toast.classList.remove('show'), 1000);
+  }
+
+  function desktopNext(){
+    if(busy || spread >= maxSpread) return;
+    busy = true;
+    const c = inds(spread);
+    const ns = spread + 1;
+    const n = inds(ns);
+    right.innerHTML = get(n.r);
+    turn.className = 'turner next';
+    front.innerHTML = get(c.r);
+    back.innerHTML = get(n.l);
+    turn.style.display = 'block';
+    requestAnimationFrame(() => requestAnimationFrame(() => turn.classList.add('anim')));
+    setTimeout(() => {
+      spread = ns;
+      turn.style.display = 'none';
+      turn.classList.remove('anim');
+      busy = false;
+      render();
+    }, 740);
+  }
+
+  function desktopPrev(){
+    if(busy || spread <= 0) return;
+    busy = true;
+    const c = inds(spread);
+    const ps = spread - 1;
+    const p = inds(ps);
+
+    // 反向翻页：当前左页作为纸张正面，从左向右翻动；
+    // 翻转后的背面显示上一跨页的右页，底层左页提前露出。
+    left.innerHTML = get(p.l);
+    turn.className = 'turner prev';
+    front.innerHTML = get(c.l);
+    back.innerHTML = get(p.r);
+    turn.style.display = 'block';
+    turn.style.transform = 'rotateY(0deg)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      turn.style.transform = '';
+      turn.classList.add('anim');
+    }));
+    setTimeout(() => {
+      spread = ps;
+      turn.style.display = 'none';
+      turn.classList.remove('anim');
+      turn.style.transform = '';
+      busy = false;
+      render();
+    }, 740);
+  }
+
+  function mobileFlip(direction){
+    if(busy) return;
+    const target = mi + direction;
+    if(target < 0 || target >= pages.length) return;
+    busy = true;
+    right.innerHTML = get(target);
+    swipeLayer.innerHTML = get(mi);
+    swipeLayer.style.display = 'block';
+    swipeLayer.style.transition = 'none';
+    swipeLayer.style.transform = 'translate3d(0,0,0)';
+    requestAnimationFrame(() => {
+      swipeLayer.style.transition = 'transform var(--mobile-turn) cubic-bezier(.2,.7,.2,1), opacity var(--mobile-turn)';
+      swipeLayer.style.transform = `translate3d(${direction > 0 ? '-105%' : '105%'},0,0) rotateY(${direction > 0 ? '-4deg' : '4deg'})`;
+      swipeLayer.style.opacity = '.92';
+    });
+    setTimeout(() => {
+      mi = target;
+      swipeLayer.style.display = 'none';
+      swipeLayer.style.opacity = '1';
+      busy = false;
+      render();
+    }, 280);
+  }
+
+  function next(){ mobile ? mobileFlip(1) : desktopNext(); }
+  function prev(){ mobile ? mobileFlip(-1) : desktopPrev(); }
+
+  function go(i){
+    i = Math.max(0, Math.min(pages.length - 1, i));
+    if(mobile) mi = i;
+    else spread = i === 0 ? 0 : Math.ceil(i / 2);
+    render();
+    closeDrawer();
+    say('已跳转：' + pages[i].title);
+  }
+
+  function openDrawer(){ drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+  function closeDrawer(){ drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+
+  function openArticle(id){
+    const a = articles[id];
+    if(!a) return;
+    articleTitle.textContent = a.title;
+    const paras = a.paras.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    const link = a.url ? `<a class="open-original" href="${escapeAttr(a.url)}" target="_blank" rel="noopener">打开原网页 ↗</a>` : '';
+    articleBody.innerHTML = `<div class="sub">${escapeHtml(a.subtitle || '')}</div>${paras}<div class="source-note">${escapeHtml(a.source_note || '')}</div>${link}`;
+    articleModal.classList.add('open');
+    articleModal.setAttribute('aria-hidden','false');
+  }
+  function closeArticle(){ articleModal.classList.remove('open'); articleModal.setAttribute('aria-hidden','true'); }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  pages.forEach((p,i) => {
+    if(p.title === '尾刊寄语') return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = `<b>${String(i+1).padStart(2,'0')} · ${p.title}</b><span>点击跳转到本页</span>`;
+    b.addEventListener('click', () => go(i));
+    list.appendChild(b);
+  });
+
+  nexts.forEach(b => b.addEventListener('click', next));
+  prevs.forEach(b => b.addEventListener('click', prev));
+  document.getElementById('home').addEventListener('click', () => go(0));
+  document.getElementById('toc').addEventListener('click', openDrawer);
+  document.getElementById('tocTop').addEventListener('click', openDrawer);
+  document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+  drawer.addEventListener('click', e => { if(e.target === drawer) closeDrawer(); });
+
+  document.getElementById('closeArticle').addEventListener('click', closeArticle);
+  articleModal.addEventListener('click', e => { if(e.target === articleModal) closeArticle(); });
+
+  document.getElementById('full').addEventListener('click', async () => {
+    try{
+      if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
+    }catch(e){
+      say('当前浏览器不支持全屏');
+    }
+  });
+
+  // Background music switch: packaged assets/music/bgm.mp3, default ON.
+  const musicTop = document.getElementById('musicTop');
+  let musicEnabled = true;
+
+  function updateMusicToggle(){
+    musicTop.classList.toggle('on', musicEnabled);
+    musicTop.classList.toggle('off', !musicEnabled);
+    musicTop.setAttribute('aria-pressed', musicEnabled ? 'true' : 'false');
+    musicTop.textContent = musicEnabled ? '♫ 音乐：开' : '♫ 音乐：关';
+  }
+
+  async function startMusic(){
+    if(!musicEnabled) return;
+    try{
+      await bgm.play();
+    }catch(_){
+      // Most mobile/desktop browsers block audible autoplay until the first user gesture.
+      // The switch remains ON; the first interaction anywhere on the page will start playback.
+    }
+  }
+
+  function closeMusic(){
+    if(musicModal){
+      musicModal.classList.remove('open');
+      musicModal.setAttribute('aria-hidden','true');
+    }
+  }
+
+  function toggleMusic(){
+    musicEnabled = !musicEnabled;
+    if(musicEnabled){
+      startMusic();
+      say('背景音乐已开启');
+    }else{
+      bgm.pause();
+      say('背景音乐已关闭');
+    }
+    updateMusicToggle();
+  }
+
+  function resumeMusicOnFirstGesture(){
+    if(musicEnabled && bgm.paused) bgm.play().catch(() => {});
+  }
+
+  musicTop.addEventListener('click', toggleMusic);
+  ['pointerdown','touchstart','keydown'].forEach(type => {
+    document.addEventListener(type, resumeMusicOnFirstGesture, {once:true, capture:true});
+  });
+  bgm.addEventListener('error', () => say('背景音乐文件加载失败'));
+  updateMusicToggle();
+  startMusic();
+
+  
+  document.getElementById('closeImage').addEventListener('click', closeImageEditor);
+  imageModal.addEventListener('click', e => { if(e.target === imageModal) closeImageEditor(); });
+  document.getElementById('chooseImage').addEventListener('click', () => imageFile.click());
+
+  imageFile.addEventListener('change', () => {
+    const file = imageFile.files && imageFile.files[0];
+    if(!file || !activeImageSlot) return;
+    if(!file.type.startsWith('image/')){
+      imageStatus.textContent = '请选择图片文件。';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      imageEdits[activeImageSlot] = {
+        dataUrl: reader.result,
+        fit: 'cover',
+        zoom: 100,
+        x: 50,
+        y: 50
+      };
+      refreshEditedImage(activeImageSlot);
+      updateImagePreview();
+      saveImageEdits();
+      imageStatus.textContent = '图片已替换，可继续调整缩放和位置。';
+    };
+    reader.readAsDataURL(file);
+    imageFile.value = '';
+  });
+
+  [imageFit, imageZoom, imageX, imageY].forEach(control => {
+    control.addEventListener('input', updateActiveImageSetting);
+    control.addEventListener('change', updateActiveImageSetting);
+  });
+
+  document.getElementById('resetImage').addEventListener('click', () => {
+    if(!activeImageSlot) return;
+    delete imageEdits[activeImageSlot];
+    saveImageEdits();
+    const keepSlot = activeImageSlot;
+    render();
+    activeImageSlot = keepSlot;
+    updateImagePreview();
+    imageStatus.textContent = '已恢复该位置的默认插画。';
+  });
+
+document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === 'PageDown') next();
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp') prev();
+    if(e.key === 'Escape'){
+      closeDrawer(); closeArticle(); closeMusic(); closeImageEditor();
+    }
+  });
+
+  // Smooth mobile swipe: transform-only, requestAnimationFrame, no layout thrashing.
+  const stage = document.getElementById('stage');
+
+  function resetPointer(){
+    pointer.active = false;
+    pointer.dragging = false;
+    pointer.direction = 0;
+    pointer.target = -1;
+    if(pointer.raf) cancelAnimationFrame(pointer.raf);
+    pointer.raf = 0;
+  }
+
+  stage.addEventListener('pointerdown', e => {
+    if(!mobile || busy) return;
+    if(e.target.closest('button,a,video')) return;
+    pointer.active = true;
+    pointer.sx = pointer.x = e.clientX;
+    pointer.sy = e.clientY;
+    pointer.startedAt = performance.now();
+    try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if(!mobile || !pointer.active || busy) return;
+    pointer.x = e.clientX;
+    const dx = pointer.x - pointer.sx;
+    const dy = e.clientY - pointer.sy;
+
+    if(!pointer.dragging){
+      if(Math.abs(dx) < 7) return;
+      if(Math.abs(dy) > Math.abs(dx)) {
+        resetPointer();
+        return;
+      }
+      pointer.direction = dx < 0 ? 1 : -1;
+      pointer.target = mi + pointer.direction;
+      if(pointer.target < 0 || pointer.target >= pages.length){
+        pointer.target = -1;
+        return;
+      }
+      pointer.dragging = true;
+      right.innerHTML = get(pointer.target);
+      swipeLayer.innerHTML = get(mi);
+      swipeLayer.style.display = 'block';
+      swipeLayer.style.transition = 'none';
+      swipeLayer.style.opacity = '1';
+    }
+
+    if(pointer.target < 0) return;
+    const w = stage.getBoundingClientRect().width || 1;
+    let dragX = dx;
+    if(pointer.direction === 1) dragX = Math.min(0, dx);
+    else dragX = Math.max(0, dx);
+    const progress = Math.min(1, Math.abs(dragX) / w);
+    if(pointer.raf) cancelAnimationFrame(pointer.raf);
+    pointer.raf = requestAnimationFrame(() => {
+      const angle = (dragX / w) * 5;
+      swipeLayer.style.transform = `translate3d(${dragX}px,0,0) rotateY(${angle}deg)`;
+      swipeLayer.style.opacity = String(1 - progress * .08);
+    });
+  });
+
+  stage.addEventListener('pointerup', e => {
+    if(!mobile || !pointer.active) return;
+    const dx = e.clientX - pointer.sx;
+    const dt = Math.max(1, performance.now() - pointer.startedAt);
+    const velocity = Math.abs(dx) / dt;
+    const width = stage.getBoundingClientRect().width || 1;
+
+    if(pointer.dragging && pointer.target >= 0){
+      const commit = Math.abs(dx) > width * .22 || velocity > .5;
+      swipeLayer.style.transition = 'transform var(--mobile-turn) cubic-bezier(.2,.7,.2,1), opacity var(--mobile-turn)';
+      if(commit){
+        const out = pointer.direction === 1 ? '-105%' : '105%';
+        swipeLayer.style.transform = `translate3d(${out},0,0) rotateY(${pointer.direction === 1 ? '-4deg' : '4deg'})`;
+        swipeLayer.style.opacity = '.92';
+        const target = pointer.target;
+        busy = true;
+        setTimeout(() => {
+          mi = target;
+          swipeLayer.style.display = 'none';
+          swipeLayer.style.opacity = '1';
+          busy = false;
+          render();
+        }, 280);
+      }else{
+        swipeLayer.style.transform = 'translate3d(0,0,0) rotateY(0)';
+        swipeLayer.style.opacity = '1';
+        setTimeout(() => {
+          swipeLayer.style.display = 'none';
+          right.innerHTML = get(mi);
+          bind();
+        }, 280);
+      }
+    }else{
+      // Tap zones if it was not a drag.
+      if(Math.abs(dx) < 8 && Math.abs(e.clientY - pointer.sy) < 8){
+        const r = stage.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if(x > r.width * .68) next();
+        else if(x < r.width * .32) prev();
+      }
+    }
+    resetPointer();
+  });
+
+  stage.addEventListener('pointercancel', () => {
+    if(pointer.dragging){
+      swipeLayer.style.display = 'none';
+      right.innerHTML = get(mi);
+    }
+    resetPointer();
+  });
+
+  addEventListener('resize', () => {
+    const n = matchMedia('(max-width:760px)').matches;
+    if(n !== mobile){
+      const i = idx();
+      mobile = n;
+      mi = i;
+      spread = i === 0 ? 0 : Math.ceil(i / 2);
+      swipeLayer.style.display = 'none';
+      render();
+    }
+    updateResponsiveTypography();
+  });
+
+  updateResponsiveTypography();
+  render();
+})();
+</script>
+</body>
+</html>
