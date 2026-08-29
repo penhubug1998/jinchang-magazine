@@ -1,13 +1,26 @@
 import { DESIGN_PRESETS, DESIGN_PRESET_GROUPS } from './design-presets.js';
 let STUDIO_CORE = null;
-try { STUDIO_CORE = await import('./core/index.js'); } catch {}
 let WORKSPACE_VIEWPORT = null, WORKSPACE_INSPECTOR = null, SMART_LAYOUT_RECOMMENDER = null;
-try { WORKSPACE_VIEWPORT = await import('./workspace/viewport.js'); } catch {}
-try { WORKSPACE_INSPECTOR = await import('./workspace/inspector.js'); } catch {}
-try { SMART_LAYOUT_RECOMMENDER = await import('./layout-recommender.js'); } catch {}
 let PUBLICATION_CENTER = null, MOBILE_STUDIO = null;
-try { PUBLICATION_CENTER = await import('./publication-center.js'); } catch {}
-try { MOBILE_STUDIO = await import('./mobile-studio.js'); } catch {}
+// The core studio must never wait for optional enhancements before loading an
+// issue.  Every module below has a local fallback, so load them in the
+// background instead of using top-level await: a slow/cached module used to
+// leave the whole admin shell visible but with an empty issue list.
+void Promise.allSettled([
+  import('./core/index.js'),
+  import('./workspace/viewport.js'),
+  import('./workspace/inspector.js'),
+  import('./layout-recommender.js'),
+  import('./publication-center.js'),
+  import('./mobile-studio.js')
+]).then(([core, viewport, inspector, recommender, publication, mobile]) => {
+  STUDIO_CORE = core.status === 'fulfilled' ? core.value : null;
+  WORKSPACE_VIEWPORT = viewport.status === 'fulfilled' ? viewport.value : null;
+  WORKSPACE_INSPECTOR = inspector.status === 'fulfilled' ? inspector.value : null;
+  SMART_LAYOUT_RECOMMENDER = recommender.status === 'fulfilled' ? recommender.value : null;
+  PUBLICATION_CENTER = publication.status === 'fulfilled' ? publication.value : null;
+  MOBILE_STUDIO = mobile.status === 'fulfilled' ? mobile.value : null;
+});
 const fallbackHash = value => { let h=0x811c9dc5; for(const ch of String(value||'')){h^=ch.charCodeAt(0);h=Math.imul(h,0x01000193);} return (h>>>0).toString(36); };
 const fallbackValidId = (value,kind=null) => typeof value==='string' && /^(?:page|block)_[a-z0-9][a-z0-9_-]{5,63}$/i.test(value) && (!kind || value.startsWith(`${kind}_`));
 function fallbackEnsureIssueIdentity(issue){const stats={assignedPages:0,assignedBlocks:0,repairedDuplicatePages:0,repairedDuplicateBlocks:0,changed:false};if(!Array.isArray(issue?.pages))return stats;const pages=new Set(),blocks=new Set(),issueId=String(issue.id||'issue');const uid=(prefix,seed,seen)=>{let base=`${prefix}_${fallbackHash(seed).padStart(6,'0')}`,id=base,n=2;while(seen.has(id))id=`${base}_${n++}`;seen.add(id);return id};const walk=(rows,pageId,path)=>{(rows||[]).forEach((b,bi)=>{if(!b||typeof b!=='object')return;const old=typeof b.id==='string'?b.id:'';if(fallbackValidId(old,'block')&&!blocks.has(old))blocks.add(old);else{if(old)stats.repairedDuplicateBlocks++;b.id=uid('block',`${issueId}|${pageId}|${path}${bi}|${b.type||'block'}`,blocks);stats.assignedBlocks++;}if(b.type==='container')(b.columns||[]).forEach((c,ci)=>walk(c?.blocks,pageId,`${path}${bi}.c${ci}.`));});};issue.pages.forEach((page,pi)=>{if(!page||typeof page!=='object')return;const old=typeof page.id==='string'?page.id:'';if(fallbackValidId(old,'page')&&!pages.has(old))pages.add(old);else{if(old)stats.repairedDuplicatePages++;page.id=uid('page',`${issueId}|page|${pi}|${page.type||'article'}`,pages);stats.assignedPages++;}walk(page.blocks,page.id,`p${pi}.b`);});stats.changed=Boolean(stats.assignedPages||stats.assignedBlocks||stats.repairedDuplicatePages||stats.repairedDuplicateBlocks);return stats;}
@@ -92,6 +105,13 @@ const api = async (url, options = {}) => {
   const r = await fetch(appUrl(url), { headers: { 'Content-Type': 'application/json', ...(options.headers || {}) }, ...options });
   const text = await r.text(); let data = {};
   try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text }; }
+  // A service restart clears the in-memory admin session.  An already-open
+  // studio tab must not remain on a dead shell while every data request is
+  // rejected with AUTH_REQUIRED; send it back through the login route once.
+  if (r.status === 401 && data?.code === 'AUTH_REQUIRED' && !window.__V3_AUTH_REDIRECTING__) {
+    window.__V3_AUTH_REDIRECTING__ = true;
+    location.replace(appUrl('/'));
+  }
   if (!r.ok && options.allowError !== true) { const error=new Error(data.error || `${r.status} ${r.statusText}`); error.code=data.code||''; error.status=r.status; error.payload=data; throw error; }
   return data;
 };
@@ -1208,7 +1228,10 @@ $('#redoBtn').onclick = redoHistory;
 $('#discardBtn').onclick = discardUnsaved;
 $('#addPage').onclick = () => openPageTemplateDialog('add'); $('#applyPageTemplate').onclick = () => openPageTemplateDialog('replace');
 $('#duplicatePage').onclick = () => { if(!state.issue||!commitPage())return; if(state.issue.pages.length>=LIMITS.pages)return toast(`页面已达到上限 ${LIMITS.pages} 页`); const p=currentPage(); if(['cover','toc','closing'].includes(p?.type))return toast('封面、目录和尾页属于结构页，不允许直接复制；请使用模板新增。',2800); const copy=cloneData(p); const suffix='（副本）',baseTitle=String(p.navTitle||p.title||`第 ${state.page+1} 页`); copy.navTitle=`${baseTitle.slice(0,Math.max(0,120-suffix.length))}${suffix}`; state.issue.pages.splice(state.page+1,0,copy); state.page++; state.pageSearch=''; $('#pageSearch').value=''; markDirty({historyGroup:'page-duplicate',forceHistory:true}); renderPages(); renderPage(); requestAnimationFrame(()=>{const ed=$('#pageEditor');if(ed)ed.scrollTop=0;}); toast('页面副本已创建'); };
-$('#deletePage').onclick = () => { const p=currentPage(); deletePageIndices([state.page],{historyGroup:'page-delete',confirmMessage:`删除第 ${state.page+1} 页“${p?.navTitle||p?.title||''}”？`}); };
+// The legacy page-delete button no longer exists in the streamlined center.
+// Keep this guard for older embedded shells; current workspace controls bind
+// their own delete actions below.
+$('#deletePage')?.addEventListener('click', () => { const p=currentPage(); deletePageIndices([state.page],{historyGroup:'page-delete',confirmMessage:`删除第 ${state.page+1} 页“${p?.navTitle||p?.title||''}”？`}); });
 $('#sidebarToggle')?.addEventListener('click',()=>setSidebarCollapsed(!state.sidebarCollapsed));
 $('#pagesPanelToggle')?.addEventListener('click',()=>setPagesPanelCollapsed(!state.pagesPanelCollapsed));
 function ensureWorkflowControls(){
