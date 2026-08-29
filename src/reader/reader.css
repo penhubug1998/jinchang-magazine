@@ -61,6 +61,7 @@ dialog{width:min(650px,calc(100% - 30px));max-height:82vh;border:0;border-radius
 body.studio-canvas-mode .studio-design-target{position:relative;outline:1.5px dashed rgba(156,67,57,.46);outline-offset:3px;transition:outline-color .12s,box-shadow .12s}
 body.studio-canvas-mode .studio-design-target:hover{outline-color:#9e3b36;box-shadow:0 0 0 4px rgba(158,59,54,.07)}
 body.studio-canvas-mode .studio-design-target.studio-canvas-selected{outline:2px solid #9e302b;box-shadow:0 0 0 5px rgba(158,48,43,.10)}
+body:not(.studio-canvas-mode) .studio-design-target.studio-canvas-selected{outline:1px dashed rgba(158,48,43,.78);outline-offset:3px;box-shadow:0 0 0 4px rgba(158,48,43,.07)}
 .studio-canvas-grip,.studio-canvas-resize{display:none}
 body.studio-canvas-mode .studio-design-target>.studio-canvas-grip,body.studio-canvas-mode .studio-design-target>.studio-canvas-resize{display:grid;position:absolute;z-index:40;place-items:center;background:#2d2723;color:#fff;border:1px solid rgba(255,255,255,.65);box-shadow:0 4px 12px rgba(0,0,0,.22);user-select:none;touch-action:none}
 body.studio-canvas-mode .studio-design-target>.studio-canvas-grip{left:-11px;top:50%;transform:translate(-100%,-50%);width:24px;height:38px;border-radius:8px;cursor:grab;font-size:13px}
@@ -125,6 +126,15 @@ body.print-mode .page-scroll{overflow:hidden!important}
 .toolbar>.tools .tool{display:inline-grid;place-items:center;width:40px;height:46px;min-width:40px;padding:0;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.13);color:#fff1d6;font-size:inherit;font-weight:400}
 .toolbar>.tools .tool:hover{background:rgba(255,255,255,.22)}
 .toolbar>.tools .tool svg{width:19px;height:19px}
+.studio-canvas-transform-toolbar{position:fixed;z-index:40;left:50%;bottom:18px;transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:7px 9px;border:1px solid rgba(255,240,213,.34);border-radius:12px;background:rgba(35,27,22,.94);box-shadow:0 12px 28px rgba(0,0,0,.28);color:#f6e4c4;font-size:11px;backdrop-filter:blur(8px)}
+.studio-canvas-transform-toolbar[hidden]{display:none}
+.studio-canvas-transform-toolbar b{margin-right:3px;font-size:10px;white-space:nowrap}
+.studio-canvas-transform-toolbar button{display:grid;place-items:center;min-width:29px;height:29px;padding:0;border:1px solid rgba(255,240,213,.28);border-radius:7px;background:rgba(255,255,255,.1);color:#fff4dc;font-size:15px;line-height:1;cursor:pointer}
+.studio-canvas-transform-toolbar button:hover{background:rgba(255,255,255,.22)}
+.studio-design-target.studio-canvas-selected{outline:1px solid rgba(211,154,57,.9);outline-offset:3px}
+.studio-design-target.studio-canvas-dragging{cursor:grabbing;opacity:.88}
+.studio-design-target [contenteditable=true]{cursor:text}
+@media(max-width:760px){.studio-canvas-transform-toolbar{left:8px;right:8px;bottom:78px;transform:none;justify-content:center;gap:3px;padding:6px}.studio-canvas-transform-toolbar button{min-width:27px;height:27px}.studio-canvas-transform-toolbar b{display:none}}
 .toolbar>.meta{min-width:0}
 .toolbar button:disabled{opacity:.24;cursor:not-allowed}
 .issue-panel{max-width:460px}

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f4efe6">
   <title>V3.1 自由创作期刊制作中心</title>
-  <link rel="stylesheet" href="./studio.css?v=3.1.0-streamline-20260829">
+  <link rel="stylesheet" href="./studio.css?v=3.1.0-ui-hardening-20260829">
   <!-- V3.1 compatibility marker: runtime version is resolved from /api/health; Mobile Studio remains Reader-first. -->
 </head>
 <body>
@@ -108,16 +108,6 @@
             <button type="button" id="quickAdvancedDesign">更多 / 高级</button>
           </div>
           <div class="workspace-layout-toolbar" id="workspaceLayoutToolbar"><span>工作区</span><button type="button" data-layout="edit">编辑辅助 30/70</button><button type="button" data-layout="balanced">双栏 50/50</button><button type="button" data-layout="preview" class="active">画布优先</button><button type="button" data-layout="preview-max">纯画布</button><em id="workspaceSplitLabel">25% / 75%</em></div>
-          <section class="workspace-audit-panel" id="workspaceAuditPanel" aria-live="polite">
-            <div class="workspace-audit-head">
-              <div><span class="eyebrow">WORKSPACE CHECKS</span><strong>工作台检查</strong><p id="workspaceAuditSummary">硬性门禁会阻断发布；提示项只提供修复建议，不阻断继续制作。</p></div>
-              <div class="workspace-audit-actions"><span id="workspaceAuditState" class="workspace-audit-state">尚未检查</span><button type="button" id="workspaceAuditRun">检查</button><button type="button" id="workspaceAuditStrict">严格检查</button></div>
-            </div>
-            <div class="workspace-audit-columns">
-              <section class="workspace-audit-group hard"><header><b>硬性检查项</b><span id="workspaceAuditHardCount">0</span></header><div id="workspaceAuditHard"><div class="workspace-audit-empty">尚未运行检查。</div></div></section>
-              <section class="workspace-audit-group tips"><header><b>提示检查项</b><span id="workspaceAuditTipCount">0</span></header><div id="workspaceAuditTips"><div class="workspace-audit-empty">尚未运行检查。</div></div></section>
-            </div>
-          </section>
           <header class="mobile-studio-header" id="mobileStudioHeader" aria-label="手机制作中心工具栏">
             <button type="button" id="mobileStudioBack" class="mobile-icon-button" aria-label="返回制作中心">←</button>
             <button type="button" id="mobileStudioPagePicker" class="mobile-page-identity"><b id="mobileStudioPageLabel">P1</b><span id="mobileStudioPageTitle">页面</span></button>
@@ -149,7 +139,7 @@
 <div id="builtPreviewPanel" class="built-preview">
                 <div class="reader-preview-toolbar">
                   <label>预览尺寸<select id="readerPreviewDevice"><option value="adaptive">当前页自适应</option><option value="desktop-1366">PC · 1366×768</option><option value="desktop-1920">PC · 1920×1080</option><option value="tablet-820">iPad · 820×1180</option><option value="phone-390">手机 · 390×844</option><option value="phone-412">手机 · 412×915</option></select></label>
-                  <div class="reader-preview-actions"><div class="reader-zoom-actions" role="group" aria-label="画布缩放"><button id="readerZoomOut" type="button" title="缩小画布">−</button><button id="readerZoomLabel" type="button" title="切换适合页面 / 100%">适合页面</button><button id="readerZoomIn" type="button" title="放大画布">＋</button><button id="readerFitWidth" type="button" title="适合宽度">宽</button></div><button id="readerFitCurrentPage" type="button" title="按当前页布局自适应画布">自适应页</button><button id="contextInspectorToggle" type="button" aria-pressed="true">属性</button><button id="expandReaderPreview" type="button">全屏画布</button><button id="popoutReaderPreview" type="button">工作台新窗口</button><button id="refreshBuiltPreview" type="button" class="reader-repair-action" hidden>修复预览</button></div>
+                  <div class="reader-preview-actions"><div class="reader-zoom-actions" role="group" aria-label="画布缩放"><button id="readerZoomOut" type="button" title="缩小画布">−</button><button id="readerZoomLabel" type="button" title="切换适合页面 / 100%">适合页面</button><button id="readerZoomIn" type="button" title="放大画布">＋</button><button id="readerFitWidth" type="button" title="适合宽度">宽</button></div><label class="reader-animation-select">翻页<select id="workspaceReaderAnimation" title="设置工作台与 Reader 的翻页效果"><option value="smooth">平滑</option><option value="slide">滑动</option><option value="fade">淡入</option><option value="three-d">3D 翻转</option><option value="none">无动效</option></select></label><button id="readerFitCurrentPage" type="button" title="按当前页布局自适应画布">自适应页</button><button id="contextInspectorToggle" type="button" aria-pressed="true">属性</button><button id="expandReaderPreview" type="button">全屏画布</button><button id="popoutReaderPreview" type="button">工作台新窗口</button><button id="refreshBuiltPreview" type="button" class="reader-repair-action" hidden>修复预览</button></div>
                 </div>
                 <div class="built-preview-state"><span id="builtPreviewState">正在连接真实 Reader…</span><em id="readerLayoutBadge">PC 双页</em></div>
               <div class="reader-viewport-area" id="readerViewportArea"><div class="reader-scale-box" id="readerScaleBox"><div class="reader-device" id="readerDevice"><iframe id="builtPreviewFrame" title="真实 V3 Reader 实时预览" loading="eager" allow="fullscreen" allowfullscreen></iframe></div></div></div>
@@ -198,6 +188,18 @@
 
 <dialog id="visualHealthDialog" class="visual-health-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE VISUAL HEALTH</span><h3>当前页版面健康</h3><p>数据来自真实 Reader 当前页面测量，只用于制作建议，不参与 V3.0 正式门禁。</p></div><button value="cancel" aria-label="关闭">×</button></div><div id="visualHealthMetrics" class="visual-health-metrics"></div><div id="visualHealthAdvice" class="visual-health-advice"></div><div class="dialog-actions"><button type="button" id="visualHealthBalance">按建议调整间距</button><button value="cancel" class="primary">完成</button></div></form></dialog>
 <dialog id="workspacePageDialog" class="workspace-page-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE NAVIGATOR</span><h3>页面导航</h3><p id="workspacePageDialogMeta">当前期刊页面</p></div><button value="cancel" aria-label="关闭">×</button></div><label class="workspace-page-search">查找页面<input id="workspacePageSearch" maxlength="80" placeholder="标题 / 栏目 / 类型"></label><div class="workspace-page-dialog-actions"><button type="button" id="workspaceSelectFilteredPages">选择筛选结果</button><button type="button" id="workspaceDeleteSelectedPages" class="danger-lite">删除所选页面</button><span id="workspaceSelectedPageCount">未选择页面</span></div><div id="workspacePageList" class="workspace-page-list"></div></form></dialog>
+<dialog id="workspaceAuditDialog" class="workspace-audit-dialog" aria-labelledby="workspaceAuditDialogTitle">
+  <section class="workspace-audit-panel" id="workspaceAuditPanel" aria-live="polite">
+    <div class="workspace-audit-head">
+      <div><span class="eyebrow">WORKSPACE CHECKS</span><strong id="workspaceAuditDialogTitle">工作台检查</strong><p id="workspaceAuditSummary">硬性门禁会阻断发布；提示项只提供修复建议，不阻断继续制作。</p></div>
+      <div class="workspace-audit-actions"><span id="workspaceAuditState" class="workspace-audit-state">尚未检查</span><button type="button" id="workspaceAuditRun">检查</button><button type="button" id="workspaceAuditStrict">严格检查</button><button type="button" id="workspaceAuditClose" class="dialog-close" aria-label="关闭工作台检查">×</button></div>
+    </div>
+    <div class="workspace-audit-columns">
+      <section class="workspace-audit-group hard"><header><b>硬性检查项</b><span id="workspaceAuditHardCount">0</span></header><div id="workspaceAuditHard"><div class="workspace-audit-empty">尚未运行检查。</div></div></section>
+      <section class="workspace-audit-group tips"><header><b>提示检查项</b><span id="workspaceAuditTipCount">0</span></header><div id="workspaceAuditTips"><div class="workspace-audit-empty">尚未运行检查。</div></div></section>
+    </div>
+  </section>
+</dialog>
 <dialog id="issueInfoDialog" class="issue-info-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">ISSUE INFO</span><h3>期刊信息</h3><p>低频元数据集中在这里；正式发布前会再次检查必填项。</p></div><button value="cancel" aria-label="关闭">×</button></div><section class="issue-meta card" id="metaCard">
         <button type="button" class="meta-summary" id="metaToggle" aria-expanded="false">
           <span class="meta-summary-main"><span class="eyebrow">ISSUE INFO</span><strong id="metaSummaryTitle">期刊信息</strong><small id="metaSummaryText">期号 · 状态 · 发布单位</small></span>
@@ -250,6 +252,6 @@
 
 <dialog id="draftRecoveryDialog" class="draft-recovery-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">AUTO RECOVERY</span><h3>发现自动保存草稿</h3><p id="draftRecoveryText">上次编辑未正式保存，可恢复到工作台继续编辑。</p></div><button value="cancel" aria-label="关闭">×</button></div><div class="draft-recovery-summary" id="draftRecoverySummary"></div><div class="dialog-actions"><button value="discard" id="discardRecoveredDraft">丢弃草稿</button><button class="primary" value="recover" id="recoverDraft">恢复草稿</button></div></form></dialog>
 
-<script type="module" src="./studio.js?v=3.1.0-streamline-20260829"></script>
+<script type="module" src="./studio.js?v=3.1.0-ui-hardening-20260829"></script>
 </body>
 </html>
