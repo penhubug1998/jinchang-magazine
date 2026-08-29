@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "3.1-alpha13",
+  "introducedAtVersion": "3.1.0-alpha.13",
+  "extends": "v3-schema-3.1-alpha12.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true
+  },
+  "dynamicSectionSemantics": {
+    "unlimitedSectionCountWithinImportLimits": true,
+    "sectionBoundaries": [
+      "Heading1 without fixed name",
+      "第N版块 heading"
+    ],
+    "articleBoundary": "Heading2",
+    "subsectionBoundary": "Heading3",
+    "classificationSignals": [
+      "section title",
+      "section tagline",
+      "feature heading",
+      "article titles",
+      "section intro text"
+    ],
+    "semanticCategories": [
+      "news",
+      "theory",
+      "safety",
+      "discipline",
+      "health",
+      "finance",
+      "profile",
+      "culture",
+      "service",
+      "activity",
+      "general"
+    ],
+    "stableIssuePageTypes": [
+      "article",
+      "news",
+      "theory",
+      "safety",
+      "discipline",
+      "health"
+    ],
+    "unknownFallback": "general -> article",
+    "confidenceLevels": ["high", "medium", "low", "manual"],
+    "layoutHints": [
+      "single-focus",
+      "lead-two",
+      "two-balanced",
+      "media-left",
+      "media-right",
+      "three-brief"
+    ],
+    "preApplyManualOverride": true,
+    "manualOverrideChangesIssueSchema": false
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.12",
+    "parentFullSourceSha256": "fe4382259f445997e0ae95a788fcc260051603f5d354051ab5d97ac84a1249b4",
+    "stableVersion": "3.0.0"
+  }
+}

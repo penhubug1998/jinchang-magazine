@@ -1,0 +1,11 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+const root=process.cwd();
+const pkg=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+if(pkg.v3StableVersion!=='3.0.0')throw new Error(`V3.0 稳定发布锁错误 ${pkg.v3StableVersion}`);
+const [html,css,js]=await Promise.all(['src/studio/index.html','src/studio/studio.css','src/studio/studio.js'].map(x=>readFile(path.join(root,x),'utf8')));
+for(const token of ['sidebarToggle','pagesPanelToggle','workspaceLayoutToolbar','editorPreviewSplitter','fastTrackImportBtn'])if(!html.includes(token))throw new Error(`RC3 Studio 缺少 ${token}`);
+for(const token of ['sidebar-collapsed','pages-panel-collapsed','--studio-editor-share','editor-preview-splitter','import-fast-track'])if(!css.includes(token))throw new Error(`RC3 CSS 缺少 ${token}`);
+for(const token of ['setSidebarCollapsed','setPagesPanelCollapsed','setWorkspaceSplit','setWorkspaceLayoutPreset','runFastTrackImport'])if(!js.includes(token))throw new Error(`RC3 JS 缺少 ${token}`);
+if(!(html.includes('V3.1 自由创作期刊制作中心')||html.includes('V3.1 alpha8 · 内部校审 / 问题闭环')||html.includes('V3.1 alpha9 · 校审轮次 / 交接签收')||html.includes('V3.1 alpha10 · 交接基线 / 复核差异')||html.includes('V3.1 alpha11 · 沉浸式工作区 / 双屏编辑')||html.includes('V3.1 alpha12 · 整期结构快速导入')||html.includes('V3.1 alpha13 · 动态板块语义识别')||(html.includes('V3.1 alpha15 · 所见即所得工作区 / 制作中心瘦身')||html.includes('V3.1 alpha16 · 媒体直编 / 多窗口同步 / 版面健康')||(html.includes('V3.1 alpha17 · Reader 最大化 / 页面控制台')||html.includes('V3.1 alpha18 · 交互修复 / 页面同步 / 移动增强')))))throw new Error('V3.1 alpha6 Studio 标识异常');
+console.log('V3.0 RC3能力基线 smoke 通过：左侧导航收束、页面结构收束、50:50/可拖拽工作区、预览最大化和快速成刊流水线均已接入。');

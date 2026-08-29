@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "3.1-alpha5",
+  "introducedAtVersion": "3.1.0-alpha.5",
+  "extends": "v3-schema-3.1-alpha4.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha4",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "pageTemplateAssets": {
+    "existingLibrary": ".v3-templates/page-templates.json",
+    "crossIssueReuse": true,
+    "pageDesignPreserved": true,
+    "nestedMediaBindingsSanitized": true,
+    "storedOutsideIssueJson": true
+  },
+  "layoutAssetLibrary": {
+    "persistence": ".v3-layout-library/layouts.json",
+    "maxItems": 40,
+    "blueprintNodes": [
+      "slot",
+      "container"
+    ],
+    "storesContent": false,
+    "storesMediaBindings": false,
+    "storesArticleBindings": false,
+    "pageDesignSupported": true,
+    "crossIssueReuse": true,
+    "storedOutsideIssueJson": true,
+    "serverValidation": true
+  },
+  "oneClickLayout": {
+    "preservesCurrentContent": true,
+    "preservesCurrentMediaBindings": true,
+    "flattensExistingContainersBeforeReflow": true,
+    "builtInPresets": [
+      "single-focus",
+      "lead-two",
+      "two-balanced",
+      "media-left",
+      "media-right",
+      "three-brief"
+    ]
+  },
+  "smartLayoutSuggestions": {
+    "execution": "local-deterministic",
+    "signals": [
+      "content-unit-count",
+      "media-count",
+      "card-density",
+      "text-length"
+    ],
+    "topK": 3,
+    "autoMutation": false,
+    "interpretation": "advisory-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "f12c39a09aa2a0a0b1410ab37f586cd5a6660985f15c1a6404e20029c75a0c07",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

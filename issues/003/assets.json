@@ -1,0 +1,594 @@
+{
+  "issue": "003",
+  "assetSource": "issues/003/assets",
+  "generatedAt": "2026-08-25T14:55:05.056Z",
+  "expected": [
+    {
+      "path": "music/bgm.mp3",
+      "kind": "music",
+      "source": "features.music.src",
+      "references": [
+        {
+          "page": null,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.music.src"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-01.wav",
+      "kind": "tts",
+      "page": 1,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 1,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-02.wav",
+      "kind": "tts",
+      "page": 2,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 2,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-03.wav",
+      "kind": "tts",
+      "page": 3,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 3,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-04.wav",
+      "kind": "tts",
+      "page": 4,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 4,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-05.wav",
+      "kind": "tts",
+      "page": 5,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 5,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-06.wav",
+      "kind": "tts",
+      "page": 6,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 6,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-07.wav",
+      "kind": "tts",
+      "page": 7,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 7,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-08.wav",
+      "kind": "tts",
+      "page": 8,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 8,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-09.wav",
+      "kind": "tts",
+      "page": 9,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 9,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-10.wav",
+      "kind": "tts",
+      "page": 10,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 10,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-11.wav",
+      "kind": "tts",
+      "page": 11,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 11,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-12.wav",
+      "kind": "tts",
+      "page": 12,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 12,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-13.wav",
+      "kind": "tts",
+      "page": 13,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 13,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-14.wav",
+      "kind": "tts",
+      "page": 14,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 14,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-15.wav",
+      "kind": "tts",
+      "page": 15,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 15,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-16.wav",
+      "kind": "tts",
+      "page": 16,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 16,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-17.wav",
+      "kind": "tts",
+      "page": 17,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 17,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-18.wav",
+      "kind": "tts",
+      "page": 18,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 18,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-19.wav",
+      "kind": "tts",
+      "page": 19,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 19,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-20.wav",
+      "kind": "tts",
+      "page": 20,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 20,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-21.wav",
+      "kind": "tts",
+      "page": 21,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 21,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-22.wav",
+      "kind": "tts",
+      "page": 22,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 22,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-23.wav",
+      "kind": "tts",
+      "page": 23,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 23,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-24.wav",
+      "kind": "tts",
+      "page": 24,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 24,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-25.wav",
+      "kind": "tts",
+      "page": 25,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 25,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-26.wav",
+      "kind": "tts",
+      "page": 26,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 26,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-27.wav",
+      "kind": "tts",
+      "page": 27,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 27,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-28.wav",
+      "kind": "tts",
+      "page": 28,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 28,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-29.wav",
+      "kind": "tts",
+      "page": 29,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 29,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-30.wav",
+      "kind": "tts",
+      "page": 30,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 30,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-31.wav",
+      "kind": "tts",
+      "page": 31,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 31,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-32.wav",
+      "kind": "tts",
+      "page": 32,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 32,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-33.wav",
+      "kind": "tts",
+      "page": 33,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 33,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-34.wav",
+      "kind": "tts",
+      "page": 34,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 34,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-35.wav",
+      "kind": "tts",
+      "page": 35,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 35,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-36.wav",
+      "kind": "tts",
+      "page": 36,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 36,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-37.wav",
+      "kind": "tts",
+      "page": 37,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 37,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-38.wav",
+      "kind": "tts",
+      "page": 38,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 38,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-39.wav",
+      "kind": "tts",
+      "page": 39,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 39,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-40.wav",
+      "kind": "tts",
+      "page": 40,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 40,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-41.wav",
+      "kind": "tts",
+      "page": 41,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 41,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    }
+  ]
+}

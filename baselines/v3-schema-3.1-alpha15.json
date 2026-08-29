@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "3.1-alpha15",
+  "introducedAtVersion": "3.1.0-alpha.15",
+  "extends": "v3-schema-3.1-alpha14.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true,
+    "alpha14CanvasDesignFieldsPreserved": true
+  },
+  "productionCenterSlimming": {
+    "desktopFixedViewport": true,
+    "documentScrollReplacedByInternalPanels": true,
+    "issueInfoMovedToDialog": true,
+    "workspaceEntryPrimary": true,
+    "lowFrequencyIssueMetadataAlwaysVisible": false
+  },
+  "workspaceModes": {
+    "default": "preview",
+    "presets": {
+      "edit": "30/70",
+      "balanced": "50/50",
+      "preview": "25/75",
+      "preview-max": "pure-canvas"
+    },
+    "quickStructureRemoved": true,
+    "realReaderSinglePreviewSurface": true,
+    "popoutOpensFullWorkspace": true,
+    "popoutInherits": [
+      "issue",
+      "page",
+      "layout",
+      "device",
+      "editor mode",
+      "canvas mode",
+      "selected blocks"
+    ]
+  },
+  "wysiwygTextEditing": {
+    "canvasDoubleClickInlineEdit": true,
+    "supportedTopLevelFields": [
+      "paragraph.text",
+      "quote.title",
+      "quote.text",
+      "cardline.title",
+      "cardline.text",
+      "casePair.case",
+      "casePair.warning",
+      "coverMeta.text",
+      "blessing.text",
+      "producer.text"
+    ],
+    "floatingTextToolbar": [
+      "font smaller",
+      "font bigger",
+      "bold",
+      "left",
+      "center",
+      "right"
+    ],
+    "persistedToStandardBlockFields": true,
+    "directDomIsNotSourceOfTruth": true
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.14",
+    "parentFullSourceSha256": "fc30b04a24bea274c7dfe4f0b196505ca5bfda779cd556be43a3354fca2ba4de",
+    "stableVersion": "3.0.0"
+  }
+}

@@ -1,0 +1,179 @@
+{
+  "id": "v31-style-matrix",
+  "label": "V3.1 样式矩阵",
+  "publication": "V3 电子期刊",
+  "subtitle": "Theme → Page → Component 三级继承",
+  "engine": "v3",
+  "status": "draft",
+  "assetSource": "examples/v31-style-matrix/assets",
+  "theme": "classic-red",
+  "design": {
+    "tokens": {
+      "accent": "#7b2f2a",
+      "paper": "#fffaf2",
+      "text": "#342a24",
+      "muted": "#8c7769",
+      "fontBase": 13.5,
+      "radius": 14,
+      "spacing": 11
+    }
+  },
+  "features": {
+    "flipAnimation": true,
+    "fullscreen": true
+  },
+  "articles": {},
+  "pages": [
+    {
+      "type": "cover",
+      "navTitle": "封面",
+      "section": "",
+      "kicker": "V3.1 ALPHA2",
+      "title": "可视化样式\n三级继承",
+      "design": {
+        "background": "#6f2723",
+        "color": "#fff5e5",
+        "accent": "#f0c977",
+        "padding": 6,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "coverMeta",
+          "text": "Theme → Page → Component",
+          "design": {
+            "fontSize": 15,
+            "fontWeight": "700",
+            "color": "#f7dca7",
+            "textAlign": "center",
+            "margin": 12
+          }
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "页面覆盖",
+      "section": "样式设计",
+      "kicker": "PAGE STYLE",
+      "title": "页面级样式覆盖",
+      "design": {
+        "background": "#f6fbf7",
+        "color": "#28433a",
+        "accent": "#3d735d",
+        "padding": 5,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "页面背景、文字色、强调色、内容宽度和留白可独立覆盖全刊 Theme。"
+        },
+        {
+          "type": "quote",
+          "title": "继承规则",
+          "text": "没有设置的属性继续继承全刊 Theme。",
+          "design": {
+            "background": "#e7f2eb",
+            "color": "#315c4b",
+            "padding": 14,
+            "radius": 14,
+            "borderWidth": 1,
+            "borderColor": "#9ab9aa",
+            "shadow": "sm"
+          }
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "组件覆盖",
+      "section": "样式设计",
+      "kicker": "COMPONENT STYLE",
+      "title": "组件级自由设计",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "design": {
+            "background": "#fff3e7",
+            "padding": 12,
+            "radius": 18,
+            "borderWidth": 1,
+            "borderColor": "#dfc3aa",
+            "shadow": "md"
+          },
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "subhead",
+                  "text": "强调组件",
+                  "design": {
+                    "fontSize": 18,
+                    "fontWeight": "800",
+                    "color": "#8b3029",
+                    "textAlign": "center"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "单个内容块可以覆盖字号、字重、颜色、背景、边距、圆角和对齐。",
+                  "design": {
+                    "background": "#ffffff",
+                    "padding": 10,
+                    "radius": 10,
+                    "width": 92
+                  }
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "assets/image/demo.svg",
+                  "alt": "样式设计示例",
+                  "caption": "图片仍继承容器与页面的视觉语言。",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "design": {
+                    "radius": 18,
+                    "shadow": "lg",
+                    "margin": 6
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "closing",
+      "navTitle": "总结",
+      "section": "",
+      "kicker": "V3.1",
+      "title": "默认简单 · 进阶自由",
+      "blocks": [
+        {
+          "type": "blessing",
+          "text": "Theme 管整体，页面做场景，组件做表达。",
+          "design": {
+            "fontSize": 22,
+            "fontWeight": "800",
+            "color": "#ffe0a0",
+            "textAlign": "center",
+            "margin": 20
+          }
+        }
+      ]
+    }
+  ]
+}

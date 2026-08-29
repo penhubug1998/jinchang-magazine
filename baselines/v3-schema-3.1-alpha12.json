@@ -1,0 +1,56 @@
+{
+  "schemaVersion": "3.1-alpha12",
+  "introducedAtVersion": "3.1.0-alpha.12",
+  "extends": "v3-schema-3.1-alpha11.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true
+  },
+  "semanticQuickImport": {
+    "structureModes": ["auto", "periodical", "article"],
+    "writeModes": ["auto", "append", "replace", "publication"],
+    "docxOutlinePreferred": true,
+    "periodicalDetection": {
+      "preface": "卷首语 heading",
+      "section": "第N版块 heading",
+      "article": "heading2 within section",
+      "subsection": "heading3 within article",
+      "closing": "尾刊寄语/编后寄语 heading"
+    },
+    "sectionPageTypes": {
+      "时政": "news",
+      "理论学习": "theory",
+      "安全防范": "safety",
+      "警示教育": "discipline",
+      "时令养生": "health"
+    },
+    "semanticPagination": {
+      "articleBoundaryStartsNewSemanticUnit": true,
+      "subheadAware": true,
+      "maxBlocksPerPage": 10,
+      "continuationTitlesCompacted": true,
+      "plainArticleFallbackPreserved": true
+    },
+    "publicationReplace": {
+      "preserveCover": true,
+      "preserveToc": true,
+      "replaceExistingBodySkeleton": true,
+      "replaceClosingWhenImported": true,
+      "fillPlaceholderCoverTitleFromDocument": true,
+      "autoTocUsesDetectedSections": true
+    }
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.11",
+    "parentFullSourceSha256": "253c1c1ec751f16c8a3455866af158478b40ffa83b1666653ca1a9695727b1a7",
+    "stableVersion": "3.0.0"
+  }
+}

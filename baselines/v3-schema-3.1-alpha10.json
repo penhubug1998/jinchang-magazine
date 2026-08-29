@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "3.1-alpha10",
+  "introducedAtVersion": "3.1.0-alpha.10",
+  "extends": "v3-schema-3.1-alpha9.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha9",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "handoffBaseline": {
+    "usesExistingSnapshotEngine": true,
+    "snapshotCreatedOnExplicitHandoff": true,
+    "requiresSavedIssueBeforeHandoff": true,
+    "baselineStoresIssueSha256": true,
+    "snapshotReadApi": "read-only-current-issue-snapshot",
+    "readerRuntimeDependency": false
+  },
+  "reviewDiff": {
+    "compares": "handoff-baseline-to-current-issue",
+    "metrics": [
+      "meta",
+      "pages",
+      "blocks",
+      "articles"
+    ],
+    "pageLocate": true,
+    "explicitReviewRequiredBeforeAcceptance": true,
+    "reviewInvalidatesWhenIssueFingerprintChanges": true,
+    "legacyAlpha9RoundWithoutBaselineRemainsReadable": true
+  },
+  "handoffIsolation": {
+    "writesIssueJson": false,
+    "writesIssueStatus": false,
+    "autoPublishes": false,
+    "writesFinalEvidence": false,
+    "interpretation": "internal-review-baseline-only-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "d9f0fd54790b50571f7583be2acf877e7da8323f9a350970d2aa58b77c519db6",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "id": "003-demo",
+  "label": "V3 示例刊",
+  "publication": "中国人民银行金昌市分行离退休干部电子期刊",
+  "publisher": "中国人民银行金昌市分行",
+  "subtitle": "V3.0-alpha1 数据驱动阅读器预览",
+  "engine": "v3",
+  "status": "draft",
+  "pages": [
+    {
+      "type": "cover",
+      "title": "V3 数据驱动期刊",
+      "subtitle": "内容与阅读器首次分离",
+      "body": ["本页仅用于验证 V3.0-alpha1 架构，不代表正式第三期内容。"]
+    },
+    {
+      "type": "article",
+      "kicker": "架构说明",
+      "title": "一期内容，只维护一份数据",
+      "body": [
+        "V3 开始，期刊标题、栏目和正文统一保存到 issue.json，公共阅读器只维护一次。",
+        "正式迁移第三期后，新增期刊将不再复制整份 HTML、CSS 和 JavaScript。"
+      ],
+      "blocks": [
+        {
+          "type": "quote",
+          "text": "稳定版继续使用现有 1/ 和 2/，V3 在独立目录并行开发。"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "kicker": "可复用模块",
+      "title": "页面组件",
+      "blocks": [
+        {
+          "type": "cards",
+          "items": [
+            {"title": "文章页", "text": "标题、正文、引语和卡片统一使用结构化数据。"},
+            {"title": "图片页", "text": "图片路径、替代文本与正文分离。"},
+            {"title": "视频页", "text": "默认 preload=metadata，避免进入期刊就下载完整视频。"}
+          ]
+        }
+      ]
+    },
+    {
+      "type": "closing",
+      "title": "V3.0-alpha1",
+      "body": ["公共阅读器骨架已经建立，下一阶段可开始迁移现有第二期内容并补齐朗读、翻页动画与媒体能力。"]
+    }
+  ]
+}

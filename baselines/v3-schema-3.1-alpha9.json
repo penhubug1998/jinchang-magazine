@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "3.1-alpha9",
+  "introducedAtVersion": "3.1.0-alpha.9",
+  "extends": "v3-schema-3.1-alpha8.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha8",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "reviewHandoff": {
+    "storage": ".v3-review-handoffs/<issueId>.json",
+    "storedOutsideIssueJson": true,
+    "readerRuntimeDependency": false,
+    "maxRounds": 80,
+    "roundNumberRange": [1, 50],
+    "statuses": ["draft", "handed_off", "accepted", "returned"],
+    "roles": ["editor", "reviewer", "approver", "other"],
+    "requiredItemsSnapshot": true,
+    "acceptanceRequiresExplicitReviewedState": true,
+    "deletedOrHeldItemDoesNotCountAsResolved": true,
+    "copyableInternalSummary": true
+  },
+  "handoffIsolation": {
+    "writesIssueJson": false,
+    "writesIssueStatus": false,
+    "autoPublishes": false,
+    "writesFinalEvidence": false,
+    "interpretation": "internal-production-handoff-only-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "6b4d0458148544afb98001283226c03c9be85c0d1a262cfe2d6df4030fbae832",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

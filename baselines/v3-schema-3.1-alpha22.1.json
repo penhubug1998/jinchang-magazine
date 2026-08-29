@@ -1,0 +1,60 @@
+{
+  "version": "3.1-alpha22.1",
+  "title": "Rich Text Production Hardening",
+  "richText": {
+    "engine": "Tiptap Core",
+    "engineVersion": "3.30.2",
+    "headlessUI": true,
+    "storage": "issue.json richText JSON",
+    "htmlSourceOfTruth": false,
+    "legacyTextMirror": true,
+    "legacyBlocksReadable": true,
+    "selfHostedRuntime": true,
+    "externalCdnFallback": false,
+    "nativeStructuredFallback": true,
+    "nodes": ["paragraph","heading","bulletList","orderedList","listItem","blockquote"],
+    "marks": ["bold","italic","underline","link","highlight","textStyle"],
+    "styles": ["textColor","highlight","textAlign","fontSize"]
+  },
+  "runtime": {
+    "vendorModule": "src/reader/vendor/tiptap-runtime.js",
+    "vendorCommand": "npm run vendor:tiptap",
+    "bundleStrategy": "esbuild single-file ESM",
+    "networkRequiredAtReaderRuntime": false
+  },
+  "history": {
+    "readerUndoRedo": true,
+    "studioSessionMerge": true,
+    "intermediateSnapshotsPersistWithoutHistoryEntry": true,
+    "finalSnapshotCreatesOneStudioHistoryBoundary": true
+  },
+  "paste": {
+    "sanitizeHtml": true,
+    "sanitizeText": true,
+    "removeScriptsEventsEmbeds": true,
+    "allowStructuredTextMarks": true
+  },
+  "selectionToolbar": {
+    "floatingBubble": true,
+    "commands": ["bold","italic","underline","link","highlight"],
+    "selectionAwarePosition": true
+  },
+  "readerBridge": {
+    "message": "canvas-richtext-edit",
+    "stableBlockId": true,
+    "sessionId": true,
+    "plainTextMirror": true,
+    "debouncedLiveSync": true,
+    "finalCommit": true
+  },
+  "compatibility": {
+    "legacyParagraphTextReadable": true,
+    "legacyQuoteTextReadable": true,
+    "v3StableVersion": "3.0.0",
+    "schemaChangeKind": "backward-compatible rich text production hardening"
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.22",
+    "parentFullSourceSha256": "d3a5815ccc9f7a7d1e922202ae9fcdf649999c795b067bc134dd41719491f2e1"
+  }
+}

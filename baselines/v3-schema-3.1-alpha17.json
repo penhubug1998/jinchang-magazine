@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "3.1-alpha17",
+  "introducedAtVersion": "3.1.0-alpha.17",
+  "extends": "v3-schema-3.1-alpha16.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true,
+    "alpha16MediaPeerHealthPreserved": true
+  },
+  "workspaceMaximization": {
+    "compactTopChrome": true,
+    "viewModeMergedIntoQuickBar": true,
+    "readerControlsFloating": true,
+    "readerPrimaryCanvas": true,
+    "pureCanvasPreserved": true
+  },
+  "pageRail": {
+    "collapsedByDefaultInManager": true,
+    "explicitExpandControl": true,
+    "expandedSearchAndBatchPreserved": true,
+    "selectionPreserved": true
+  },
+  "pageDashboard": {
+    "readerThumbnail": true,
+    "pageHealthSummary": true,
+    "contentOutline": true,
+    "quickActions": true,
+    "singlePrimaryWorkspaceCta": true,
+    "managerDoesNotDuplicateFullEditor": true
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.16",
+    "parentFullSourceSha256": "3335f8bb5f4cc4f55716f4fa20b759b1afd5096f9f1664f742a293cf572f7604",
+    "stableVersion": "3.0.0"
+  }
+}

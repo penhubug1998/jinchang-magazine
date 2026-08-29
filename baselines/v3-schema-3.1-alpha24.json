@@ -1,0 +1,27 @@
+{
+  "version": "3.1-alpha24",
+  "feature": "smart-layout-recommendation",
+  "sourceOfTruth": "issue.json",
+  "recommendation": {
+    "deterministic": true,
+    "explainable": true,
+    "autoApply": false,
+    "candidateCount": 3,
+    "signals": ["titleChars", "bodyChars", "media", "quotes", "points", "headings", "visualHealth", "semantic", "textFlow"]
+  },
+  "recipes": [
+    "longform-media-spread",
+    "brief-three-column",
+    "balanced-deep-read",
+    "visual-feature",
+    "lead-news",
+    "single-focus"
+  ],
+  "application": {
+    "usesExistingLayoutPresets": true,
+    "usesPublishingColumns": true,
+    "undoable": true,
+    "doesNotRewriteArticleText": true,
+    "paginationSuggestionOnly": true
+  }
+}

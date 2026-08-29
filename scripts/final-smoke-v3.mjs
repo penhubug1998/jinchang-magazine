@@ -1,0 +1,23 @@
+import { readFile } from 'node:fs/promises';
+import crypto from 'node:crypto';
+
+const pkg=JSON.parse(await readFile('package.json','utf8'));
+if(pkg.v3StableVersion!=='3.0.0')throw new Error(`V3.0 稳定发布锁必须保持 3.0.0，当前 ${pkg.v3StableVersion}`);
+const schema=JSON.parse(await readFile('baselines/v3-schema-3.0.json','utf8'));
+if(schema.schemaVersion!=='3.0'||schema.frozenAtVersion!=='3.0.0')throw new Error('V3.0 schema baseline 异常');
+if(schema.pageTypes.length!==9)throw new Error('V3.0 page type 冻结数量异常');
+if(schema.blockTypes.length!==14)throw new Error('V3.0 block type 冻结数量异常');
+const check=await readFile('scripts/check-v3.mjs','utf8');
+for(const t of schema.pageTypes)if(!check.includes(`"${t}"`))throw new Error(`check:v3 缺少冻结 page type ${t}`);
+for(const t of schema.blockTypes)if(!check.includes(`"${t}"`))throw new Error(`check:v3 缺少冻结 block type ${t}`);
+for(const n of [schema.limits.maxBlocksPerPage,schema.limits.maxArrayItemsPerBlock,schema.limits.maxNestedTextChars])if(!check.includes(String(n)))throw new Error(`check:v3 缺少冻结边界 ${n}`);
+const studio=await readFile('src/studio/index.html','utf8');
+if(!(studio.includes('V3.1 自由创作期刊制作中心')||studio.includes('V3.1 alpha8 · 内部校审 / 问题闭环')||studio.includes('V3.1 alpha9 · 校审轮次 / 交接签收')||studio.includes('V3.1 alpha10 · 交接基线 / 复核差异')||studio.includes('V3.1 alpha11 · 沉浸式工作区 / 双屏编辑')||studio.includes('V3.1 alpha12 · 整期结构快速导入')||studio.includes('V3.1 alpha13 · 动态板块语义识别')||(studio.includes('V3.1 alpha15 · 所见即所得工作区 / 制作中心瘦身')||studio.includes('V3.1 alpha16 · 媒体直编 / 多窗口同步 / 版面健康')||(studio.includes('V3.1 alpha17 · Reader 最大化 / 页面控制台')||studio.includes('V3.1 alpha18 · 交互修复 / 页面同步 / 移动增强')))))throw new Error('Studio V3.1 alpha8 标识缺失');
+const packageScripts=pkg.scripts||{};
+for(const name of ['final:status','final:release','final:seal','verify:final','test:final'])if(!packageScripts[name])throw new Error(`缺少正式版脚本 ${name}`);
+if(packageScripts['verify:v3']!=='npm run verify:final')throw new Error('verify:v3 未切换到正式版门禁');
+for(const f of ['scripts/final-readiness-v3.mjs','scripts/final-release-v3.mjs','docs/V3_FINAL_RELEASE.md','baselines/v3-schema-3.0.json'])await readFile(f,'utf8');
+const digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);
+const rel=await readFile('scripts/final-release-v3.mjs','utf8');
+if(!rel.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!rel.includes("status:'RELEASED'"))throw new Error('正式版两阶段发布锁缺失');
+console.log(`V3.0 稳定发布锁 smoke 通过：3.0.0 冻结 schema 与两阶段发布锁继续保留；当前开发版本=${pkg.version}。schema=${digest}`);

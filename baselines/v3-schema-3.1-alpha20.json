@@ -1,0 +1,39 @@
+{
+  "version": "3.1-alpha20",
+  "title": "Studio Core Architecture Governance",
+  "identity": {
+    "optionalStablePageId": true,
+    "optionalStableBlockId": true,
+    "legacyIssueAutoMigration": true,
+    "duplicateIdentityRepair": true,
+    "duplicateBlockCloneRegeneratesId": true,
+    "serverValidatesPresentIds": true
+  },
+  "commandArchitecture": {
+    "commandBus": true,
+    "registeredBlockCommands": ["block:update", "block:design", "block:reorder"],
+    "readerCanvasMutationsUseCommands": true,
+    "centralDirtyHistoryPreviewHook": true
+  },
+  "readerBridge": {
+    "blockIdInCanvasMessages": true,
+    "blockIndexFallback": true,
+    "stableIdPreferredResolution": true
+  },
+  "modularization": {
+    "identityModule": "src/studio/core/identity.js",
+    "commandBusModule": "src/studio/core/command-bus.js",
+    "historyModule": "src/studio/core/history.js"
+  },
+  "compatibility": {
+    "legacyIssuesWithoutIdsReadable": true,
+    "idsOptionalOnServer": true,
+    "v3StableVersion": "3.0.0",
+    "issueJsonSchemaChanged": true,
+    "schemaChangeKind": "backward-compatible optional identity fields"
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.19",
+    "parentFullSourceSha256": "58d12ff8f1a40af063075b3f9a4d2524907a554001577b62dca5db86563e04c6"
+  }
+}

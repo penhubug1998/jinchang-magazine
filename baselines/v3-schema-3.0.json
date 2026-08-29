@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "3.0",
+  "frozenAtVersion": "3.0.0",
+  "pageTypes": ["cover", "article", "toc", "news", "theory", "safety", "discipline", "health", "closing"],
+  "blockTypes": ["paragraph", "quote", "chips", "cardline", "casePair", "toc", "articleLink", "video", "image", "coverMeta", "coverSections", "blessing", "producer", "cards"],
+  "limits": {
+    "maxPages": 200,
+    "maxBlocksPerPage": 80,
+    "maxArrayItemsPerBlock": 40,
+    "maxNestedTextChars": 12000,
+    "mobileReaderMaxWidth": 760
+  },
+  "compatibility": {
+    "issueEngine": "v3",
+    "readerDataContract": "issue.json",
+    "studioAndReaderShareSameBlocks": true,
+    "breakingSchemaChangesRequire": "V4 or explicit schema migration"
+  }
+}

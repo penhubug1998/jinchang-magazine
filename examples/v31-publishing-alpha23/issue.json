@@ -1,0 +1,66 @@
+{
+  "id": "v31-publishing-alpha23",
+  "label": "V3.1 Publishing Alpha23",
+  "publication": "V3 电子期刊",
+  "subtitle": "Text Flow · Multi-column · Publishing Constraints",
+  "engine": "v3",
+  "status": "draft",
+  "theme": "classic-red",
+  "features": {"flipAnimation": true, "fullscreen": true},
+  "articles": {},
+  "pages": [
+    {
+      "id":"page-pub-cover",
+      "type":"cover","navTitle":"封面","section":"","kicker":"V3.1 ALPHA23","title":"Publishing\nLayout Engine",
+      "blocks":[{"id":"block-cover-meta","type":"coverMeta","text":"跨页文本流 · 双栏平衡 · 出版约束"}]
+    },
+    {
+      "id":"page-pub-1",
+      "type":"article","navTitle":"文本流 1","section":"出版排版","kicker":"TEXT FLOW","title":"正文从这一页开始",
+      "publishing":{"columns":2,"columnGap":18,"balanceColumns":true,"columnRule":true},
+      "blocks":[
+        {"id":"heading-span","type":"sectionHeading","level":3,"text":"跨栏标题：结构化正文自动续排","publishing":{"spanAll":true,"keepWithNext":true}},
+        {
+          "id":"flow-main-1","type":"textFlow","flowId":"feature-story","text":"结构化跨页正文示例。",
+          "flow":{"capacity":245,"lineChars":24,"orphanLines":2,"widowLines":2},
+          "publishing":{"dropCap":true},
+          "richText":{"type":"doc","content":[
+            {"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"出版级文本流"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"过去的 H5 期刊通常把每一页当作彼此独立的静态容器，正文一旦超过页面高度，就只能滚动、缩小字号或由编辑人员手工拆页。Alpha23 开始把正文视为一个连续的结构化内容流，页面只是承载它的版面槽位。"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"当第一页容量不足时，排版引擎会在不改写原始 RichText 的前提下生成派生分页计划，再把剩余内容流向下一张拥有相同 flowId 的页面。标题会尽量与后续正文保持在同一页，段落拆分时同时考虑孤行与寡行阈值。"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"因为分页结果不是事实来源，所以调整字号、栏间距、页面尺寸或阅读设备后可以重新计算，而无需在 issue.json 中保存易失的 HTML 切片。这也为后续 PDF、打印版和自动分页建立同一套内容基础。"}]},
+            {"type":"paragraph","content":[{"type":"text","text":"多栏页面继续使用浏览器成熟的 CSS Multi-column 能力完成栏内平衡，跨栏标题、重点引语和侧栏则作为出版语义进入版面约束层。移动端会自动回到单栏，优先保证可读性。"}]}
+          ]}
+        },
+        {"id":"pull-1","type":"pullQuote","label":"PULL QUOTE","text":"页面不是内容的容器，而是内容流经过的版面窗口。","attribution":"Alpha23 Layout Engine","publishing":{"spanAll":true,"role":"pullQuote","avoidBreak":true}}
+      ]
+    },
+    {
+      "id":"page-pub-2",
+      "type":"article","navTitle":"文本流 2","section":"出版排版","kicker":"CONTINUED","title":"正文自动续排到下一页",
+      "publishing":{"columns":2,"columnGap":22,"balanceColumns":true},
+      "blocks":[
+        {"id":"flow-main-2","type":"textFlow","flowId":"feature-story","flow":{"capacity":270,"lineChars":24,"orphanLines":2,"widowLines":2}},
+        {"id":"side-1","type":"sidebar","title":"版面约束","text":"keep heading with paragraph\nwidows / orphans\nbreak-inside: avoid\ncolumn-span: all","publishing":{"role":"sidebar","avoidBreak":true}},
+        {"id":"flow-main-3","type":"textFlow","flowId":"feature-story","flow":{"capacity":260,"lineChars":24,"orphanLines":2,"widowLines":2}}
+      ]
+    },
+    {
+      "id":"page-pub-3",
+      "type":"article","navTitle":"图文排版","section":"出版排版","kicker":"EDITORIAL OBJECTS","title":"首字、环绕、图注与侧栏",
+      "publishing":{"columns":2,"columnGap":20,"balanceColumns":true},
+      "blocks":[
+        {"id":"dropcap-demo","type":"paragraph","style":"body","text":"首字下沉适用于专题文章的开篇段落。它仍然是普通结构化正文，只通过 publishing.dropCap 控制版面表现。","publishing":{"dropCap":true,"keepWithNext":false}},
+        {"id":"sidebar-demo","type":"sidebar","title":"SIDEBAR","text":"侧栏被视为不可轻易拆开的出版对象，可用于政策解释、延伸阅读、数据摘要和编辑提示。","publishing":{"role":"sidebar","avoidBreak":true}},
+        {"id":"quote-demo","type":"pullQuote","label":"EDITORIAL NOTE","text":"跨栏重点引语能够打断长文节奏，建立清晰的视觉停顿。","publishing":{"spanAll":true,"role":"pullQuote"}},
+        {"id":"section-demo","type":"sectionHeading","level":3,"text":"跨栏标题重新开启下一节","publishing":{"spanAll":true,"keepWithNext":true}},
+        {"id":"body-demo","type":"paragraph","style":"body","text":"Alpha23 同时为图片左右环绕与 Caption 建立 publishing 语义。实际图片仍沿用现有 image block，只需要在右侧出版属性里选择左环绕或右环绕，即可参与正文流式布局。"}
+      ]
+    },
+    {
+      "id":"page-pub-close",
+      "type":"closing","navTitle":"完成","section":"","kicker":"V3.1","title":"从 H5 页面走向数字出版",
+      "blocks":[{"id":"close-blessing","type":"blessing","text":"内容流、版面约束与渲染结果正式分离。"}]
+    }
+  ]
+}

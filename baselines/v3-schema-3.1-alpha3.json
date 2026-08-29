@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "3.1-alpha3",
+  "introducedAtVersion": "3.1.0-alpha.3",
+  "extends": "v3-schema-3.1-alpha2.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "designWorkflow": {
+    "themePresets": true,
+    "presetPersistence": "resolved-token-values-only",
+    "clipboard": ["copy", "paste"],
+    "batchApply": ["selected-pages", "same-type-current-page", "same-type-whole-issue"],
+    "designHistory": ["undo", "redo"],
+    "readerDirectTargeting": "studio-embed-only"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

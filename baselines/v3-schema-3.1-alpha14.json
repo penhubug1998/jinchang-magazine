@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "3.1-alpha14",
+  "introducedAtVersion": "3.1.0-alpha.14",
+  "extends": "v3-schema-3.1-alpha13.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "optionalBlockDesignExtension": ["alignSelf"],
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true
+  },
+  "visualCanvas": {
+    "interactionModel": "constrained visual canvas",
+    "inspiredBy": ["daybrush/moveable", "daybrush/selecto", "daybrush/guides"],
+    "runtimeRequiresExternalCdn": false,
+    "topLevelBlockMultiSelect": true,
+    "shiftRangeSelect": true,
+    "metaCtrlAdditiveSelect": true,
+    "previewDirectReorder": true,
+    "previewDirectResize": true,
+    "previewHorizontalSnap": ["left", "center", "right"],
+    "widthSnapPercent": [25, 33, 50, 66, 80, 100],
+    "storedCanvasStateInIssueJson": false,
+    "persistedOutputs": ["block order", "block.design.width", "block.design.alignSelf"]
+  },
+  "quickFormatting": {
+    "pageLayoutPreset": true,
+    "paragraphStyle": true,
+    "blockSpacing": true,
+    "fontSize": true,
+    "textAlign": true,
+    "blockWidth": true,
+    "blockAlign": true,
+    "batchMoveDuplicateDelete": true,
+    "advancedDesignRemainsAvailable": true
+  },
+  "editorReadability": {
+    "largerStudioTypography": true,
+    "fixedWorkspacePageNavigationGeometry": true,
+    "mediaOptimizeControlExplicitlyLabeled": true,
+    "readerNavigationWidthDependsOnViewportNotTitle": true
+  },
+  "semanticPagination": {
+    "continuationTailRebalance": true,
+    "tinyContinuationMerge": true,
+    "trailingContextShift": true,
+    "preservesSemanticSubheadWithFollowingTextWhenPossible": true
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.13",
+    "parentFullSourceSha256": "95b412d9692e8834e8afb3a8ace669a151a0f51f5905a2259e39331bbabd9ed7",
+    "stableVersion": "3.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#29221e">
+  <title>管理端登录 · 电子期刊制作中心</title>
+  <link rel="stylesheet" href="./login.css?v=3.1.0-admin-login-20260827">
+</head>
+<body>
+  <main class="login-shell">
+    <section class="login-card" aria-labelledby="loginTitle">
+      <div class="login-brand"><span class="login-mark">刊</span><div><strong>电子期刊制作中心</strong><small>V3.1 管理端</small></div></div>
+      <div class="login-heading"><span class="eyebrow">ADMIN ACCESS</span><h1 id="loginTitle">登录管理端</h1><p>登录后进入期刊制作、检查与发布工作台。</p></div>
+      <form id="adminLoginForm" novalidate>
+        <label>用户名<input id="adminUsername" name="username" autocomplete="username" value="admin" required maxlength="80"></label>
+        <label>密码<input id="adminPassword" name="password" type="password" autocomplete="current-password" required maxlength="240"></label>
+        <button id="adminLoginSubmit" class="login-submit" type="submit">登录管理端</button>
+        <p id="adminLoginStatus" class="login-status" role="status" aria-live="polite"></p>
+      </form>
+      <p class="login-note">登录会话有效期 8 小时；退出后需要重新登录。</p>
+    </section>
+  </main>
+  <script type="module" src="./login.js?v=3.1.0-admin-login-20260827"></script>
+</body>
+</html>

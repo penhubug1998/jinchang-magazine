@@ -1,0 +1,18 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { root, V3_VERSION, V31_SCHEMA_VERSION } from './lib-v3-production.mjs';
+const assert=(c,m)=>{if(!c)throw new Error(m)};
+const read=async f=>JSON.parse(await readFile(path.join(root,f),'utf8'));
+const production=await read('reports/v31-beta1-production-last.json');
+const real=await read('reports/v31-rc1-real-content.json');
+const deploy=await read('reports/v31-rc1-deployment.json');
+const perf=await read('reports/v31-rc1-performance.json');
+const compat=await read('reports/v31-rc1-compat.json');
+assert(V3_VERSION==='3.1.0-rc.1','RC1 version drift');assert(V31_SCHEMA_VERSION==='3.1-alpha24','RC1 schema drift');
+assert(production.ok===true&&production.version===V3_VERSION,'RC1 production E2E not rerun on candidate version');
+assert(production.checkpoints?.length>=24&&production.checkpoints.every(x=>x.ok),'RC1 production checkpoints incomplete');
+assert(real.status==='passed'&&real.issues?.['001']?.mobileReader==='pass'&&real.issues?.['002']?.mobileReader==='pass','real-content acceptance failed');
+assert(deploy.status==='passed','deployment rehearsal failed');assert(perf.status==='passed','performance budget failed');assert(compat.status==='passed'&&compat.smoke===9&&compat.chromium===9,'compatibility gate failed');
+const report={version:V3_VERSION,schema:V31_SCHEMA_VERSION,generatedAt:new Date().toISOString(),status:'passed',releaseCandidate:true,openSeverity:{P0:0,P1:0},gates:{productionE2E:{status:'pass',checkpoints:production.checkpoints.length,issue:production.issue,pdf:production.artifacts?.pdf||null},realContent:{status:'pass',issues:real.issues},deployment:{status:'pass',issue:deploy.issue,steps:deploy.steps},performance:{status:'pass',totals:perf.totals},compatibility:{status:'pass',range:'V3.1-alpha19 → V3.1-alpha26',smoke:compat.smoke,chromium:compat.chromium},schemaFreeze:{status:'pass',value:V31_SCHEMA_VERSION},build:{status:'pass',knownWarnings:['Full Source overlay 未包含 1/assets','Full Source overlay 未包含 2/assets']}}};
+await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports','v31-rc1-gate.json'),JSON.stringify(report,null,2)+'\n');
+console.log('V3.1 RC1 Gate PASS：生产闭环、真实内容、部署回滚、性能预算、兼容链与 Schema Freeze 均满足 Release Candidate 条件。');

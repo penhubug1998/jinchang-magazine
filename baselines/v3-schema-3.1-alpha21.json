@@ -1,0 +1,56 @@
+{
+  "version": "3.1-alpha21",
+  "title": "Canvas Workspace 2.0 / Context Inspector",
+  "workspace": {
+    "canvasWorkspace2": true,
+    "readerPrimaryCanvas": true,
+    "contextInspector": true,
+    "zoomModes": [
+      "fit-page",
+      "fit-width",
+      "manual"
+    ],
+    "manualZoomRange": [
+      25,
+      200
+    ],
+    "ctrlWheelZoom": true,
+    "canvasMaximizeLayout": true,
+    "mobileInspectorFlow": true
+  },
+  "selection": {
+    "stableBlockIdCanonical": true,
+    "indexFallback": true,
+    "selectionSurvivesReorder": true,
+    "multiSelectionInspector": true
+  },
+  "readerBridge": {
+    "stablePageId": true,
+    "pageIndexFallback": true,
+    "pageIdPreferredResolution": true,
+    "visualMetricsCarryPageId": true,
+    "blockIdPreferredResolution": true
+  },
+  "inspector": {
+    "page": true,
+    "text": true,
+    "media": true,
+    "layout": true,
+    "multi": true,
+    "stableIdentityFooter": true
+  },
+  "modules": {
+    "viewport": "src/studio/workspace/viewport.js",
+    "inspector": "src/studio/workspace/inspector.js"
+  },
+  "compatibility": {
+    "legacyIssuesWithoutIdsReadable": true,
+    "legacyPageIndexBridge": true,
+    "v3StableVersion": "3.0.0",
+    "schemaChangeKind": "workspace behavior + backward-compatible identity bridge"
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.20",
+    "parentFullSourceSha256": "739d190080e90729f2383aabc8d7bd2d4ee0deca489c6bd4005b34758d7b9ee8"
+  }
+}

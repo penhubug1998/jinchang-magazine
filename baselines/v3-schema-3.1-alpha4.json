@@ -1,0 +1,36 @@
+{
+  "schemaVersion": "3.1-alpha4",
+  "introducedAtVersion": "3.1.0-alpha.4",
+  "extends": "v3-schema-3.1-alpha3.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "issueDesignSchema": "unchanged-from-alpha3",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "designAssetLibrary": {
+    "persistence": ".v3-design-library/styles.json",
+    "maxItems": 60,
+    "scopes": [
+      "theme",
+      "page",
+      "block"
+    ],
+    "crossIssueReuse": true,
+    "storedOutsideIssueJson": true,
+    "serverValidation": true,
+    "deleteSupported": true
+  },
+  "designGovernance": {
+    "pageOverrideCoverage": true,
+    "blockOverrideCoverage": true,
+    "sameTypeVariantDetection": true,
+    "locator": "studio-design-target",
+    "interpretation": "advisory-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "d89ccad9b88392c0f20755711cabfb1f78dd4cccc7c8e93b08e3087f7f1613b9",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

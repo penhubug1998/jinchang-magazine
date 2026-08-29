@@ -1,0 +1,13 @@
+{
+  "baseline": "V3.1-alpha11 full source parent",
+  "stableVersion": "3.0.0",
+  "files": {
+    "scripts/final-readiness-v3.mjs": "4156417c689a2808b6dd3723056ab78b9b13711547a64ff9468afb230b2f926c",
+    "scripts/final-gate-v3.mjs": "da2a9902e093558a6f9132470ca5c535b4fefc5cc7bb2285f2881af725ac4da2",
+    "scripts/final-release-v3.mjs": "4128565efcb947e8395205cecf98d6c644cfa412535dd5e450accd2a05d5a39e",
+    "scripts/final-doctor-v3.mjs": "03cf8697adb609869f3a3295fd7cb5730de57e1d7d83dd5d470adc4679451d0f",
+    "scripts/final-next-v3.mjs": "8a4d496663e83cb61fd1e6c44625962eb23affa44f11dd98adfe55a0b9559d09",
+    "baselines/v3-schema-3.0.json": "24e30679276f098427053c21b45fec52b5698475429f09e1f23e751a618ec3c8"
+  },
+  "parentFullSourceSha256": "253c1c1ec751f16c8a3455866af158478b40ffa83b1666653ca1a9695727b1a7"
+}

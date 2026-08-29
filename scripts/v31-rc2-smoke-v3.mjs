@@ -1,0 +1,16 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
+import { root, V3_VERSION, V31_SCHEMA_VERSION } from './lib-v3-production.mjs';
+const assert=(c,m)=>{if(!c)throw new Error(m)};
+const pkg=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+assert(V3_VERSION==='3.1.0-rc.2',`version=${V3_VERSION}`);
+assert(V31_SCHEMA_VERSION==='3.1-alpha24',`schema=${V31_SCHEMA_VERSION}`);
+assert(pkg.v3StableVersion==='3.0.0','stable lock changed');
+const html=await readFile(path.join(root,'src/studio/index.html'),'utf8');
+const studio=await readFile(path.join(root,'src/studio/studio.js'),'utf8');
+const pub=await readFile(path.join(root,'src/studio/publication-center.js'),'utf8');
+assert(html.includes('id="studioVersionLabel"'),'runtime version label missing');
+assert(!html.includes('V3.1 alpha26'),'obsolete alpha26 header remains');
+assert(studio.includes("api('/api/health')")&&studio.includes('runtimeVersionLabel'),'runtime version resolver missing');
+assert(!pub.includes('3.1.0-alpha.26')&&pub.includes("versionSource:'runtime:/api/health'"),'publication center still hard-codes alpha version');
+console.log('V3.1 RC2 Smoke PASS：Schema Freeze、运行时版本证据和发布中心版本来源均正确。');

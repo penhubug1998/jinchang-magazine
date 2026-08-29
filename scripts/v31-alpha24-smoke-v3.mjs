@@ -1,0 +1,18 @@
+import { readFile } from 'node:fs/promises';
+import { analyzeSmartLayoutProfile, recommendSmartLayouts, SMART_LAYOUT_ENGINE_INFO } from '../src/studio/layout-recommender.js';
+const assert=(c,m)=>{if(!c)throw new Error(m)};
+const pkg=JSON.parse(await readFile('package.json','utf8'));
+assert(/^3\.1\.0-alpha\.(?:2[4-9]|[3-9]\d+)$/.test(pkg.version)||['3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2'].includes(pkg.version),`version ${pkg.version}`);assert(pkg.v31SchemaVersion==='3.1-alpha24',`schema ${pkg.v31SchemaVersion}`);assert(pkg.v3StableVersion==='3.0.0','stable version changed');
+assert(SMART_LAYOUT_ENGINE_INFO.deterministic&&SMART_LAYOUT_ENGINE_INFO.explainable&&!SMART_LAYOUT_ENGINE_INFO.autoApply&&SMART_LAYOUT_ENGINE_INFO.sourceOfTruth==='issue.json','smart layout engine contract failed');
+const longform={type:'article',section:'银龄风采',title:'银发丹心映晚晴——一位老同志的初心故事',blocks:[{type:'paragraph',text:'正'.repeat(2200)},{type:'image',src:'a.jpg',caption:'图一'},{type:'image',src:'b.jpg',caption:'图二'},{type:'quote',text:'初心如磐，银龄生辉。'}]};
+const longProfile=analyzeSmartLayoutProfile(longform,{visualMetric:{fillRatio:.91,overflow:false}}),longRecs=recommendSmartLayouts(longform,{visualMetric:{fillRatio:.91,overflow:false}});
+assert(longProfile.bodyChars>=2200&&longProfile.media===2&&longProfile.quotes===1,`long profile ${JSON.stringify(longProfile)}`);assert(longRecs[0]?.id==='longform-media-spread'&&longRecs[0]?.preset==='media-right'&&longRecs[0]?.recommendedPages===2&&longRecs[0]?.columns===2,`long recommendation ${JSON.stringify(longRecs)}`);
+const brief={type:'safety',section:'安全防范',title:'六个反诈提醒',blocks:[{type:'paragraph',text:'安'.repeat(500)},...Array.from({length:6},(_,i)=>({type:'cardline',badge:String(i+1),title:`提醒${i+1}`,text:'注意防范'}))]};
+const briefProfile=analyzeSmartLayoutProfile(brief),briefRecs=recommendSmartLayouts(brief);
+assert(briefProfile.bodyChars>=500&&briefProfile.points===6&&briefProfile.media===0,`brief profile ${JSON.stringify(briefProfile)}`);assert(briefRecs[0]?.id==='brief-three-column'&&briefRecs[0]?.preset==='three-brief'&&briefRecs[0]?.recommendedPages===1&&briefRecs[0]?.columns===3,`brief recommendation ${JSON.stringify(briefRecs)}`);
+const [studio,html,css,schema]=await Promise.all([readFile('src/studio/studio.js','utf8'),readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('baselines/v3-schema-3.1-alpha24.json','utf8').then(JSON.parse)]);
+for(const token of ['SMART_LAYOUT_RECOMMENDER','applySmartLayoutRecommendation','recommendationId','recommendedPages','requiresPagination','function openIssue(','function loadIssues(','function undoHistory(','function renderPage('])assert(studio.includes(token),`studio missing ${token}`);
+for(const token of ['SMART LAYOUT RECOMMENDATION','managerLayoutRecommendationTitle','智能版式推荐'])assert(html.includes(token),`html missing ${token}`);
+for(const token of ['V3.1-alpha24 · Smart Layout Recommendation','smart-layout-card','manager-layout-recommendation'])assert(css.includes(token),`css missing ${token}`);
+assert(schema.recommendation?.candidateCount===3&&schema.application?.undoable,'alpha24 schema contract missing');
+console.log('V3.1-alpha24 Smoke 通过：内容指纹、可解释三候选推荐、长文图文双页与要点三栏规则、一键套版契约成立。');

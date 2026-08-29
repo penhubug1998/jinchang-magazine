@@ -1,0 +1,55 @@
+{
+  "schemaVersion": "3.1-alpha1",
+  "introducedAtVersion": "3.1.0-alpha.1",
+  "extends": "v3-schema-3.0.json",
+  "pageTypes": [
+    "cover",
+    "article",
+    "toc",
+    "news",
+    "theory",
+    "safety",
+    "discipline",
+    "health",
+    "closing"
+  ],
+  "blockTypes": [
+    "paragraph",
+    "quote",
+    "chips",
+    "cardline",
+    "casePair",
+    "toc",
+    "articleLink",
+    "video",
+    "image",
+    "coverMeta",
+    "coverSections",
+    "blessing",
+    "producer",
+    "cards",
+    "container"
+  ],
+  "container": {
+    "layouts": [
+      "single",
+      "two-equal",
+      "two-40-60",
+      "two-60-40",
+      "three-equal",
+      "media-left",
+      "media-right"
+    ],
+    "maxColumns": 3,
+    "maxChildrenPerColumn": 20,
+    "maxNestingDepth": 1,
+    "mobile": [
+      "stack",
+      "preserve"
+    ]
+  },
+  "compatibility": {
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  }
+}

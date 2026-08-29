@@ -1,0 +1,152 @@
+name: V3 checks
+on:
+  pull_request:
+  push:
+    branches: [main, "feat/v3-**"]
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run verify:v31
+      - name: Verify complete repository media
+        run: npm run media:check -- --strict
+      - name: Generate production audit
+        if: always()
+        run: npm run audit:v3
+      - name: Upload audit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-release-audit
+          path: reports/
+          if-no-files-found: ignore
+      - name: Upload browser regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-browser-regression
+          path: .tmp-v3-browser-*/
+          if-no-files-found: ignore
+
+
+      - name: Upload V3.1 Alpha2 style regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v31-alpha2-style-regression
+          path: .tmp-v3-browser-preview-v31-style-matrix/
+          if-no-files-found: ignore
+
+      - name: Upload V3.1 Alpha1 layout regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v31-alpha1-layout-regression
+          path: .tmp-v3-browser-preview-v31-layout-matrix/
+          if-no-files-found: ignore
+
+      - name: Upload studio browser regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-studio-browser-regression
+          path: .tmp-v3-studio-browser/
+          if-no-files-found: ignore
+      - name: Upload Alpha13 import browser regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-alpha13-import-browser-regression
+          path: .tmp-v3-alpha13-browser/
+          if-no-files-found: ignore
+      - name: Upload Alpha14 live Reader regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-alpha14-live-reader-regression
+          path: .tmp-v3-alpha14-browser/
+          if-no-files-found: ignore
+
+
+      - name: Upload Beta1 block matrix regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-beta1-block-matrix-regression
+          path: .tmp-v3-browser-preview-beta1-matrix/
+          if-no-files-found: ignore
+
+      - name: Upload Beta2 production rehearsal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-beta2-production-rehearsal
+          path: reports/v3-beta2-production-rehearsal.json
+          if-no-files-found: ignore
+      - name: Upload Beta2 Safari-like compatibility regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-beta2-compatibility-regression
+          path: .tmp-v3-browser-002-compat/
+          if-no-files-found: ignore
+      - name: Upload RC acceptance console regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rc-acceptance-console-regression
+          path: .tmp-v3-rc1-acceptance-browser/
+          if-no-files-found: ignore
+      - name: Upload RC1 deployment rehearsal and media baseline reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rc1-release-candidate-reports
+          path: |
+            reports/v3-rc1-*.json
+            reports/v3-full-media-check.json
+          if-no-files-found: ignore
+
+
+      - name: Upload RC2 gate closure reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rc2-gate-closure-reports
+          path: |
+            reports/v3-rc2-*.json
+            reports/v3-rc2-*.md
+          if-no-files-found: ignore
+      - name: Upload RC3 workspace and fast-track regression
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rc3-workspace-fast-track-regression
+          path: .tmp-v3-rc3-browser/
+          if-no-files-found: ignore
+      - name: Upload RC3 readiness reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-rc3-readiness-reports
+          path: |
+            reports/v3-rc3-*.json
+            reports/v3-rc3-*.md
+          if-no-files-found: ignore
+      - name: Generate V3.0.0 final readiness
+        if: always()
+        run: npm run final:status
+      - name: Upload V3.0.0 final readiness
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v3-final-readiness
+          path: |
+            reports/v3-final-readiness.json
+            reports/v3-final-readiness.md
+          if-no-files-found: ignore

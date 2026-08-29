@@ -1,0 +1,60 @@
+{
+  "schemaVersion": "3.1-alpha16",
+  "introducedAtVersion": "3.1.0-alpha.16",
+  "extends": "v3-schema-3.1-alpha15.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true,
+    "alpha15WysiwygFieldsPreserved": true
+  },
+  "directMediaEditing": {
+    "canvasMediaToolbar": true,
+    "supportedTopLevelBlocks": [
+      "image",
+      "video"
+    ],
+    "actions": [
+      "replace resource",
+      "image crop/focus",
+      "image fit toggle",
+      "image ratio cycle",
+      "video poster"
+    ],
+    "reusesMediaWorkbench": true,
+    "persistsToStandardBlockFields": true
+  },
+  "workspacePeerSync": {
+    "transport": "BroadcastChannel with safe no-op fallback",
+    "savedIssueBroadcast": true,
+    "presencePageBroadcast": true,
+    "autoApplyRemoteWhenLocalClean": true,
+    "protectLocalDirtyDraft": true,
+    "remotePendingIndicator": true
+  },
+  "visualHealth": {
+    "readerMeasured": true,
+    "signals": [
+      "fill ratio",
+      "overflow",
+      "block count",
+      "short page",
+      "dense page"
+    ],
+    "advisoryOnly": true,
+    "quickSpacingBalance": true,
+    "changesFormalGate": false
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.15",
+    "parentFullSourceSha256": "e2d0278e55d1dd3a25ccf9e660558382032fb958bb673d67d44b3bfa8498af75",
+    "stableVersion": "3.0.0"
+  }
+}

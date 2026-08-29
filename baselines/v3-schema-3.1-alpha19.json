@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "3.1-alpha19",
+  "introducedAtVersion": "3.1.0-alpha.19",
+  "extends": "v3-schema-3.1-alpha18.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true,
+    "alpha18InteractionSyncPreserved": true
+  },
+  "workspaceControls": {
+    "manualResyncDemoted": true,
+    "realFullscreenApi": true,
+    "fullscreenFallback": true,
+    "fullWorkspacePopout": true,
+    "draftHandoff": true,
+    "inheritsLayoutDeviceEditorCanvasSelection": true
+  },
+  "readerNavigationSync": {
+    "singleTargetPageSource": true,
+    "requestAckProtocol": true,
+    "staleReaderPageGuard": true,
+    "readerInitiatedNavigationSyncsStudio": true,
+    "readyReplay": true,
+    "reloadFallback": true
+  },
+  "secondaryMenuReadability": {
+    "dialogDescriptionMinPx": 12,
+    "plannerDenseTextRaised": true,
+    "mobileDescriptionMinPx": 13
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.18",
+    "parentFullSourceSha256": "a76c08afb95c951ea2c0a93ea9699807f0cfa60c008c065f25585337c70ecbb1",
+    "stableVersion": "3.0.0"
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "issue": "002",
+  "assetSource": "2/assets",
+  "generatedAt": "2026-08-22T00:36:33.907Z",
+  "expected": [
+    {
+      "path": "music/bgm.mp3",
+      "kind": "music"
+    },
+    {
+      "path": "tts/page-01.mp3",
+      "kind": "tts",
+      "page": 1
+    },
+    {
+      "path": "tts/page-02.mp3",
+      "kind": "tts",
+      "page": 2
+    },
+    {
+      "path": "tts/page-03.mp3",
+      "kind": "tts",
+      "page": 3
+    },
+    {
+      "path": "tts/page-04.mp3",
+      "kind": "tts",
+      "page": 4
+    },
+    {
+      "path": "tts/page-05.mp3",
+      "kind": "tts",
+      "page": 5
+    },
+    {
+      "path": "tts/page-06.mp3",
+      "kind": "tts",
+      "page": 6
+    },
+    {
+      "path": "tts/page-07.mp3",
+      "kind": "tts",
+      "page": 7
+    },
+    {
+      "path": "tts/page-08.mp3",
+      "kind": "tts",
+      "page": 8
+    },
+    {
+      "path": "tts/page-09.mp3",
+      "kind": "tts",
+      "page": 9
+    },
+    {
+      "path": "tts/page-10.mp3",
+      "kind": "tts",
+      "page": 10
+    },
+    {
+      "path": "tts/page-11.mp3",
+      "kind": "tts",
+      "page": 11
+    },
+    {
+      "path": "tts/page-12.mp3",
+      "kind": "tts",
+      "page": 12
+    },
+    {
+      "path": "tts/page-13.mp3",
+      "kind": "tts",
+      "page": 13
+    },
+    {
+      "path": "tts/page-14.mp3",
+      "kind": "tts",
+      "page": 14
+    },
+    {
+      "path": "tts/page-15.mp3",
+      "kind": "tts",
+      "page": 15
+    },
+    {
+      "path": "tts/page-16.mp3",
+      "kind": "tts",
+      "page": 16
+    },
+    {
+      "path": "tts/page-17.mp3",
+      "kind": "tts",
+      "page": 17
+    },
+    {
+      "path": "tts/page-18.mp3",
+      "kind": "tts",
+      "page": 18
+    },
+    {
+      "path": "tts/page-19.mp3",
+      "kind": "tts",
+      "page": 19
+    },
+    {
+      "path": "tts/page-20.mp3",
+      "kind": "tts",
+      "page": 20
+    },
+    {
+      "path": "tts/page-21.mp3",
+      "kind": "tts",
+      "page": 21
+    },
+    {
+      "path": "tts/page-22.mp3",
+      "kind": "tts",
+      "page": 22
+    },
+    {
+      "path": "tts/page-23.mp3",
+      "kind": "tts",
+      "page": 23
+    },
+    {
+      "path": "tts/page-24.mp3",
+      "kind": "tts",
+      "page": 24
+    },
+    {
+      "path": "tts/page-25.mp3",
+      "kind": "tts",
+      "page": 25
+    },
+    {
+      "path": "tts/page-26.mp3",
+      "kind": "tts",
+      "page": 26
+    },
+    {
+      "path": "tts/page-27.mp3",
+      "kind": "tts",
+      "page": 27
+    },
+    {
+      "path": "tts/page-28.mp3",
+      "kind": "tts",
+      "page": 28
+    },
+    {
+      "path": "tts/page-29.mp3",
+      "kind": "tts",
+      "page": 29
+    },
+    {
+      "path": "video/b5f8fa9399881dcaa092a0e2a2c00d03.mp4",
+      "kind": "video",
+      "page": 14
+    }
+  ]
+}

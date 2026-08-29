@@ -1,0 +1,51 @@
+{
+  "schemaVersion": "3.1-alpha8",
+  "introducedAtVersion": "3.1.0-alpha.8",
+  "extends": "v3-schema-3.1-alpha7.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha7",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "internalReviewWorkspace": {
+    "storage": ".v3-review-workspaces/<issueId>.json",
+    "storedOutsideIssueJson": true,
+    "readerRuntimeDependency": false,
+    "maxItems": 200,
+    "statuses": [
+      "open",
+      "reviewed",
+      "hold"
+    ],
+    "severities": [
+      "normal",
+      "important"
+    ],
+    "sources": [
+      "manual",
+      "audit"
+    ],
+    "directPageLocate": true,
+    "reviewedMeaning": "editorial-review-only-not-release-ready"
+  },
+  "auditBridge": {
+    "existingAuditFindingsReadOnly": true,
+    "canPromoteFindingToManualReview": true,
+    "automaticFindingPersistence": false,
+    "disappearedFindingDetection": true,
+    "strictAuditGateSemanticsUnchanged": true
+  },
+  "reviewIsolation": {
+    "writesIssueJson": false,
+    "writesIssueStatus": false,
+    "autoPublishes": false,
+    "writesFinalEvidence": false,
+    "interpretation": "editorial-sidecar-only-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "110906fa3ef3360b93afbcc7cb5d88e0c0bd4f54a2494bf035158ea50a5a4569",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

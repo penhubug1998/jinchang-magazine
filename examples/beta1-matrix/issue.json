@@ -1,0 +1,76 @@
+{
+  "id": "beta1-matrix",
+  "label": "Beta1 内容块矩阵",
+  "publication": "V3 Reader 回归矩阵",
+  "publisher": "自动测试",
+  "subtitle": "全部页面类型与内容块冻结测试",
+  "engine": "v3",
+  "status": "draft",
+  "theme": "classic-red",
+  "testing": {"blockMatrix": true},
+  "features": {"flipAnimation": false, "fullscreen": true},
+  "articles": {
+    "demo": {
+      "title": "矩阵文章",
+      "subtitle": "Beta1",
+      "url": "https://example.com/",
+      "paras": ["文章弹窗正文。"],
+      "sourceNote": "仅用于自动回归。"
+    }
+  },
+  "pages": [
+    {
+      "type": "cover", "navTitle": "封面", "title": "Beta1 内容块矩阵", "kicker": "RELEASE FREEZE",
+      "blocks": [
+        {"type":"coverMeta","text":"全内容块回归"},
+        {"type":"coverSections","items":["页面类型","内容块","边界","发布恢复"]}
+      ]
+    },
+    {
+      "type": "article", "navTitle": "正文组件", "title": "段落、引言与卡片", "kicker": "ARTICLE",
+      "blocks": [
+        {"type":"paragraph","style":"body","text":"这是标准正文段落。"},
+        {"type":"paragraph","style":"subhead","text":"这是结构化小标题。"},
+        {"type":"quote","title":"提示","text":"这是引用与提示内容。"},
+        {"type":"chips","items":[{"text":"标签一"},{"text":"标签二","tone":"warn"}]},
+        {"type":"cardline","badge":"1","title":"编号卡片","text":"卡片正文。"},
+        {"type":"cards","items":[{"title":"通用卡片","text":"通用卡片正文。"}]}
+      ]
+    },
+    {
+      "type": "toc", "navTitle": "目录", "title": "矩阵目录", "kicker": "CONTENTS",
+      "blocks": [{"type":"toc","items":[{"number":"01","title":"正文组件","subtitle":"回归","page":2},{"number":"02","title":"资讯","subtitle":"链接","page":4}]}]
+    },
+    {
+      "type": "news", "navTitle": "资讯", "title": "文章链接", "kicker": "NEWS",
+      "blocks": [
+        {"type":"paragraph","style":"body","text":"资讯正文。"},
+        {"type":"articleLink","articleId":"demo"},
+        {"type":"image","src":"assets/image/matrix.png","alt":"矩阵图片","caption":"图片说明","frameRatio":"16:9","fit":"cover","positionX":65,"positionY":40}
+      ]
+    },
+    {
+      "type": "theory", "navTitle": "理论", "title": "案例与警示", "kicker": "THEORY",
+      "blocks": [{"type":"casePair","case":"案例内容。","warning":"警示内容。"}]
+    },
+    {
+      "type": "safety", "navTitle": "安全", "title": "安全提示", "kicker": "SAFETY",
+      "blocks": [{"type":"cardline","tone":"green","badge":"✓","title":"安全卡片","text":"保持风险意识。"}]
+    },
+    {
+      "type": "discipline", "navTitle": "纪律", "title": "视频组件", "kicker": "DISCIPLINE",
+      "blocks": [{"type":"video","src":"assets/video/matrix.mp4","poster":"assets/image/matrix.png","caption":"视频说明"}]
+    },
+    {
+      "type": "health", "navTitle": "健康", "title": "健康提示", "kicker": "HEALTH",
+      "blocks": [{"type":"chips","items":[{"text":"规律作息"},{"text":"适度运动"}]}]
+    },
+    {
+      "type": "closing", "navTitle": "尾刊寄语", "title": "回归完成", "kicker": "EPILOGUE",
+      "blocks": [
+        {"type":"blessing","text":"祝阅读顺利。"},
+        {"type":"producer","text":"Beta1 自动回归制作"}
+      ]
+    }
+  ]
+}

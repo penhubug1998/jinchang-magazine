@@ -1,0 +1,14 @@
+import crypto from 'node:crypto';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { V3_VERSION, exists, normalizeIssueId, parseArgs, posix, root } from './lib-v3-production.mjs';
+const args=parseArgs();const id=normalizeIssueId(args.issue||args.id||args._[0]||'003');const confirmed=Boolean(args['confirm-real-material']);const skipBrowser=Boolean(args['skip-browser']);const reportFile=path.join(root,`reports/v3-rc1-third-issue-trial-${id}.json`);
+const report={version:V3_VERSION,issue:id,checkedAt:new Date().toISOString(),confirmedRealMaterial:confirmed,status:'failed',steps:{},error:null};
+function run(label,script,scriptArgs=[]){const r=spawnSync(process.execPath,[path.join(root,'scripts',script),...scriptArgs],{cwd:root,encoding:'utf8'});report.steps[label]={status:r.status,stdout:r.stdout?.slice(-5000)||'',stderr:r.stderr?.slice(-5000)||''};if((r.status??1)!==0)throw new Error(`${label} 失败（status=${r.status}）`);return r}
+try{
+ if(!confirmed)throw new Error('RC1 真实试制必须显式追加 --confirm-real-material，防止把模拟/占位内容误当真实第三期。');
+ const issueFile=path.join(root,'issues',id,'issue.json');if(!(await exists(issueFile)))throw new Error(`找不到 issues/${id}/issue.json；请先用真实材料创建第三期。`);const issue=JSON.parse(await readFile(issueFile,'utf8'));if(issue.engine!=='v3')throw new Error(`${id} 不是 V3 期刊`);if(!['ready','published'].includes(issue.status))throw new Error(`真实试制要求 status=ready 或 published，当前 ${issue.status||'unknown'}`);report.pageCount=issue.pages?.length||0;report.label=issue.label;report.subtitle=issue.subtitle||'';
+ run('strictMedia','full-media-check-v3.mjs',['--strict','--issue',id,'--report',`reports/v3-rc1-third-media-${id}.json`]);run('strictAudit','audit-v3.mjs',['--strict','--issue',id]);const releaseArgs=['--issue',id];if(skipBrowser)releaseArgs.push('--skip-browser');run('releaseCheck','release-check-v3.mjs',releaseArgs);const pubArgs=['--issue',id,'--output','release-rc1-trial'];if(skipBrowser)pubArgs.push('--skip-browser');run('publishTrial','publish-v3.mjs',pubArgs);run('deployReady','deployment-readiness-v3.mjs',['--issue',id,'--release','release-rc1-trial']);
+ const integrity=JSON.parse(await readFile(path.join(root,'release-rc1-trial',id,'integrity.json'),'utf8'));report.treeSha256=integrity.treeSha256;const sourceBytes=await readFile(issueFile);report.issueSha256=crypto.createHash('sha256').update(sourceBytes).digest('hex');report.status='passed';
+}catch(error){report.error=error.message;console.error(`RC1 第三期真实试制未通过：${error.message}`)}finally{await mkdir(path.dirname(reportFile),{recursive:true});await writeFile(reportFile,JSON.stringify(report,null,2)+'\n','utf8');console.log(`报告：${posix(path.relative(root,reportFile))}`)}if(report.status!=='passed')process.exit(1);console.log(`RC1 第三期真实试制通过：${id} · ${report.pageCount} 页 · treeSha256=${report.treeSha256}`);

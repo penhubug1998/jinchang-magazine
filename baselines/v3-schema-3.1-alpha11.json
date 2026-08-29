@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "3.1-alpha11",
+  "introducedAtVersion": "3.1.0-alpha.11",
+  "extends": "v3-schema-3.1-alpha10.json",
+  "compatibility": {
+    "newRequiredIssueFields": [],
+    "issueJsonSchemaChanged": false,
+    "readerRuntimeDependencyAdded": false,
+    "v3StableReleaseLockPreserved": true
+  },
+  "immersiveWorkspace": {
+    "route": "/workspace/",
+    "queryState": [
+      "issue",
+      "page"
+    ],
+    "hidesGlobalIssueSidebar": true,
+    "hidesGlobalTopbar": true,
+    "hidesPersistentPageTree": true,
+    "independentEditorAndPreviewScroll": true,
+    "defaultSplit": "50/50-user-adjustable",
+    "pageDrawer": true,
+    "returnPreservesIssueAndPage": true
+  },
+  "pageInfoBlock": {
+    "insideContentCanvas": true,
+    "collapsible": true,
+    "defaultCollapsed": true,
+    "fields": [
+      "navTitle",
+      "type",
+      "section",
+      "kicker",
+      "title"
+    ],
+    "issueJsonRepresentationUnchanged": true
+  },
+  "readerSync": {
+    "immediatePostMessageBeforePreviewPersistence": true,
+    "debounceMs": 100,
+    "iframeRecreatedOnNormalEdit": false,
+    "readerPageScrollPreservedOnIssueRefresh": true,
+    "studioWorkspaceScrollIndependent": true,
+    "deviceSwitchDoesNotReloadWorkspace": true
+  },
+  "deployment": {
+    "subpathAware": true,
+    "workspaceStaticAssetsServedUnderWorkspaceRoute": true,
+    "inheritsAlpha10FullSourceR1RootFix": true
+  },
+  "evidenceBoundary": {
+    "developmentOnly": true,
+    "writesFinalEvidence": false,
+    "changesIssueStatus": false,
+    "satisfiesV30FormalGate": false
+  },
+  "evidenceBinding": {
+    "verifiedParentFullSourceR1Sha256": "f465866e97bf5f067377392eb8e3a5ee85ac35bb669d780a79eaa522be5bc5c1",
+    "parentVersion": "3.1.0-alpha.10",
+    "stableVersion": "3.0.0"
+  }
+}

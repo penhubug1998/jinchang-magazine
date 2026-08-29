@@ -1,0 +1,27 @@
+{
+  "issueId": "001",
+  "assetSource": "1/assets",
+  "generatedBy": "v3.0-alpha9-migration",
+  "expected": [
+    "music/bgm.mp3",
+    "video/discipline.mp4",
+    "tts/page-01.mp3",
+    "tts/page-02.mp3",
+    "tts/page-03.mp3",
+    "tts/page-04.mp3",
+    "tts/page-05.mp3",
+    "tts/page-06.mp3",
+    "tts/page-07.mp3",
+    "tts/page-08.mp3",
+    "tts/page-09.mp3",
+    "tts/page-10.mp3",
+    "tts/page-11.mp3",
+    "tts/page-12.mp3",
+    "tts/page-13.mp3",
+    "tts/page-14.mp3",
+    "tts/page-15.mp3",
+    "tts/page-16.mp3",
+    "tts/page-17.mp3",
+    "tts/page-18.mp3"
+  ]
+}

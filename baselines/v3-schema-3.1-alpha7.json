@@ -1,0 +1,71 @@
+{
+  "schemaVersion": "3.1-alpha7",
+  "introducedAtVersion": "3.1.0-alpha.7",
+  "extends": "v3-schema-3.1-alpha6.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha6",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "productionBoard": {
+    "source": "derived-from-editorial-sidecar-and-current-issue",
+    "persistedInIssueJson": false,
+    "persistedAsNewSidecarFields": false,
+    "signals": [
+      "missing-pages",
+      "structure-drift",
+      "placeholder-skeleton",
+      "content-present",
+      "content-enriched",
+      "status-conflict",
+      "unplanned-pages"
+    ],
+    "localDeterministic": true,
+    "directPageLocate": true,
+    "filters": [
+      "all",
+      "attention",
+      "skeleton",
+      "drift",
+      "enriched"
+    ]
+  },
+  "pageProductionProfile": {
+    "usesCurrentPageContent": true,
+    "placeholderDetection": true,
+    "mediaBindingSignal": true,
+    "articleBindingSignal": true,
+    "stages": [
+      "missing",
+      "skeleton",
+      "content",
+      "enriched"
+    ],
+    "interpretation": "production-progress-only-not-release-readiness"
+  },
+  "planPageReconciliation": {
+    "exactMatchKeys": [
+      "target-title",
+      "page-type",
+      "section"
+    ],
+    "detectsTitleMatchedStructureDrift": true,
+    "detectsUnplannedBodyPages": true,
+    "doesNotInjectEditorialIdsIntoIssue": true,
+    "doesNotRequireReaderRuntimeData": true
+  },
+  "statusSuggestions": {
+    "derivedFromCurrentPages": true,
+    "requiresExplicitConfirmation": true,
+    "writesOnlyExistingEditorialStatusField": true,
+    "writesIssueStatus": false,
+    "autoPublishes": false,
+    "interpretation": "editorial-sidecar-only-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "af4c52aa8844f48ebc8a4cc06aad13ef305f2795d1804bd5074fd36250df14a1",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}

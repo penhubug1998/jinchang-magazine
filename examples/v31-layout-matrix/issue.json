@@ -1,0 +1,341 @@
+{
+  "id": "v31-layout-matrix",
+  "label": "V3.1 布局矩阵",
+  "publication": "V3 电子期刊",
+  "subtitle": "Container + Layout 基础能力",
+  "engine": "v3",
+  "status": "draft",
+  "assetSource": "examples/v31-layout-matrix/assets",
+  "theme": "classic-red",
+  "testing": {
+    "blockMatrix": false,
+    "v31LayoutMatrix": true
+  },
+  "features": {
+    "flipAnimation": true,
+    "fullscreen": true
+  },
+  "articles": {},
+  "pages": [
+    {
+      "type": "cover",
+      "navTitle": "封面",
+      "section": "",
+      "kicker": "V3.1",
+      "title": "自由创作\n容器布局矩阵",
+      "blocks": [
+        {
+          "type": "coverMeta",
+          "text": "V3.1-alpha1 · Container Layout Matrix"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "单栏自由区",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "单栏自由区",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "single",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "单栏容器可将多个内容块作为一个可整体移动的版式单元。"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "双栏 5:5",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "双栏 5:5",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "subhead",
+                  "text": "左栏：并列观点。"
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "适合短文、观点、人物对话等。"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "subhead",
+                  "text": "右栏：保持视觉平衡。"
+                },
+                {
+                  "type": "quote",
+                  "text": "手机端默认自动堆叠。"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "双栏 4:6",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "双栏 4:6",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "two-40-60",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "cardline",
+                  "badge": "1",
+                  "title": "窄栏摘要",
+                  "text": "用更少文字承担提示信息。",
+                  "tone": "default"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "宽栏正文承担主要阅读内容，适合信息主次明确的版式。"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "双栏 6:4",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "双栏 6:4",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "two-60-40",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "宽栏正文位于左侧，形成传统杂志阅读节奏。"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "quote",
+                  "title": "侧栏",
+                  "text": "可放引语或补充说明。"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "三栏速览",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "三栏速览",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "three-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "cardline",
+                  "badge": "1",
+                  "title": "第一栏",
+                  "text": "短内容",
+                  "tone": "default"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "cardline",
+                  "badge": "2",
+                  "title": "第二栏",
+                  "text": "短内容",
+                  "tone": "green"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "cardline",
+                  "badge": "3",
+                  "title": "第三栏",
+                  "text": "短内容",
+                  "tone": "default"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "图左文右",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "图左文右",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-left",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "assets/image/demo.svg",
+                  "alt": "左侧视觉素材",
+                  "caption": "左侧视觉素材",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "subhead",
+                  "text": "图文专题"
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "图片与正文被组合为一个整体，桌面分栏，手机自动纵向阅读。"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "文左图右",
+      "section": "V3.1 自由创作",
+      "kicker": "LAYOUT CONTAINER",
+      "title": "文左图右",
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-right",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "subhead",
+                  "text": "文左图右"
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "适合人物故事、活动纪实与专题介绍。"
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "assets/image/demo.svg",
+                  "alt": "右侧视觉素材",
+                  "caption": "右侧视觉素材",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "closing",
+      "navTitle": "尾页",
+      "section": "",
+      "kicker": "V3.1",
+      "title": "自由而不失可读性",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "默认给出稳定版式，高级用户再逐步打开更高自由度。"
+        },
+        {
+          "type": "producer",
+          "text": "V3.1-alpha1"
+        }
+      ]
+    }
+  ]
+}

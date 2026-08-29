@@ -1,0 +1,56 @@
+{
+  "version": "3.1-alpha22",
+  "title": "Rich Text Engine / Tiptap Core",
+  "richText": {
+    "engine": "Tiptap Core",
+    "engineVersion": "3.30.2",
+    "headlessUI": true,
+    "storage": "issue.json richText JSON",
+    "htmlSourceOfTruth": false,
+    "legacyTextMirror": true,
+    "legacyBlocksReadable": true,
+    "nodes": [
+      "paragraph",
+      "heading",
+      "bulletList",
+      "orderedList",
+      "listItem",
+      "blockquote"
+    ],
+    "marks": [
+      "bold",
+      "italic",
+      "underline",
+      "link",
+      "highlight",
+      "textStyle"
+    ],
+    "styles": [
+      "textColor",
+      "highlight",
+      "textAlign",
+      "fontSize"
+    ]
+  },
+  "readerBridge": {
+    "message": "canvas-richtext-edit",
+    "stableBlockId": true,
+    "plainTextMirror": true,
+    "debouncedLiveSync": true,
+    "finalCommit": true
+  },
+  "fallback": {
+    "nativeContenteditable": true,
+    "reason": "Tiptap runtime/CDN unavailable",
+    "dataLossOnFallback": false
+  },
+  "compatibility": {
+    "legacyParagraphTextReadable": true,
+    "legacyQuoteTextReadable": true,
+    "v3StableVersion": "3.0.0",
+    "schemaChangeKind": "backward-compatible structured rich text field"
+  },
+  "evidenceBinding": {
+    "parentVersion": "3.1.0-alpha.21"
+  }
+}

@@ -1,0 +1,282 @@
+{
+  "version": "3.0.0-rc.1",
+  "source": {
+    "repository": "penhubug1998/jinchang-magazine",
+    "ref": "main",
+    "commit": "e603ad3add77514a6474d0a1d67e34bff7f0e9b4",
+    "capturedAt": "2026-08-22T13:00:00+08:00"
+  },
+  "issues": {
+    "001": {
+      "assetSource": "1/assets",
+      "pages": 18,
+      "files": [
+        {
+          "path": "music/bgm.mp3",
+          "bytes": 3316084,
+          "gitBlobSha1": "5b4319d8509cb8ac0601d948419111cdde89486d"
+        },
+        {
+          "path": "tts/page-01.mp3",
+          "bytes": 103824,
+          "gitBlobSha1": "eca6d5019252f7c43d041fac440dab66ee749e8f"
+        },
+        {
+          "path": "tts/page-02.mp3",
+          "bytes": 396576,
+          "gitBlobSha1": "67f98a7be86fd0485c46bbcc6bbf76b2819338b6"
+        },
+        {
+          "path": "tts/page-03.mp3",
+          "bytes": 35856,
+          "gitBlobSha1": "f63db93014aaf6c0680054bad4e94b4dd30e7416"
+        },
+        {
+          "path": "tts/page-04.mp3",
+          "bytes": 359712,
+          "gitBlobSha1": "37a0b57aa9ec3ab9b46d36db1532b3873dc45705"
+        },
+        {
+          "path": "tts/page-05.mp3",
+          "bytes": 498384,
+          "gitBlobSha1": "b4d422416bd01f7f27aca4c5f5092d5a71985710"
+        },
+        {
+          "path": "tts/page-06.mp3",
+          "bytes": 487584,
+          "gitBlobSha1": "913f347353a838e91a296e57fbb323bc7a1f335c"
+        },
+        {
+          "path": "tts/page-07.mp3",
+          "bytes": 208368,
+          "gitBlobSha1": "85970440b45581ae6c08b128ec846c2f10801ea4"
+        },
+        {
+          "path": "tts/page-08.mp3",
+          "bytes": 180432,
+          "gitBlobSha1": "e3525ab04b6a762e5b25b6a816e7b91a7bc5d577"
+        },
+        {
+          "path": "tts/page-09.mp3",
+          "bytes": 578880,
+          "gitBlobSha1": "296aeb35c375d2659f2f10b9efd5a7f6dcdb5ca9"
+        },
+        {
+          "path": "tts/page-10.mp3",
+          "bytes": 351936,
+          "gitBlobSha1": "34285945d3af5cbf2029cd5dff4fff1fe1a73d5e"
+        },
+        {
+          "path": "tts/page-11.mp3",
+          "bytes": 523440,
+          "gitBlobSha1": "e1d91d7bab76df86e28ddbf00224ae88857adafd"
+        },
+        {
+          "path": "tts/page-12.mp3",
+          "bytes": 382464,
+          "gitBlobSha1": "68bf27c648a3c205dfa8dd18838a9ec0832f09a3"
+        },
+        {
+          "path": "tts/page-13.mp3",
+          "bytes": 451152,
+          "gitBlobSha1": "594022b641e2a6f7ef50ec5f851c90894fe87031"
+        },
+        {
+          "path": "tts/page-14.mp3",
+          "bytes": 354096,
+          "gitBlobSha1": "f1e6b28dd7223d0adaf94e3cc741527e7602d0c1"
+        },
+        {
+          "path": "tts/page-15.mp3",
+          "bytes": 355968,
+          "gitBlobSha1": "4e68b219ae969418b4fbe374ec6e8c19963a5c3d"
+        },
+        {
+          "path": "tts/page-16.mp3",
+          "bytes": 417600,
+          "gitBlobSha1": "0b10861c7b8654b8e6492df856a7cb7504314d6f"
+        },
+        {
+          "path": "tts/page-17.mp3",
+          "bytes": 93312,
+          "gitBlobSha1": "3fad7eeb47c1c1f6cf79228f3c0420ac9689a1f8"
+        },
+        {
+          "path": "tts/page-18.mp3",
+          "bytes": 347040,
+          "gitBlobSha1": "6dcf1283cf67398dd74bbbb54289efce154d6fee"
+        },
+        {
+          "path": "video/discipline.mp4",
+          "bytes": 47486619,
+          "gitBlobSha1": "a8d4989c5db6213f2f9c41d5ea09913727f2357f"
+        }
+      ],
+      "fileCount": 20,
+      "totalBytes": 56929327
+    },
+    "002": {
+      "assetSource": "2/assets",
+      "pages": 29,
+      "files": [
+        {
+          "path": "music/bgm.mp3",
+          "bytes": 3316084,
+          "gitBlobSha1": "5b4319d8509cb8ac0601d948419111cdde89486d"
+        },
+        {
+          "path": "tts/page-01.mp3",
+          "bytes": 97200,
+          "gitBlobSha1": "6ae3c49fc33d9ba932b0a354804d3cb8bba1d996"
+        },
+        {
+          "path": "tts/page-02.mp3",
+          "bytes": 430416,
+          "gitBlobSha1": "389c47af0328434614fe499c5c029df93747791c"
+        },
+        {
+          "path": "tts/page-03.mp3",
+          "bytes": 35856,
+          "gitBlobSha1": "f63db93014aaf6c0680054bad4e94b4dd30e7416"
+        },
+        {
+          "path": "tts/page-04.mp3",
+          "bytes": 398160,
+          "gitBlobSha1": "0e19dddb652580dce2dbc78313208e36fe1de602"
+        },
+        {
+          "path": "tts/page-05.mp3",
+          "bytes": 475776,
+          "gitBlobSha1": "9aa5d0f723a1b7a9a41aca71f5ef54469b042eaa"
+        },
+        {
+          "path": "tts/page-06.mp3",
+          "bytes": 329328,
+          "gitBlobSha1": "da0b86bd9de6d62702bf14c0d667ed360331f13a"
+        },
+        {
+          "path": "tts/page-07.mp3",
+          "bytes": 457056,
+          "gitBlobSha1": "245e82522b59e4c4548379c7ce79c3e2598264da"
+        },
+        {
+          "path": "tts/page-08.mp3",
+          "bytes": 431280,
+          "gitBlobSha1": "7fa916daf782e7ab35a634e0f9d8abfc6208d402"
+        },
+        {
+          "path": "tts/page-09.mp3",
+          "bytes": 238176,
+          "gitBlobSha1": "94bf8d27a86c268bfb2a168afdbf6258a45ddae1"
+        },
+        {
+          "path": "tts/page-10.mp3",
+          "bytes": 508752,
+          "gitBlobSha1": "be62a8613247d732811e5959e9c33bed7ea3249c"
+        },
+        {
+          "path": "tts/page-11.mp3",
+          "bytes": 497664,
+          "gitBlobSha1": "1b3492287f4bdde4fae739de956f27f9d364e344"
+        },
+        {
+          "path": "tts/page-12.mp3",
+          "bytes": 440208,
+          "gitBlobSha1": "3dc189d024a688208ee26b8496676ac533af0c0c"
+        },
+        {
+          "path": "tts/page-13.mp3",
+          "bytes": 478800,
+          "gitBlobSha1": "2560faaef27986edd1f8d309851788cd30de27b5"
+        },
+        {
+          "path": "tts/page-14.mp3",
+          "bytes": 236160,
+          "gitBlobSha1": "65a135f62052b069f8f00e79dec72ddd7ba9acf9"
+        },
+        {
+          "path": "tts/page-15.mp3",
+          "bytes": 327168,
+          "gitBlobSha1": "5295fd5898767fb19a5bd93ec46a8231334cd073"
+        },
+        {
+          "path": "tts/page-16.mp3",
+          "bytes": 476496,
+          "gitBlobSha1": "bc957a49f8ac38419c534f08bbf5c15f3c974b88"
+        },
+        {
+          "path": "tts/page-17.mp3",
+          "bytes": 421488,
+          "gitBlobSha1": "42c60083557119f01a8f3ae95cbfb3af4f61ae71"
+        },
+        {
+          "path": "tts/page-18.mp3",
+          "bytes": 650880,
+          "gitBlobSha1": "b544a842ddffdcaf47a7f50db37c8287a69b229e"
+        },
+        {
+          "path": "tts/page-19.mp3",
+          "bytes": 757584,
+          "gitBlobSha1": "e80113838e9adb69af485827b373dda94fd3332f"
+        },
+        {
+          "path": "tts/page-20.mp3",
+          "bytes": 491184,
+          "gitBlobSha1": "1be5c0e4233c09d4cdf1e4d901ffe22bfc4cb0df"
+        },
+        {
+          "path": "tts/page-21.mp3",
+          "bytes": 365616,
+          "gitBlobSha1": "8fa27d96561fde82023988550d274eba364b7f52"
+        },
+        {
+          "path": "tts/page-22.mp3",
+          "bytes": 276912,
+          "gitBlobSha1": "5ebb79057781f3141d5d27ebe2d3e68b9b3a7cca"
+        },
+        {
+          "path": "tts/page-23.mp3",
+          "bytes": 384480,
+          "gitBlobSha1": "c209048f9d29081dea8445af40b443085d252317"
+        },
+        {
+          "path": "tts/page-24.mp3",
+          "bytes": 514800,
+          "gitBlobSha1": "7c1f765e76ed90df93b2353b9481e5f7ac0dcbda"
+        },
+        {
+          "path": "tts/page-25.mp3",
+          "bytes": 346608,
+          "gitBlobSha1": "331112b3966e0fc2a12582384a4dcc69c099991d"
+        },
+        {
+          "path": "tts/page-26.mp3",
+          "bytes": 348624,
+          "gitBlobSha1": "9acd4719e91bfc34fd3bc593dc22eb655da02203"
+        },
+        {
+          "path": "tts/page-27.mp3",
+          "bytes": 241776,
+          "gitBlobSha1": "d84904e6a9a95daac316a69c100095246aea10c7"
+        },
+        {
+          "path": "tts/page-28.mp3",
+          "bytes": 270432,
+          "gitBlobSha1": "74427a29c55725118a034efc74d2cc246933bf0a"
+        },
+        {
+          "path": "tts/page-29.mp3",
+          "bytes": 351360,
+          "gitBlobSha1": "23deef4aaba37ece6e3088d3ee99f0e5e3072e7e"
+        },
+        {
+          "path": "video/b5f8fa9399881dcaa092a0e2a2c00d03.mp4",
+          "bytes": 51007991,
+          "gitBlobSha1": "d60f458b84e0d385d86f2cb70abd710a966d95f2"
+        }
+      ],
+      "fileCount": 31,
+      "totalBytes": 65604315
+    }
+  }
+}

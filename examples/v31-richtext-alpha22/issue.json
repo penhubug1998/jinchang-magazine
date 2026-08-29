@@ -1,0 +1,52 @@
+{
+  "id": "v31-richtext-alpha22",
+  "label": "V3.1 RichText Alpha22",
+  "publication": "V3 电子期刊",
+  "subtitle": "Tiptap Core · Structured JSON",
+  "engine": "v3",
+  "status": "draft",
+  "theme": "classic-red",
+  "features": {"flipAnimation": true, "fullscreen": true},
+  "articles": {},
+  "pages": [
+    {
+      "type": "cover",
+      "navTitle": "封面",
+      "section": "",
+      "kicker": "V3.1 ALPHA22",
+      "title": "Rich Text\nEngine",
+      "blocks": [{"type":"coverMeta","text":"Tiptap Core + 自有 UI + issue.json JSON"}]
+    },
+    {
+      "type": "article",
+      "navTitle": "富文本",
+      "section": "编辑引擎",
+      "kicker": "STRUCTURED CONTENT",
+      "title": "HTML 不再是事实来源",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "结构化正文示例：局部粗体、颜色、高亮、链接、标题、列表和引用都保存在 JSON node / mark 中。",
+          "richText": {
+            "type": "doc",
+            "content": [
+              {"type":"heading","attrs":{"level":2,"textAlign":"left"},"content":[{"type":"text","text":"结构化正文","marks":[{"type":"bold"}]}]},
+              {"type":"paragraph","content":[{"type":"text","text":"局部粗体与颜色","marks":[{"type":"bold"},{"type":"textStyle","attrs":{"color":"#8d1f1c","fontSize":"18px"}}]},{"type":"text","text":"、高亮、链接都属于选区 mark，而不是整块 HTML。"}]},
+              {"type":"bulletList","content":[{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"paragraph / heading"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"bold / italic / underline"}]}]},{"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"color / highlight / align / font-size","marks":[{"type":"highlight","attrs":{"color":"#fff1a8"}}]}]}]}]},
+              {"type":"blockquote","content":[{"type":"paragraph","content":[{"type":"text","text":"保存目标始终是 issue.json。","marks":[{"type":"italic"}]}]}]}
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "type": "closing",
+      "navTitle": "完成",
+      "section": "",
+      "kicker": "V3.1",
+      "title": "内容结构与视觉渲染分离",
+      "blocks": [{"type":"blessing","text":"结构化编辑，兼容旧刊。"}]
+    }
+  ]
+}

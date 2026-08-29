@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#7a1717">
+  <title>离退休干部电子期刊</title>
+  <link rel="stylesheet" href="./reader.css?v=3.1.0-rc.1">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar">
+      <a class="brand" id="homeLink" href="../../" aria-label="返回期刊总目录">
+        <span class="mark">刊</span>
+        <span class="brand-copy">
+          <strong id="brandTitle">离退休干部电子期刊</strong>
+          <small id="brandMeta">加载中…</small>
+        </span>
+      </a>
+      <div class="top-actions" aria-label="阅读工具">
+        <button id="musicButton" type="button" title="背景音乐" aria-pressed="false">♫</button>
+        <button id="readButton" type="button" title="朗读当前页" aria-pressed="false">朗读</button>
+        <button id="tocButton" type="button" title="目录">目录</button>
+        <button id="fontButton" type="button" title="字号">字号</button>
+        <button id="fullButton" type="button" title="全屏">全屏</button>
+      </div>
+    </header>
+
+    <main class="reader">
+      <button class="nav nav-prev" id="prevButton" type="button" aria-label="上一页">‹</button>
+      <section class="stage" id="stage" aria-live="polite" aria-label="电子期刊阅读器"></section>
+      <button class="nav nav-next" id="nextButton" type="button" aria-label="下一页">›</button>
+    </main>
+
+    <footer class="toolbar">
+      <button id="prevBottom" type="button" aria-label="上一页">‹</button>
+      <div class="progress-wrap">
+        <div class="progress-meta">
+          <span id="pageLabel">加载中</span>
+          <span id="pageCount">0 / 0</span>
+        </div>
+        <div class="progress"><i id="progressBar"></i></div>
+      </div>
+      <button id="nextBottom" type="button" aria-label="下一页">›</button>
+    </footer>
+  </div>
+
+  <dialog id="tocDialog">
+    <div class="dialog-head"><strong>目录</strong><button data-close="tocDialog" type="button">关闭</button></div>
+    <div id="tocList" class="toc-list"></div>
+  </dialog>
+
+  <dialog id="fontDialog">
+    <div class="dialog-head"><strong>阅读字号</strong><button data-close="fontDialog" type="button">关闭</button></div>
+    <div class="font-list">
+      <button data-font="0.92" type="button">较小</button>
+      <button data-font="1" type="button">标准</button>
+      <button data-font="1.12" type="button">较大</button>
+      <button data-font="1.24" type="button">特大</button>
+    </div>
+  </dialog>
+
+  <dialog id="readDialog">
+    <div class="dialog-head"><strong>有声阅读</strong><button data-close="readDialog" type="button">关闭</button></div>
+    <p id="readStatus" class="dialog-copy">未开始朗读。</p>
+    <div class="read-settings">
+      <label><input id="continuousRead" type="checkbox"> 连续听刊（当前页结束后自动翻页）</label>
+      <label>语速
+        <select id="speechRate">
+          <option value="0.85">0.85×</option>
+          <option value="1" selected>1.0×</option>
+          <option value="1.15">1.15×</option>
+          <option value="1.3">1.3×</option>
+        </select>
+      </label>
+    </div>
+    <div class="dialog-actions">
+      <button id="readStart" class="primary" type="button">朗读当前页</button>
+      <button id="readStop" type="button">停止</button>
+    </div>
+  </dialog>
+
+  <dialog id="articleDialog">
+    <div class="dialog-head"><strong id="articleTitle">链接内容</strong><button data-close="articleDialog" type="button">关闭</button></div>
+    <div id="articleBody" class="article-body"></div>
+  </dialog>
+
+
+  <div class="video-fs-overlay" id="videoFullscreenOverlay" aria-hidden="true">
+    <button class="video-fs-close" id="videoFullscreenClose" type="button" aria-label="退出视频全屏">×</button>
+    <div class="video-fs-slot" id="videoFullscreenSlot"></div>
+  </div>
+
+
+  <div id="studioTextToolbar" class="studio-text-toolbar" hidden aria-label="结构化富文本工具栏">
+    <button type="button" data-rich-command="undo" title="撤销（Ctrl/Cmd+Z）">↶</button><button type="button" data-rich-command="redo" title="重做（Ctrl/Cmd+Shift+Z）">↷</button>
+    <select data-rich-block title="段落类型"><option value="p">正文</option><option value="h1">标题 1</option><option value="h2">标题 2</option><option value="h3">标题 3</option></select>
+    <button type="button" data-rich-command="bold" title="粗体"><b>B</b></button><button type="button" data-rich-command="italic" title="斜体"><i>I</i></button><button type="button" data-rich-command="underline" title="下划线"><u>U</u></button>
+    <button type="button" data-rich-command="link" title="链接">链接</button><button type="button" data-rich-command="bulletList" title="无序列表">• 列表</button><button type="button" data-rich-command="orderedList" title="有序列表">1. 列表</button><button type="button" data-rich-command="quote" title="引用">❝</button>
+    <label class="rich-color" title="文字颜色"><span>A</span><input data-rich-color type="color" value="#3b2d26"></label><button type="button" data-rich-command="highlight" title="高亮">荧光</button>
+    <select data-rich-align title="对齐"><option value="left">左对齐</option><option value="center">居中</option><option value="right">右对齐</option><option value="justify">两端</option></select>
+    <select data-rich-size title="字号"><option value="">默认字号</option><option value="12px">12</option><option value="14px">14</option><option value="16px">16</option><option value="18px">18</option><option value="20px">20</option><option value="24px">24</option><option value="28px">28</option><option value="32px">32</option><option value="36px">36</option><option value="42px">42</option><option value="48px">48</option></select>
+    <button type="button" data-rich-command="clear" title="清除格式">清除</button><span class="rich-engine-badge" id="richEngineBadge">RichText · JSON</span>
+  </div>
+  <div id="studioRichBubble" class="studio-rich-bubble" hidden aria-label="选区快捷工具栏">
+    <button type="button" data-rich-bubble-command="bold" title="粗体"><b>B</b></button>
+    <button type="button" data-rich-bubble-command="italic" title="斜体"><i>I</i></button>
+    <button type="button" data-rich-bubble-command="underline" title="下划线"><u>U</u></button>
+    <button type="button" data-rich-bubble-command="link" title="链接">↗</button>
+    <button type="button" data-rich-bubble-command="highlight" title="高亮">▰</button>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <audio id="bgm" loop preload="none"></audio>
+  <audio id="narration" preload="none"></audio>
+  <script type="module" src="./reader.js?v=3.1.0-rc.1"></script>
+</body>
+</html>

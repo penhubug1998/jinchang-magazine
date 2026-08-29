@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "3.1-alpha6",
+  "introducedAtVersion": "3.1.0-alpha.6",
+  "extends": "v3-schema-3.1-alpha5.json",
+  "compatibility": {
+    "issueJson": "no-new-required-fields",
+    "readerSchema": "unchanged-from-alpha5",
+    "v3_0_issue_json": "read-compatible",
+    "v3_0_final_release_lock": "preserved"
+  },
+  "editorialPlanning": {
+    "persistence": ".v3-editorial-plans/<issueId>.json",
+    "storedOutsideIssueJson": true,
+    "maxEntries": 120,
+    "maxPagesPerEntry": 8,
+    "maxPlannedBodyPages": 180,
+    "allowedPageTypes": ["article", "news", "theory", "safety", "discipline", "health"],
+    "statuses": ["planned", "in-progress", "done", "hold"],
+    "storesBodyContent": false,
+    "storesMediaBindings": false,
+    "storesArticleBindings": false,
+    "serverValidation": true
+  },
+  "planningSources": {
+    "syncCurrentIssue": true,
+    "referenceAnotherV3Issue": true,
+    "referenceOnlyDoesNotMutateIssue": true,
+    "groupsSequentialSplitPages": true
+  },
+  "batchSkeletonGeneration": {
+    "requiresExplicitConfirmation": true,
+    "generatesOnlyMissingTargets": true,
+    "skipsHoldEntries": true,
+    "usesExistingPageTemplates": true,
+    "usesAlpha5LayoutPresets": true,
+    "doesNotInjectPlannedNotes": true,
+    "doesNotInjectEditorialIds": true,
+    "doesNotAutoPublish": true
+  },
+  "editorialAdvice": {
+    "execution": "local-deterministic",
+    "signals": [
+      "planned-page-count",
+      "matched-page-count",
+      "section-concentration",
+      "unassigned-section-count",
+      "hold-count",
+      "layout-diversity",
+      "page-capacity"
+    ],
+    "autoMutation": false,
+    "interpretation": "advisory-not-release-gate"
+  },
+  "evidenceBinding": {
+    "stableVersion": "3.0.0",
+    "verifiedParentOverlaySha256": "5345d592c55c39f7385747799534347e38afcb1f775264fdef653969677f81c5",
+    "developmentSmokeCannotSatisfyFinalGate": true
+  }
+}
