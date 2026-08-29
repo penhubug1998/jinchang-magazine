@@ -1,0 +1,1773 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#7a1717">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>中国人民银行金昌市分行离退休干部电子期刊｜第二期</title>
+<style>
+:root{
+  --page-w:460px;--page-h:650px;--paper:#fffaf0;--ink:#3b2d26;--red:#8d1f1c;--gold:#c99b48;
+  --turn:720ms;--mobile-turn:460ms
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"Noto Serif SC","Source Han Serif SC","Songti SC","STSong","Microsoft YaHei",serif;color:var(--ink);background:#211c18}
+body{overflow-x:hidden}
+button,a{font:inherit}
+button{cursor:pointer}
+a{color:#8b241e;text-decoration:none}
+a:hover{text-decoration:underline}
+.app{min-height:100vh;padding:18px 14px 86px;background:radial-gradient(circle at 20% 12%,rgba(205,161,83,.14),transparent 24%),radial-gradient(circle at 82% 88%,rgba(142,28,28,.16),transparent 32%),linear-gradient(145deg,#352d27,#1d1917 65%,#141210)}
+.topbar{max-width:1120px;margin:0 auto 13px;display:flex;justify-content:space-between;align-items:center;gap:12px;color:#f8ead0}
+.brand{display:flex;align-items:center;gap:10px;min-width:0}
+.mark{width:34px;height:34px;border:1px solid rgba(255,239,210,.38);border-radius:50%;display:grid;place-items:center;color:#f2c873;flex:0 0 auto}
+.brand strong{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{display:block;margin-top:2px;color:rgba(255,239,215,.62);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.actions{display:flex;gap:7px;flex:0 0 auto}
+.actions button{border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff1d6;border-radius:10px;padding:8px 10px}
+.actions button:hover{background:rgba(255,255,255,.12)}
+.actions .music-toggle{min-width:86px;transition:background .2s,border-color .2s,color .2s}
+.actions .music-toggle.on{background:rgba(201,155,72,.22);border-color:rgba(242,200,115,.46);color:#ffe7ad}
+.actions .music-toggle.off{background:rgba(255,255,255,.05);color:rgba(255,241,214,.68)}
+.reader{max-width:1120px;margin:auto;display:flex;align-items:center;justify-content:center;gap:14px;min-height:var(--page-h)}
+.arrow{width:44px;height:64px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:#f8ead3;font-size:28px}
+.arrow:hover{background:rgba(255,255,255,.14)}
+.arrow:disabled{opacity:.22;cursor:not-allowed}
+.stage{position:relative;width:calc(var(--page-w)*2);height:var(--page-h);perspective:2400px;filter:drop-shadow(0 25px 26px rgba(0,0,0,.35));user-select:none;contain:layout paint;touch-action:pan-y}
+.stage:after{content:"";position:absolute;left:50%;top:8px;bottom:8px;width:1px;background:rgba(72,44,28,.2);box-shadow:-7px 0 16px rgba(0,0,0,.1),7px 0 16px rgba(0,0,0,.1);z-index:20;pointer-events:none}
+.slot,.turner,.swipe-layer{position:absolute;top:0;width:var(--page-w);height:var(--page-h);transform-style:preserve-3d}
+.slot.left{left:0}
+.slot.right{left:var(--page-w)}
+.turner{left:var(--page-w);z-index:50;display:none;transform-origin:left center;transition:transform var(--turn) cubic-bezier(.22,.66,.2,1);will-change:transform}
+.turner.prev{left:0;transform-origin:right center;transform:rotateY(-180deg)}
+.turner.next.anim{transform:rotateY(-180deg)}
+.turner.prev.anim{transform:rotateY(0)}
+.face{position:absolute;inset:0;backface-visibility:hidden;overflow:hidden}
+.face.back{transform:rotateY(180deg)}
+.turner:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 60%,rgba(0,0,0,.18));backface-visibility:hidden}
+.swipe-layer{display:none;left:0;z-index:60;will-change:transform;backface-visibility:hidden;transform:translate3d(0,0,0);filter:drop-shadow(0 12px 18px rgba(0,0,0,.18));pointer-events:none;transform-origin:left center;contain:layout paint}
+.swipe-layer.forward{transform-origin:left center}
+.swipe-layer.backward{transform-origin:right center}
+.swipe-layer::after{content:"";position:absolute;inset:0;z-index:5;pointer-events:none;opacity:0;transition:opacity .18s ease;background:linear-gradient(90deg,rgba(0,0,0,.02),transparent 58%,rgba(0,0,0,.2));backface-visibility:hidden}
+.swipe-layer.backward::after{background:linear-gradient(270deg,rgba(0,0,0,.02),transparent 58%,rgba(0,0,0,.2))}
+.swipe-layer.turning::after{opacity:.72}
+.page{position:relative;width:100%;height:100%;overflow:hidden;background:var(--paper);border:1px solid rgba(88,57,37,.17);box-shadow:inset 0 0 38px rgba(110,77,48,.055);backface-visibility:hidden}
+.page.blank{background:linear-gradient(90deg,#eadfca,#fff8e9)}
+.texture{position:absolute;inset:0;background-image:radial-gradient(rgba(115,76,43,.12) .55px,transparent .55px);background-size:8px 8px;opacity:.25;pointer-events:none}
+.inner{height:100%;padding:31px 35px 32px;position:relative;z-index:2;overflow:hidden}
+.pageno{position:absolute;bottom:12px;right:20px;color:#9a8879;font-size:11px;z-index:3}
+.kicker{font-size:11px;color:#a47b4d;letter-spacing:.17em;margin-bottom:7px}
+.page h2{font-size:24px;line-height:1.3;color:#7e1c19;margin:0 0 12px;letter-spacing:.03em}
+.page h3{font-size:15px;line-height:1.5;margin:0 0 5px;color:#66352e}
+.body,.cardline p{font-size:13.3px;line-height:1.72;text-align:justify;margin:0}
+.body.small{font-size:12.7px}
+.body.xsmall{font-size:11.8px;line-height:1.58}
+.lead{font-size:15px;line-height:1.82;margin:0}
+.quote{margin:13px 0;padding:12px 14px;border-left:3px solid var(--gold);background:rgba(191,145,66,.08);font-size:12.8px;line-height:1.68}
+.article{border-top:1px solid rgba(109,73,48,.18);padding-top:10px;margin-top:8px}
+.readmore{display:inline-flex;align-items:center;gap:5px;margin-top:8px;font-size:11.5px;border:0;border-bottom:1px solid rgba(139,36,30,.38);background:transparent;color:#8b241e;padding:0 0 2px}
+.readmore:hover{color:#621611}
+.illu{height:132px;margin:4px 0 13px}
+.illu svg{width:100%;height:100%}
+.cover{background:linear-gradient(155deg,#a52a24,#7c1716 46%,#42100f);color:#fff4dc}
+.cover .texture{opacity:.1}
+.cover .inner{padding:40px 38px}
+.covercopy{position:relative;z-index:3}
+.cover-kicker{font-size:13px;letter-spacing:.16em;color:#f7dca7}
+.cover-pub{font-size:12px;letter-spacing:.24em;color:#f0c875;margin-top:8px}
+.cover-title{font-size:35px;line-height:1.25;font-weight:700;letter-spacing:.07em;margin-top:34px;text-shadow:0 2px 12px rgba(0,0,0,.22)}
+.cover-rule{width:70px;height:3px;background:#e6ba63;margin:24px 0 14px}
+.cover-sub{font-size:13px;color:#ffe4b1;line-height:1.8}
+.coverart{position:absolute;left:0;right:0;bottom:0;height:210px;opacity:.93}
+.coverart .illu{height:100%;margin:0}
+.coverart svg{border-radius:0}
+.toc{display:grid;gap:8px;margin-top:15px}
+.toc button{display:flex;gap:10px;align-items:center;text-align:left;border:1px solid rgba(121,79,49,.16);background:rgba(255,255,255,.5);border-radius:12px;padding:10px 12px;color:#4b342a}
+.toc button:hover{background:#fff}
+.toc button b{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#8f201d;color:#fff6df;font-size:11px}
+.toc button span{display:flex;flex-direction:column}
+.toc strong{font-size:13px}
+.toc small{color:#8a7566;margin-top:2px}
+.cardline{display:grid;grid-template-columns:25px 1fr;gap:9px;border-top:1px solid rgba(108,73,48,.16);padding-top:9px;margin-top:9px}
+.cardline .n{width:23px;height:23px;border-radius:50%;display:grid;place-items:center;background:#8e1c1c;color:white;font-size:11px}
+.cardline.green .n{background:#4f7c68}
+.cardline p{font-size:11.8px;line-height:1.58}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px}
+.chips span{font-size:10.5px;border:1px solid #d3e6d9;background:#eef6f0;color:#416d59;border-radius:999px;padding:5px 8px}
+.chips .warn{background:#fff2e7;border-color:#ecd0b6;color:#8b4b26}
+.health{background:linear-gradient(180deg,#fbfff9,#fffaf0)}
+.health h2{color:#356954}
+.theory{background:linear-gradient(180deg,#fffaf2,#fffdf9)}
+.safety{background:linear-gradient(180deg,#fffdf8,#f9f2e8)}
+.news{background:linear-gradient(180deg,#fffaf1,#fff)}
+.discipline{background:linear-gradient(155deg,#fff9ed,#f7e9d1)}
+.video-wrap{margin-top:18px}
+.discipline-video{display:block;width:100%;aspect-ratio:16/9;border-radius:14px;background:#1f1b18;box-shadow:0 10px 24px rgba(69,39,24,.16)}
+.video-caption{text-align:center;font-size:10.5px;color:#826f61;margin-top:7px}
+.closing{background:linear-gradient(155deg,#8f201d,#571514);color:#fff3dc}
+.closing h2{color:#ffe3a2}
+.closing .body{color:#fff0da}
+.closing .quote{background:rgba(255,255,255,.07);border-left-color:#e6bc68}
+.closing .blessing{font-size:20px;color:#ffe3a2;font-weight:700;margin:16px 0}
+.closing .producer{font-size:12px;color:#e8d3ae;text-align:center;letter-spacing:.1em;margin:14px 0 0}
+.closing .illu{height:145px}
+.toolbar{position:fixed;left:50%;bottom:max(12px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100;width:min(760px,calc(100% - 24px));display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:9px 11px;border-radius:16px;background:rgba(28,22,19,.9);backdrop-filter:blur(14px);border:1px solid rgba(255,255,255,.12);color:#f7ead2;box-shadow:0 14px 28px rgba(0,0,0,.28)}
+.tools{display:flex;gap:6px}
+.tool{border:0;border-radius:9px;background:rgba(255,255,255,.08);color:#f9ecd8;padding:8px 10px}
+.tool:hover{background:rgba(255,255,255,.14)}
+.meta{min-width:0}
+.metatop{display:flex;justify-content:space-between;gap:10px;font-size:10.5px;color:rgba(255,238,215,.72);margin-bottom:5px}
+.bar{height:4px;background:rgba(255,255,255,.14);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:#dfb45d;transition:width .3s}
+.drawer,.modal{position:fixed;inset:0;z-index:150;background:rgba(10,8,7,.62);display:none;align-items:center;justify-content:center;padding:16px}
+.drawer.open,.modal.open{display:flex}
+.panel{width:min(720px,100%);max-height:82vh;overflow:auto;background:#fffaf0;border-radius:20px;padding:17px;box-shadow:0 25px 60px rgba(0,0,0,.34)}
+.panelhead{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;position:sticky;top:-17px;background:#fffaf0;padding:4px 0 10px;z-index:3}
+.panelhead strong{color:#65231f}
+.panelhead button{border:0;background:#ede1d1;border-radius:8px;padding:7px 10px}
+.drawer{align-items:flex-end}
+.drawer .panel{border-radius:20px 20px 14px 14px}
+.drawerlist{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.drawerlist button{border:1px solid #eadcc9;background:#fff;border-radius:11px;padding:10px;text-align:left;color:#50372c}
+.drawerlist button.active{border-color:#a4372f;background:#fff4ec}
+.drawerlist b{display:block;font-size:12.5px}
+.drawerlist span{font-size:10.5px;color:#8b786a}
+.article-modal-body{padding:4px 3px 8px}
+.article-modal-body .sub{font-size:12px;color:#9a7b61;margin-bottom:10px}
+.article-modal-body p{font-size:14px;line-height:1.85;text-align:justify;margin:0 0 13px;color:#40332c}
+.article-modal-body .source-note{font-size:11px;color:#9a887a;border-top:1px solid #eadcc9;padding-top:10px}
+.article-modal-body .open-original{display:inline-flex;margin-top:12px;background:#8e1c1c;color:#fff7e6;border-radius:10px;padding:9px 13px;text-decoration:none}
+.music-panel{max-width:470px}
+.music-status{font-size:13px;color:#6f5a4b;line-height:1.7;margin:8px 0 14px}
+.music-actions{display:flex;flex-wrap:wrap;gap:8px}
+.music-actions button{border:1px solid #e3d3bd;background:#fff;border-radius:10px;padding:9px 12px;color:#5a4033}
+.music-actions button.primary{background:#8e1c1c;color:#fff;border-color:#8e1c1c}
+.music-help{font-size:11px;color:#907c6c;line-height:1.65;margin-top:12px;padding-top:10px;border-top:1px solid #eadcc9}
+.toast{position:fixed;top:72px;left:50%;transform:translateX(-50%) translateY(-8px);opacity:0;z-index:200;background:rgba(34,27,23,.9);color:#fff5e4;border-radius:999px;padding:8px 13px;font-size:11px;transition:.22s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+@media(max-width:980px){
+  :root{--page-w:400px;--page-h:566px}
+  .inner{padding:25px 28px}
+  .page h2{font-size:21px}
+  .body,.cardline p{font-size:11.7px}
+  .body.small{font-size:11.3px}
+  .body.xsmall{font-size:10.7px}
+  .lead{font-size:13px}
+  .cover-title{font-size:31px}
+  .arrow{display:none}
+  .illu{height:108px}
+}
+@media(max-width:760px){
+  :root{--page-w:min(92vw,430px);--page-h:calc(var(--page-w)*1.42)}
+  .app{padding:10px 8px 92px}
+  .brand strong{font-size:13px}
+  .brand small{display:none}
+  .actions button{padding:7px 8px;font-size:12px}
+  .reader{min-height:var(--page-h)}
+  .stage{width:var(--page-w);height:var(--page-h);filter:drop-shadow(0 18px 20px rgba(0,0,0,.32));overflow:hidden;border-radius:2px}
+  .stage:after{display:none}
+  .slot.left{display:none}
+  .slot.right{left:0}
+  .turner{display:none!important}
+  .swipe-layer{left:0;filter:none;transform-style:preserve-3d}
+  .inner{padding:5.7% 6.2% 7%}
+  .cover .inner{padding:8% 7.5%}
+  .cover-kicker{font-size:clamp(11px,3vw,13px)}
+  .cover-pub{font-size:clamp(10px,2.7vw,12px)}
+  .cover-title{font-size:clamp(27px,8.3vw,37px)}
+  .coverart{height:34%}
+  .page h2{font-size:clamp(19px,5.6vw,24px)}
+  .body,.cardline p{font-size:clamp(10.4px,3vw,12.7px);line-height:1.57}
+  .body.small{font-size:clamp(10.1px,2.86vw,11.9px)}
+  .body.xsmall{font-size:clamp(9.7px,2.68vw,11.3px);line-height:1.52}
+  .lead{font-size:clamp(11.8px,3.4vw,14.8px)}
+  .illu{height:19%;margin-bottom:8px}
+  .cardline{padding-top:7px;margin-top:7px}
+  .quote{margin:8px 0;padding:9px 10px;font-size:clamp(10.3px,2.95vw,12.3px)}
+  .discipline-video{border-radius:10px}
+  .video-caption{font-size:10px}
+  .drawerlist{grid-template-columns:1fr}
+  .desktop-only{display:none}
+  .toolbar{grid-template-columns:auto 1fr auto;padding:8px 9px}
+  .tool{padding:8px 9px}
+  .modal{align-items:flex-end;padding:10px}
+  .modal .panel{max-height:88vh;border-radius:18px 18px 12px 12px}
+  .article-modal-body p{font-size:13px;line-height:1.78}
+}
+
+/* ===== v2：PC大屏、反向翻页修复、可替换图片 ===== */
+.turner.prev{
+  left:0;
+  transform-origin:right center;
+  transform:rotateY(0deg);
+}
+.turner.prev.anim{
+  transform:rotateY(180deg);
+}
+.turner.prev:after{
+  background:linear-gradient(270deg,transparent 58%,rgba(0,0,0,.2));
+}
+
+.editable-illu{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+}
+.editable-illu .custom-img{
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  object-position:50% 50%;
+  transform:scale(1);
+  transform-origin:50% 50%;
+  will-change:transform;
+}
+.img-edit-trigger{
+  position:absolute;
+  right:8px;
+  bottom:8px;
+  z-index:8;
+  border:1px solid rgba(255,255,255,.68);
+  background:rgba(44,34,28,.78);
+  color:#fff8eb;
+  border-radius:999px;
+  padding:6px 9px;
+  font-size:10.5px;
+  line-height:1;
+  opacity:.16;
+  transition:opacity .18s, transform .18s, background .18s;
+  backdrop-filter:blur(8px);
+}
+.editable-illu:hover .img-edit-trigger,
+.img-edit-trigger:focus{
+  opacity:1;
+  transform:translateY(-1px);
+  background:rgba(66,44,34,.92);
+}
+.image-panel{max-width:520px}
+.image-preview{
+  height:190px;
+  border:1px solid #e5d8c6;
+  border-radius:14px;
+  overflow:hidden;
+  background:#f3eadc;
+  margin-bottom:13px;
+  position:relative;
+}
+.image-preview img{
+  width:100%;height:100%;display:block;object-fit:cover;object-position:50% 50%;
+}
+.image-preview .empty{
+  height:100%;display:grid;place-items:center;color:#8f7b6c;font-size:12px;text-align:center;padding:20px
+}
+.image-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.image-field label{
+  display:block;
+  font-size:11px;
+  color:#7f6a5a;
+  margin-bottom:5px;
+}
+.image-field select,
+.image-field input[type="range"]{
+  width:100%;
+}
+.image-field select{
+  border:1px solid #dfd0bd;
+  border-radius:9px;
+  background:#fff;
+  padding:8px 9px;
+  color:#50382e;
+}
+.image-buttons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px;
+  margin-top:14px;
+}
+.image-buttons button{
+  border:1px solid #e1d1bc;
+  background:#fff;
+  color:#553d32;
+  border-radius:10px;
+  padding:9px 12px;
+}
+.image-buttons .primary{
+  background:#8e1c1c;
+  border-color:#8e1c1c;
+  color:#fff;
+}
+.image-status{
+  margin-top:10px;
+  min-height:18px;
+  font-size:11px;
+  color:#8c7869;
+  line-height:1.55;
+}
+
+@media(min-width:761px){
+  .app{
+    height:100vh;
+    min-height:0;
+    overflow:hidden;
+    padding:8px 10px 68px;
+  }
+  .topbar{
+    max-width:none;
+    height:38px;
+    margin:0 50px 4px;
+  }
+  .reader{
+    max-width:none;
+    min-height:0;
+    height:calc(100vh - 118px);
+    gap:10px;
+  }
+  .stage{
+    width:calc(100vw - 128px);
+    height:calc(100vh - 118px);
+    aspect-ratio:auto;
+  }
+  .slot,.turner{
+    width:50%;
+    height:100%;
+  }
+  .slot.right,.turner{left:50%}
+  .turner.prev{left:0}
+  .arrow{
+    width:44px;
+    height:74px;
+    flex:0 0 44px;
+  }
+  .toolbar{
+    bottom:8px;
+    width:min(820px,calc(100% - 150px));
+  }
+  .inner{
+    padding:4.2% 6.2% 4.5%;
+  }
+  .illu{
+    height:21%;
+  }
+  .cover .inner{
+    padding:5.3% 6.5%;
+  }
+  .coverart{
+    height:34%;
+  }
+}
+
+@media(min-width:1200px){
+  .page h2{font-size:clamp(25px,1.55vw,34px)}
+  .page h3{font-size:clamp(15px,1vw,20px)}
+  .body{font-size:clamp(13.5px,.82vw,16.5px);line-height:1.72}
+  .body.small{font-size:clamp(12.7px,.76vw,15.5px)}
+  .body.xsmall{font-size:clamp(11.7px,.69vw,14px);line-height:1.62}
+  .lead{font-size:clamp(15px,.92vw,19px)}
+  .quote{font-size:clamp(12.8px,.78vw,15.5px);line-height:1.7}
+  .cardline p{font-size:clamp(11.8px,.72vw,14.5px);line-height:1.6}
+  .cover-title{font-size:clamp(36px,2.6vw,54px)}
+  .cover-kicker{font-size:clamp(13px,.86vw,17px)}
+  .cover-pub{font-size:clamp(12px,.76vw,15px)}
+  .cover-sub{font-size:clamp(13px,.82vw,16px)}
+}
+
+@media(max-width:760px){
+  .img-edit-trigger{
+    opacity:.78;
+    right:6px;
+    bottom:6px;
+    padding:5px 7px;
+    font-size:9.5px;
+  }
+  .image-grid{grid-template-columns:1fr}
+  .image-preview{height:160px}
+}
+
+/* ===== 响应式字号：按实际书页尺寸等比缩放，不改变原有版面结构 ===== */
+:root{--page-font-base:13.3px}
+.page{font-size:var(--page-font-base)}
+.page .pageno{font-size:.827em}
+.page .kicker{font-size:.827em}
+.page h2{font-size:1.805em}
+.page h3{font-size:1.128em}
+.page .body,.page .cardline p{font-size:1em}
+.page .body.small{font-size:.955em}
+.page .body.xsmall{font-size:.887em}
+.page .lead{font-size:1.128em}
+.page .quote{font-size:.962em}
+.page .readmore{font-size:.865em}
+.page .cover-kicker{font-size:.977em}
+.page .cover-pub{font-size:.902em}
+.page .cover-title{font-size:2.632em}
+.page .cover-sub{font-size:.977em}
+.page .toc button b{font-size:.827em}
+.page .toc strong{font-size:.977em}
+.page .toc small{font-size:.827em}
+.page .cardline .n{font-size:.827em}
+.page .cardline p{font-size:.887em}
+.page .chips span{font-size:.789em}
+.page .video-caption{font-size:.789em}
+.page.closing .blessing{font-size:1.504em}
+.page .body,.page .lead,.page .cardline p,.page .case-col p,.article-modal-body p{text-indent:2em}
+
+
+/* ===== 移动端阅读优化 v3：顶部防重叠 + 正文字号增强 ===== */
+@media(max-width:760px){
+  :root{
+    --page-w:min(94.5vw,440px);
+    --page-h:calc(var(--page-w)*1.42);
+  }
+  .app{
+    padding:8px 6px 94px;
+  }
+  .topbar{
+    max-width:none;
+    margin:0 auto 9px;
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:7px;
+    align-items:center;
+  }
+  .brand{
+    width:100%;
+    min-width:0;
+    gap:8px;
+  }
+  .brand > div:last-child{
+    min-width:0;
+    flex:1 1 auto;
+  }
+  .mark{
+    width:32px;
+    height:32px;
+    flex:0 0 32px;
+  }
+  .brand strong{
+    display:block;
+    width:100%;
+    font-size:15px;
+    line-height:1.35;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .actions{
+    width:100%;
+    min-width:0;
+    display:grid;
+    grid-template-columns:minmax(112px,1fr) 70px 70px;
+    gap:6px;
+  }
+  .actions button,
+  .actions .music-toggle{
+    width:100%;
+    min-width:0;
+    height:36px;
+    padding:0 8px;
+    font-size:12.5px;
+    line-height:36px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .reader{
+    align-items:flex-start;
+    min-height:var(--page-h);
+  }
+  .inner{
+    padding:5.4% 5.8% 7%;
+  }
+  .cover .inner{
+    padding:7.5% 7%;
+  }
+  .page .body,
+  .page .cardline p{
+    line-height:1.58;
+  }
+  .page .body.small{
+    line-height:1.56;
+  }
+  .page .body.xsmall{
+    line-height:1.54;
+  }
+  .page .lead{
+    line-height:1.7;
+  }
+  .page .quote{
+    line-height:1.58;
+  }
+  .toolbar{
+    width:calc(100% - 14px);
+    gap:7px;
+    padding:8px;
+  }
+  .metatop{
+    font-size:11.5px;
+  }
+}
+
+
+/* ===== 语音朗读 + 手机沉浸式全屏 ===== */
+.actions .read-toggle{transition:background .2s,border-color .2s,color .2s}
+.actions .read-toggle.reading{background:rgba(201,155,72,.22);border-color:rgba(242,200,115,.46);color:#ffe7ad}
+.actions .read-toggle.paused{background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.22);color:#fff3db}
+
+@media(max-width:760px){
+  .actions{
+    grid-template-columns:1.25fr .9fr .65fr .75fr;
+  }
+  body.mobile-immersive{
+    overflow:hidden;
+    --page-w:min(96vw, calc((100dvh - 118px)/1.42), 440px);
+    --page-h:calc(var(--page-w)*1.42);
+  }
+  body.mobile-immersive .app{
+    position:fixed;
+    inset:0;
+    z-index:80;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    overflow:hidden;
+    padding:5px 4px 66px;
+  }
+  body.mobile-immersive .brand{display:none}
+  body.mobile-immersive .topbar{
+    max-width:none;
+    margin:0 auto 4px;
+    display:block;
+  }
+  body.mobile-immersive .actions{
+    grid-template-columns:1.25fr .9fr .65fr .75fr;
+  }
+  body.mobile-immersive .reader{
+    height:calc(100vh - 108px);
+    height:calc(100dvh - 108px);
+    min-height:0;
+    align-items:center;
+  }
+  body.mobile-immersive .stage{
+    max-width:96vw;
+    max-height:calc(100vh - 118px);
+    max-height:calc(100dvh - 118px);
+  }
+  body.mobile-immersive .toolbar{
+    bottom:max(4px,env(safe-area-inset-bottom));
+  }
+}
+
+
+
+/* ===== 移动端完整显示修复 + 自然语音朗读 ===== */
+.actions .read-toggle.loading{opacity:.82}
+@media(max-width:760px){
+  html,body{min-height:100%;min-height:100dvh}
+  body{overscroll-behavior-y:none}
+  .app{
+    min-height:100svh;
+    min-height:var(--mobile-vvh,100dvh);
+    padding-bottom:calc(82px + env(safe-area-inset-bottom));
+  }
+  .reader{
+    min-height:0!important;
+    height:auto!important;
+  }
+  .stage{
+    max-width:calc(100vw - 8px);
+    max-height:calc(var(--mobile-vvh,100dvh) - 116px);
+  }
+  .page .inner{
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    scrollbar-width:none;
+    padding-bottom:max(9%,38px);
+    touch-action:pan-y;
+  }
+  .page .inner::-webkit-scrollbar{display:none}
+  .page.has-overflow .inner{
+    mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 22px),rgba(0,0,0,.82) calc(100% - 8px),transparent 100%);
+    -webkit-mask-image:linear-gradient(to bottom,#000 0,#000 calc(100% - 22px),rgba(0,0,0,.82) calc(100% - 8px),transparent 100%);
+  }
+  .page.has-overflow::after{
+    content:"上滑继续阅读";
+    position:absolute;
+    left:50%;
+    bottom:8px;
+    z-index:7;
+    transform:translateX(-50%);
+    padding:3px 8px;
+    border-radius:999px;
+    background:rgba(55,39,31,.72);
+    color:#fff6e7;
+    font-size:9.5px;
+    line-height:1.4;
+    pointer-events:none;
+  }
+  .page.scrolled-end::after{display:none}
+  body.mobile-immersive .app{
+    height:var(--mobile-vvh,100dvh)!important;
+    min-height:0!important;
+    padding:5px 4px calc(64px + env(safe-area-inset-bottom))!important;
+  }
+  body.mobile-immersive .reader{
+    height:auto!important;
+    min-height:0!important;
+  }
+  body.mobile-immersive .stage{
+    max-height:none!important;
+  }
+}
+
+
+/* ===== 手机端底部左侧翻页按钮增强 ===== */
+@media(max-width:760px){
+  .toolbar > .tools:first-child{
+    gap:8px;
+  }
+  .toolbar > .tools:first-child .tool{
+    width:54px;
+    height:54px;
+    min-width:54px;
+    padding:0;
+    border-radius:14px;
+    font-size:30px;
+    line-height:54px;
+    font-weight:600;
+    display:grid;
+    place-items:center;
+    touch-action:manipulation;
+  }
+}
+@media(max-width:360px){
+  .toolbar > .tools:first-child .tool{
+    width:50px;
+    height:52px;
+    min-width:50px;
+    line-height:52px;
+    font-size:28px;
+  }
+}
+
+
+/* ===== 上下期切换 ===== */
+.issue-panel{max-width:460px}
+.issue-list{display:grid;gap:9px;margin-top:4px}
+.issue-link{display:block;border:1px solid #e3d3bd;background:#fff;border-radius:12px;padding:11px 13px;color:#50372c;text-decoration:none;line-height:1.5}
+.issue-link:hover{border-color:#a4372f;background:#fff4ec}
+.issue-link.current{border-color:#8e1c1c;background:#f9ece4;color:#7e1c19}
+.issue-link b{display:block;font-size:13px}
+.issue-link small{display:block;margin-top:2px;color:#8b786a;font-size:11px}
+
+/* ===== 字号调节 ===== */
+.font-panel{max-width:420px}
+.font-status{margin:0 0 12px;font-size:13px;color:#6f5a4b;line-height:1.7}
+.font-presets{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.font-preset{border:1px solid #e3d3bd;background:#fff;border-radius:12px;padding:10px 6px;color:#5a4033;line-height:1.3}
+.font-preset small{display:block;margin-top:2px;font-size:10px;color:#9a887a}
+.font-preset.current{border-color:#8e1c1c;background:#f9ece4;color:#7e1c19}
+.font-preset.current small{color:#8e1c1c}
+body.font-bigger .page .inner{overflow-y:auto!important;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+body.font-bigger .page .inner::-webkit-scrollbar{display:none}
+
+/* ===== 统一图标控件 ===== */
+.actions button,.tool,.panelhead button{display:inline-grid;place-items:center}
+.actions button{min-width:42px;min-height:40px;padding:0 9px}
+.actions button svg{width:20px;height:20px}
+.actions .music-toggle{min-width:42px}
+.tool{width:40px;height:40px;padding:0}
+.tool svg{width:19px;height:19px}
+.panelhead button{width:34px;height:34px;padding:0}
+.panelhead button svg{width:16px;height:16px}
+.arrow svg{width:26px;height:26px}
+.music-actions button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.music-actions button svg{width:17px;height:17px}
+
+/* ===== 底部工具栏固定尺寸 ===== */
+.toolbar{height:58px;overflow:hidden}
+@media(max-width:760px){.toolbar{height:56px}}
+.metatop span:first-child{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta{min-width:0}
+
+/* ===== 视频自定义全屏（避免原生全屏闪退） ===== */
+.video-frame{position:relative}
+.video-fs-btn{position:absolute;right:8px;bottom:8px;z-index:5;width:44px;height:44px;border:0;border-radius:12px;background:rgba(30,22,18,.78);color:#fff6e3;display:grid;place-items:center;backdrop-filter:blur(6px)}
+.video-fs-btn svg{width:22px;height:22px}
+.video-fs-overlay{position:fixed;inset:0;z-index:300;background:#000;display:none;align-items:center;justify-content:center}
+.video-fs-overlay.open{display:flex}
+.video-fs-overlay video{width:100%;height:100%;object-fit:contain;background:#000;aspect-ratio:auto}
+.video-fs-close{position:absolute;top:max(12px,env(safe-area-inset-top));right:12px;z-index:5;width:46px;height:46px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center}
+.video-fs-close svg{width:22px;height:22px}
+
+/* ===== 导航栏位置与全屏居中 ===== */
+@media(min-width:761px){.toolbar{bottom:18px}}
+@media(max-width:760px){.toolbar{bottom:max(18px,env(safe-area-inset-bottom))}}
+@media(max-width:760px){body.mobile-immersive .toolbar{bottom:max(14px,env(safe-area-inset-bottom))}}
+body.mobile-immersive .reader{height:calc(100dvh - 108px)!important;min-height:0!important}
+body.mobile-immersive .stage{margin:auto}
+/* ===== 警示教育：案例/警示分栏 ===== */
+.case-cols{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:8px}
+.case-col{border:1px solid rgba(121,79,49,.16);background:rgba(255,255,255,.55);border-radius:10px;padding:8px 9px}
+.case-col h4{margin:0 0 4px;font-size:.96em;color:#8e1c1c}
+.case-col p{margin:0;font-size:.84em;line-height:1.52;text-align:justify}
+.case-col.warn h4{color:#356954}
+.case-col.warn{background:rgba(79,124,104,.07)}
+@media(max-width:760px){.case-cols{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+  <symbol id="i-prev" viewBox="0 0 24 24"><path d="M14.5 6 8.5 12l6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-next" viewBox="0 0 24 24"><path d="M9.5 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4.5 11 12 4.5 19.5 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 10v9h11v-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M4 6h3M4 12h3M4 18h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 6H20M9.5 12H20M9.5 18H20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18.5V6.2l10-2v12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="18" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="16.2" r="2.4" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-speak" viewBox="0 0 24 24"><path d="M4.5 9.5v5h3.5l4.5 3.5v-12L8 9.5H4.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M15.5 8.8a4.4 4.4 0 0 1 0 6.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M18 6.4a8 8 0 0 1 0 11.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-font" viewBox="0 0 24 24"><path d="M7 19 11 6h2l4 13M8.6 15h5.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M20.5 8.5v7M17 12h7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-swap" viewBox="0 0 24 24"><path d="M7 8.5h10M15 5l3.5 3.5L15 12M17 15.5H7M9 12l-3.5 3.5L9 19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-full" viewBox="0 0 24 24"><path d="M9 4.5H4.5V9M15 4.5h4.5V9M9 19.5H4.5V15M15 19.5h4.5V15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-unfull" viewBox="0 0 24 24"><path d="M9 4.5v4.5H4.5M15 4.5V9h4.5M9 19.5V15H4.5M15 19.5V15h4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M9 6.5v11l9-5.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3.5 7h5l2 2h10v9a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+</svg>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">刊</div>
+      <div>
+        <strong>中国人民银行金昌市分行离退休干部电子期刊 · 第二期</strong>
+        <small>银发丹心映晚晴 · 清风护航伴新秋</small>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="musicTop" class="music-toggle on" type="button" aria-pressed="true" title="背景音乐开关"><svg><use href="#i-music"/></svg></button>
+      <button id="readTop" class="read-toggle" type="button" aria-pressed="false" title="朗读当前页；朗读中点击可暂停或继续"><svg><use href="#i-speak"/></svg></button>
+      <button id="tocTop" type="button"><svg><use href="#i-list"/></svg></button>
+      <button id="full" type="button"><svg><use href="#i-full"/></svg></button>
+    </div>
+  </header>
+
+  <main class="reader">
+    <button class="arrow" id="prevA" type="button" aria-label="上一页"><svg><use href="#i-prev"/></svg></button>
+    <section class="stage" id="stage" aria-label="电子期刊阅读器">
+      <div class="slot left" id="left"></div>
+      <div class="slot right" id="right"></div>
+      <div class="turner next" id="turner">
+        <div class="face front" id="front"></div>
+        <div class="face back" id="back"></div>
+      </div>
+      <div class="swipe-layer" id="swipeLayer"></div>
+    </section>
+    <button class="arrow" id="nextA" type="button" aria-label="下一页"><svg><use href="#i-next"/></svg></button>
+  </main>
+</div>
+
+<div class="toolbar">
+  <div class="tools">
+    <button class="tool" id="prev" type="button" aria-label="上一页"><svg><use href="#i-prev"/></svg></button>
+    <button class="tool" id="next" type="button" aria-label="下一页"><svg><use href="#i-next"/></svg></button>
+  </div>
+  <div class="meta">
+    <div class="metatop"><span id="label">封面</span><span id="count">1 / 19</span></div>
+    <div class="bar"><i id="prog"></i></div>
+  </div>
+  <div class="tools">
+    <button class="tool desktop-only" id="home" type="button"><svg><use href="#i-home"/></svg></button>
+    <button class="tool" id="toc" type="button"><svg><use href="#i-list"/></svg></button>
+    <button class="tool" id="issueSwitch" type="button" title="切换期数"><svg><use href="#i-swap"/></svg></button>
+    <button class="tool" id="fontBtn" type="button" title="调整字号"><svg><use href="#i-font"/></svg></button>
+  </div>
+</div>
+
+<div class="drawer" id="drawer" aria-hidden="true">
+  <div class="panel">
+    <div class="panelhead"><strong>目录导航</strong><button id="closeDrawer" type="button"><svg><use href="#i-close"/></svg></button></div>
+    <div class="drawerlist" id="drawerList"></div>
+  </div>
+</div>
+
+<div class="modal" id="articleModal" aria-hidden="true">
+  <div class="panel">
+    <div class="panelhead"><strong id="articleTitle">链接内容</strong><button id="closeArticle" type="button"><svg><use href="#i-close"/></svg></button></div>
+    <div class="article-modal-body" id="articleBody"></div>
+  </div>
+</div>
+
+
+<div class="modal" id="musicModal" aria-hidden="true">
+  <div class="panel music-panel">
+    <div class="panelhead"><strong>背景音乐</strong><button id="closeMusic" type="button"><svg><use href="#i-close"/></svg></button></div>
+    <div class="music-status" id="musicStatus">尚未配置背景音乐。</div>
+    <div class="music-actions">
+      <button type="button" class="primary" id="playMusic"><svg><use href="#i-play"/></svg></button>
+      <button type="button" id="chooseMusic"><svg><use href="#i-folder"/></svg></button>
+    </div>
+    <div class="music-help">
+      正式部署时，可将背景音乐命名为 <strong>bgm.mp3</strong> 并放入 <strong>assets/music/</strong> 文件夹。
+      浏览器通常会限制网页自动播放音乐，因此建议由读者点击“♫ 音乐”后开始播放。
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="issueModal" aria-hidden="true">
+  <div class="panel issue-panel">
+    <div class="panelhead"><strong>切换期数</strong><button id="closeIssue" type="button"><svg><use href="#i-close"/></svg></button></div>
+    <div class="issue-list">
+      <a class="issue-link" id="issue1Link" href="../1/"><b>第一期</b><small>深学铸魂固初心 · 精管护航安伏夏</small></a>
+      <a class="issue-link" id="issue2Link" href="../2/"><b>第二期</b><small>银发丹心映晚晴 · 清风护航伴新秋</small></a>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal" id="fontModal" aria-hidden="true">
+  <div class="panel font-panel">
+    <div class="panelhead"><strong>调整字号</strong><button id="closeFont" type="button"><svg><use href="#i-close"/></svg></button></div>
+    <p class="font-status">请选择适合您阅读的字号，设置会自动保存。</p>
+    <div class="font-presets">
+      <button type="button" class="font-preset" data-size="88">较小<small>A</small></button>
+      <button type="button" class="font-preset" data-size="100">标准<small>A</small></button>
+      <button type="button" class="font-preset" data-size="115">较大<small>A</small></button>
+      <button type="button" class="font-preset" data-size="130">特大<small>A</small></button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="musicFile" accept="audio/*" hidden>
+<audio id="bgm" loop preload="auto" src="assets/music/bgm.mp3"></audio>
+<audio id="pageNarration" preload="metadata" playsinline></audio>
+
+<div class="video-fs-overlay" id="videoFsOverlay" aria-hidden="true">
+  <button type="button" class="video-fs-close" id="videoFsClose" title="退出全屏"><svg><use href="#i-close"/></svg></button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div id="templates" hidden><template data-title="封面"><article class="page cover"><div class="texture"></div><div class="inner"><div class="covercopy"><div class="cover-kicker">中国人民银行金昌市分行</div><div class="cover-pub">离退休干部电子期刊 · 第二期</div><div class="cover-title">银发丹心映晚晴<br>清风护航伴新秋</div><div class="cover-rule"></div><div class="cover-sub">时政要闻 · 理论学习 · 反诈防骗 · 警示教育 · 时令养生</div></div><div class="coverart"><div class="illu"><svg viewBox="0 0 420 155" role="img" aria-label="晚霞、飞鸟与山峦插画"><circle cx="328" cy="43" r="34" fill="#e7bd69"/><path d="M0 101Q78 67 152 104T300 88T420 72V155H0Z" fill="#3d1110" opacity=".65"/><path d="M0 128Q92 102 174 132T420 105V155H0Z" fill="#250b0a"/><g fill="none" stroke="#f6d89c" stroke-width="2"><path d="M72 53q9-8 18 0q9-8 18 0"/><path d="M132 35q7-6 14 0q7-6 14 0"/></g></svg></div></div></div></article></template><template data-title="卷首语"><article class="page "><div class="texture"></div><div class="inner"><div class="kicker">卷首语 · 金风送爽 初心如磐</div><h2>银发丹心映晚晴</h2><p class="lead">“金风送爽，丹桂飘香。”2026年8月7日已交立秋节气，8月23日将迎来处暑，暑热渐退，秋意渐浓。在这夏秋交替、天高云阔的美好时节，本期电子期刊如期与各位老干部见面了。</p><div class="quote">2026年是中国共产党成立105周年，也是“十五五”开局之年。今年以来，在以习近平同志为核心的党中央坚强领导下，我国经济运行总体平稳、稳中有进，高质量发展扎实推进。本期电子期刊延续时政要闻、政治理论学习、安全防范与反诈提醒、离退休干部违纪违法典型案例警示、立秋时节养生五大板块，力求内容丰富、贴近需求、务实管用。愿本期期刊陪伴各位老干部在常学常新中坚定信念，在修身自律中永葆本色，在顺时调养中安享金秋。</div></div><span class="pageno">01</span></article></template><template data-title="目录"><article class="page "><div class="texture"></div><div class="inner"><div class="kicker">CONTENTS</div><h2>本期导读</h2><p class="body">点击目录条目可直接跳转。</p><div class="toc"><button type="button" data-jump="3"><b>01</b><span><strong>时政要闻</strong><small>常览国事 · 初心永驻</small></span></button><button type="button" data-jump="6"><b>02</b><span><strong>理论学习</strong><small>坚守初心 · 永葆本色</small></span></button><button type="button" data-jump="8"><b>03</b><span><strong>反诈防骗</strong><small>守护钱袋 · 安享晚年</small></span></button><button type="button" data-jump="15"><b>04</b><span><strong>警示教育</strong><small>以案为鉴 · 筑牢防线</small></span></button><button type="button" data-jump="21"><b>05</b><span><strong>时令养生</strong><small>立秋处暑 · 顺时养收</small></span></button></div></div><span class="pageno">02</span></article></template><template data-title="时政要闻｜纪念江泽民同志诞辰100周年"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">时政要闻｜常览国事 初心永驻</div><h2>深切缅怀 · 学习崇高风范</h2><div class="article"><h3>2026年8月17日｜纪念江泽民同志诞辰100周年大会</h3><p class="body xsmall">2026年8月17日上午，中共中央、全国人大常委会、国务院、全国政协、中央军委在人民大会堂隆重举行大会，纪念伟大的马克思主义者，伟大的无产阶级革命家、政治家、军事家、外交家，中国特色社会主义伟大事业的杰出领导者江泽民同志诞辰100周年。</p><p class="body xsmall">中共中央总书记、国家主席、中央军委主席习近平出席大会并发表重要讲话。习近平强调，要深切缅怀江泽民同志的丰功伟绩，深入学习江泽民同志的崇高风范，激励全党全国各族人民把中国特色社会主义事业不断推向前进。</p><button type="button" class="readmore popup-link" data-article="news1">查看链接内容 <span>↗</span></button></div></div><span class="pageno">03</span></article></template><template data-title="时政要闻｜国务院第十二次全体会议"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">时政要闻｜常览国事 初心永驻</div><h2>努力完成全年经济社会发展目标任务</h2><div class="article"><h3>2026年8月17日｜国务院第十二次全体会议</h3><p class="body xsmall">8月17日，国务院总理李强主持召开国务院第十二次全体会议，深入学习贯彻习近平总书记关于当前经济形势和经济工作的重要讲话精神，强调要切实把思想和行动统一到党中央对形势的科学判断和决策部署上来，扎实做好各项工作，努力完成全年经济社会发展目标任务，实现“十五五”良好开局。</p><p class="body xsmall">李强指出，今年以来，在以习近平同志为核心的党中央坚强领导下，我国经济运行总体平稳、稳中有进，呈现动能向新、结构向优的发展态势。要锚定发展目标，充分发挥存量政策效能，及时谋划出台务实管用的增量政策，推动经济持续向新向优向好发展。要扎实做好保障和改善民生工作，抓好就业增收，不断提升公共服务水平。</p><button type="button" class="readmore popup-link" data-article="news2">查看链接内容 <span>↗</span></button></div></div><span class="pageno">04</span></article></template><template data-title="时政要闻｜1至7月经济数据"><article class="page news"><div class="texture"></div><div class="inner"><div class="kicker">时政要闻｜常览国事 初心永驻</div><h2>国民经济运行总体平稳 稳中有进</h2><div class="article"><h3>2026年8月17日｜国家统计局发布1至7月经济数据</h3><p class="body xsmall">国家统计局8月17日发布数据显示，2026年1至7月，全国规模以上工业增加值同比增长5.3%，全国服务业生产指数同比增长4.7%，货物进出口总额同比增长17.3%，社会消费商品和服务零售总额同比增长2.6%。各项指标显示，面对复杂严峻的外部环境和国内多重挑战，国民经济运行总体平稳、稳中有进，展现出强大韧性和活力。</p><button type="button" class="readmore popup-link" data-article="news3">查看链接内容 <span>↗</span></button></div></div><span class="pageno">05</span></article></template><template data-title="理论学习｜健全全面从严治党体系"><article class="page theory"><div class="texture"></div><div class="inner"><div class="kicker">政治理论学习｜坚守初心 永葆本色</div><h2>健全全面从严治党体系</h2><p class="lead">一、学习《习近平党建文选》——健全全面从严治党体系</p><p class="body small">在庆祝中国共产党成立105周年大会上，习近平总书记指出，“坚定信心、接续奋斗，必须持之以恒推进全面从严治党”，强调“健全全面从严治党体系”。在《健全全面从严治党体系，推动新时代党的建设新的伟大工程向纵深发展》等重要篇目中，总书记指出，健全全面从严治党体系，“需要我们坚持制度治党、依规治党，更加突出党的各方面建设有机衔接、联动集成、协同协调，更加突出体制机制的健全完善和法规制度的科学有效，更加突出运用治理的理念、系统的观念、辩证的思维管党治党建设党”，并从健全组织体系、教育体系、监管体系、制度体系、责任体系五个方面作出重要部署。</p><button type="button" class="readmore popup-link" data-article="theory1">查看链接内容 <span>↗</span></button></div><span class="pageno">06</span></article></template><template data-title="理论学习｜提高防灾减灾救灾能力"><article class="page theory"><div class="texture"></div><div class="inner"><div class="kicker">专题学习</div><h2>提高防灾减灾救灾能力</h2><p class="lead">二、学习《求是》杂志发表习近平总书记重要文章——《提高防灾减灾救灾能力》</p><p class="body small">文章强调，我国国土广袤、地理复杂、气候多样，自然灾害易发多发。党的十八大以来，党中央坚持把防灾减灾救灾工作作为关系人民安危和国家安全的大事来抓，在理念转变、体制改革、体系建设、能力提升等方面作出许多部署，带领广大干部群众战胜一系列重特大自然灾害，最大限度减少人员伤亡和财产损失，成效举世公认。做好防灾减灾救灾工作，必须坚持党的全面领导，坚持人民至上、生命至上，坚持尊重自然规律，坚持预防为主，坚持改革创新，坚持系统观念，坚持社会共治。这些宝贵经验要坚持好运用好，并结合新的实际不断丰富和发展。</p><button type="button" class="readmore popup-link" data-article="theory2">查看链接内容 <span>↗</span></button></div><span class="pageno">07</span></article></template><template data-title="反诈微课堂｜引言"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜守护“钱袋子”</div><h2>引言 · 以案为鉴 防患未然</h2><div class="quote">本期“反诈微课堂”精选四则老年人易发高发的诈骗典型案例，逐案还原诈骗过程、剖析骗子惯用套路、给出防骗提醒，帮助各位老干部以案为鉴、提高警惕，切实守护好“钱袋子”。</div><div class="chips"><span>四则真实案例</span><span>情景还原过程</span><span class="warn">牢记“四不”口诀</span></div><p class="body small">本版块通过“案例回放—诈骗套路—防骗提醒”三段式呈现，帮助老干部看得清套路、守得住钱袋。</p></div><span class="pageno">08</span></article></template><template data-title="反诈微课堂｜虚假投资理财诈骗"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜守护“钱袋子”</div><h2>案例一 · 虚假投资理财诈骗</h2><div class="cardline "><div class="n">1</div><div><h3>案例回放</h3><p>陈先生平时关注股票投资，在刷抖音时看到有人发布“专业炒股”“精准推荐涨停股”等视频，被吸引后主动联系对方。骗子自称是证券公司工作人员，以提供“内部消息”和专业指导为由，将陈先生拉入QQ群，诱导其下载虚假炒股APP。群内不断发布盈利截图，营造“人人赚钱”的假象。陈先生充值50万元后看到虚拟盈利，准备提现时却发现账户无法操作，“老师”和平台客服均已失联。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>诈骗套路</h3><p>骗子通过短视频平台“引流”，将受害者转移到私密聊天群，用“内部消息”和虚假盈利截图建立信任，诱导受害者不断加大投入，最后以缴纳保证金、账户解冻等理由继续骗取钱财。</p></div></div><div class="cardline "><div class="n">3</div><div><h3>防骗提醒</h3><p>投资理财一定要选择正规渠道，不要相信“稳赚不赔”“内幕消息”等说法。凡是要求通过陌生APP投资、私人渠道充值，或者承诺高额回报的项目，都要提高警惕。</p></div></div></div><span class="pageno">09</span></article></template><template data-title="反诈微课堂｜冒充公检法诈骗"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜守护“钱袋子”</div><h2>案例二 · 冒充公检法诈骗</h2><div class="cardline "><div class="n">1</div><div><h3>案例回放</h3><p>吴女士接到陌生电话，对方自称是某职能部门工作人员，声称其名下手机号码涉嫌参与金融诈骗，需要配合调查。骗子要求她购买新手机和新号码，安装所谓“调查软件”（实为远程控制和监听工具），并以调查资金来源为由要求取出现金，安排“专案人员”上门收取。骗子不断要求吴女士删除聊天记录、清空手机信息、禁止向家人透露情况。吴女士最终被骗走全部积蓄。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>诈骗套路</h3><p>骗子利用受害者对公检法机关的敬畏心理，以“涉嫌犯罪”“配合调查”等话术制造恐慌，通过要求保密、切断与外界联系等方式，使受害者逐渐陷入控制。</p></div></div><div class="cardline "><div class="n">3</div><div><h3>防骗提醒</h3><p>公安机关、检察机关、法院等部门不会通过电话办案，不会要求安装陌生软件，不会设置所谓“安全账户”，更不会派人上门收取现金。遇到类似情况，立即停止操作，通过官方渠道核实。</p></div></div></div><span class="pageno">10</span></article></template><template data-title="反诈微课堂｜冒充熟人诈骗"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜守护“钱袋子”</div><h2>案例三 · 冒充熟人诈骗</h2><div class="cardline "><div class="n">1</div><div><h3>案例回放</h3><p>周先生接到陌生电话，对方自称是其孙子，称与人发生冲突被派出所控制，需要8万元处理，并要求不要告诉其他家人。随后，另一名骗子冒充派出所工作人员联系周先生，表示会安排人员上门取现金。周先生取出8万元交给一名戴口罩的陌生人。直到回家后发现孙子平安在家，才意识到被骗。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>诈骗套路</h3><p>利用亲情弱点，通过冒充子女、孙辈制造突发事件，再配合冒充警察、工作人员等多个角色增强真实性。“不要告诉家人”是阻止受害者核实信息的重要手段。</p></div></div><div class="cardline "><div class="n">3</div><div><h3>防骗提醒</h3><p>亲属遇到紧急情况求助时，一定不要急于转账或交付现金。应通过原有联系方式回拨确认，或者联系其他亲属共同核实，避免因一时着急落入骗局。</p></div></div></div><span class="pageno">11</span></article></template><template data-title="反诈微课堂｜刷单返利诈骗"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜守护“钱袋子”</div><h2>案例四 · 刷单返利诈骗</h2><div class="cardline "><div class="n">1</div><div><h3>案例回放</h3><p>黄先生收到快递信封，里面写着扫码可领取20元红包和礼品。出于好奇，黄先生扫码添加微信，下载APP参与刷单任务。起初，骗子安排金额较小的任务并及时返还佣金，逐步建立信任。随后，骗子逐渐提高任务金额，引导参与更大刷单项目。当黄先生投入更多资金后，骗子又以“操作失误”“账户冻结”“需要缴纳保证金”等理由要求继续充值。黄先生前后转账10万余元，始终无法提现，最终发现被骗。</p></div></div><div class="cardline "><div class="n">2</div><div><h3>诈骗套路</h3><p>采用“先给甜头、再诱导投入”方式，利用小额返利降低防备心理，不断提高投入金额，通过制造提现障碍迫使受害者继续转账。</p></div></div><div class="cardline "><div class="n">3</div><div><h3>防骗提醒</h3><p>所有需要先垫付资金的刷单、兼职、点赞返利项目，都要高度警惕。不要因为小额收益放松警惕，更不要相信“投入越多、回报越高”的虚假承诺。</p></div></div></div><span class="pageno">12</span></article></template><template data-title="反诈微课堂｜养老诈骗警示视频"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈微课堂｜养老诈骗警示</div><h2>养老诈骗警示短视频</h2><p class="body small">各位老干部，本期“安全防范”版块配合反诈防骗专题，特别推荐养老诈骗警示短视频。视频通过情景再现的方式，生动还原了针对老年群体的各类高发骗局，直观展示骗子的话术套路和受害者的心理变化过程。</p><div class="video-wrap" id="videoWrap"><div class="video-frame"><video class="discipline-video" id="magazineVideo" controls playsinline webkit-playsinline preload="metadata" controlsList="nofullscreen nodownload" disablepictureinpicture><source src="assets/video/b5f8fa9399881dcaa092a0e2a2c00d03.mp4" type="video/mp4">您的浏览器不支持视频播放。</video><button type="button" class="video-fs-btn" id="videoFsBtn" title="全屏观看"><svg><use href="#i-full"/></svg></button></div><div class="video-caption">养老诈骗警示短视频 · 点击播放键观看</div></div><div class="quote">☆那些养老诈骗的“经典操作”：不贪高息、不轻信“专家”、不点陌生链接、不泄露个人信息。</div></div><span class="pageno">13</span></article></template><template data-title="反诈口诀｜牢记“四不”"><article class="page safety"><div class="texture"></div><div class="inner"><div class="kicker">反诈口诀｜牢记“四不”</div><h2>守好钱袋子 · 幸福过晚年</h2><p class="body small">面对形形色色的诈骗，请各位老干部时刻牢记：</p><div class="cardline "><div class="n">不</div><div><h3>不轻信</h3><p>陌生电话、陌生链接、陌生投资项目，不随意相信。</p></div></div><div class="cardline "><div class="n">转</div><div><h3>不转账</h3><p>凡是要求提前付款、充值、缴纳保证金的情况，都要提高警惕。</p></div></div><div class="cardline "><div class="n">泄</div><div><h3>不泄密</h3><p>个人身份信息、银行卡信息、验证码等重要信息不要轻易透露。</p></div></div><div class="cardline "><div class="n">核</div><div><h3>多核实</h3><p>遇到亲友求助、机构通知、账户异常等情况，先冷静、再核实，不给骗子可乘之机。</p></div></div><div class="quote">诈骗套路虽然不断翻新，但只要我们保持警惕、理性判断，就能让骗子的套路无处可施。守好钱袋子，幸福过晚年。</div></div><span class="pageno">14</span></article></template><template data-title="警示教育｜引言与言行失范"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜以案为鉴 筑牢防线</div><h2>退休不是“安全线”</h2><p class="body small">习近平总书记强调，党员干部无论退休与否，都应该严格遵守党规党纪和中央八项规定精神，要把从严管理干部贯彻落实到干部队伍建设全过程。为帮助各位老干部以案为鉴、警钟长鸣，本期梳理近年来通报的退休干部违纪违法典型案例，逐类剖析，引以为戒。</p><div class="quote"><strong>案例一 · 言行失范型——妄议时政、发表不当言论</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>中央党校（国家行政学院）退休教师蔡某，退休后丧失政治立场，在网络及公开场合发表严重政治问题言论，妄议中央大政方针，诋毁党和国家形象，完全淡忘党员身份。2020年8月，蔡某被开除党籍、取消退休待遇。</p></div><div class="case-col warn"><h4>警示</h4><p>退休后绝不等于脱离组织管束，党员身份是终身的政治烙印。不得妄议中央大政方针，不得散布与党中央精神相违背的言论，是每名党员必须恪守的政治底线。</p></div></div></div><span class="pageno">15</span></article></template><template data-title="警示教育｜违规任职型"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜以案为鉴 筑牢防线</div><h2>违规任职型</h2><div class="quote"><strong>案例二 · 违规任职型——退休后到关联企业违规任职取酬</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>浙江省嘉兴市嘉善县人大常委会原副主任马某某，退休后纪律松懈，刻意规避任职监管规定，利用退休前分管职权便利，通过关联银行变相入职原管辖范围内金融机构，担任银行党委书记、副董事长并实际参与经营管理工作，违规领取高管薪酬共计144万余元。2021年2月，马某某被开除党籍、取消退休待遇，收缴违规所得。2021年9月，马某某以受贿罪被判处有期徒刑9年，并处罚金人民币95万元。</p></div><div class="case-col warn"><h4>警示</h4><p>退休干部到企业任职兼职须严格按程序审批，不得违规接受企业聘任或兼职取酬。退休不是“护身符”，更不是腐败“避风港”。</p></div></div></div><span class="pageno">16</span></article></template><template data-title="警示教育｜权力延续与顾问咨询"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜以案为鉴 筑牢防线</div><h2>“余威”谋利 · 终付代价</h2><div class="quote"><strong>案例三 · 权力延续型——利用原职权影响力谋私受贿</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>某保监局局长谢某，2013年退休，2022年被查。退休后违规从事与原保险监管业务相关的营利活动，充当“权力掮客”，利用影响力干预监管并谋利收受巨额财物。2023年3月，谢某被开除党籍、取消退休待遇，收缴违法所得。2024年6月，谢某涉嫌职务犯罪问题被移送检察机关依法审查起诉。</p></div><div class="case-col warn"><h4>警示</h4><p>退休绝不等同于“平安着陆”，利用“余威”谋利终将付出沉重代价。党纪国法不会因为退休而网开一面。</p></div></div><div class="quote"><strong>案例四 · 顾问咨询型——以“顾问”名义在关联企业长期领薪</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>浙江省杭州市公安局原副巡视员邱某，2012年7月提前退休后，违规受聘多家网络公司，担任顾问并领取高额报酬，累计领取顾问费人民币320万余元（其中196万余元被认定为受贿数额）。2021年9月，邱某被开除党籍。2022年5月，邱某因受贿罪被判处有期徒刑五年，并处罚金人民币40万元。</p></div><div class="case-col warn"><h4>警示</h4><p>以“顾问”“独立董事”等名义掩盖违规取酬，无论包装得多么冠冕堂皇，其本质仍是权钱交易，终将受到纪法严惩。</p></div></div></div><span class="pageno">17</span></article></template><template data-title="警示教育｜利益输送与资金掮客"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜以案为鉴 筑牢防线</div><h2>权力变现 · 难逃纪法</h2><div class="quote"><strong>案例五 · 利益输送型——在职“铺路”退休“套现”</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>广西北海市人防办原主任宋某某，在职布局敛财，退休套现获利，靠权生钱、底线失守。利用人防审批职权，为企业项目审批、费用减免提供便利，私下收受企业干股并由亲属代持，退休后长期分红、转让股份套现。2021年10月，宋某某被开除党籍、取消退休待遇。2022年3月，宋某某因受贿罪被判处有期徒刑三年，并处罚金人民币30万元。</p></div><div class="case-col warn"><h4>警示</h4><p>以“期权腐败”方式逃避监管，在职时为企业“铺路”、退休后一次性或持续实现权力变现，无论时间跨度多长、手段多隐蔽，都不会逃脱纪法的追究。</p></div></div><div class="quote"><strong>案例六 · 资金掮客型——参与非法吸收公众存款</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>山西省运城市绛县财政局退休工作人员乔某某，假借合作社名义，以高额利息为诱饵，向社会不特定对象非法吸收公众存款，涉案金额高达5558万余元，至案发时尚有784万余元未归还。2018年6月，乔某某因非法吸收公众存款罪被判处有期徒刑四年，并处罚金人民币9万元。2018年11月，乔某某被开除党籍、取消退休待遇。</p></div><div class="case-col warn"><h4>警示</h4><p>退休干部利用行业人脉与信誉，私下揽储、居间借贷、代客理财，甚至参与非法集资，不仅严重违反党纪国法，更给群众财产造成巨大损失。守住底线，方能安享晚年。</p></div></div></div><span class="pageno">18</span></article></template><template data-title="警示教育｜家风腐败与结语"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜以案为鉴 筑牢防线</div><h2>管好身边人 · 守好家庭防线</h2><div class="quote"><strong>案例七 · 家风腐败型——通过亲属继续把持资源承揽业务</strong></div><div class="case-cols"><div class="case-col"><h4>案例</h4><p>国家发展改革委原党组成员、副主任徐某某，退休后以亲属入股作掩护搞利益捆绑，大搞权力与资本结盟，利用原职权和影响力帮助建筑商进入央企供应商库，承揽棚改项目，以家人“借款”名义收受巨额财物。2025年11月，徐某某被开除党籍、取消退休待遇、收缴违纪违法所得。2026年3月，其涉嫌受贿犯罪问题被检察机关依法提起公诉。</p></div><div class="case-col warn"><h4>警示</h4><p>管好身边人，守住家庭防线。退休干部通过亲属、特定关系人继续把持资源、承揽业务、收取佣金回扣，同样难逃纪法严惩。</p></div></div><div class="quote">退休只是时间点，不是安全线。广大离退休干部要牢固树立正确的权力观、地位观、利益观，不论在职还是退休，都要稳得住心神、管得住行为、守得住清白。</div></div><span class="pageno">19</span></article></template><template data-title="警示教育｜退休干部“三严”要求"><article class="page discipline"><div class="texture"></div><div class="inner"><div class="kicker">警示教育｜退休干部“三严”要求</div><h2>离岗不离心 · 退休不褪色</h2><div class="cardline "><div class="n">严</div><div><h3>严淬政治觉悟，筑牢思想根基</h3><p>始终牢记党员身份，始终坚定理想信念，始终强化党性修养，做到离岗不离心、退休不褪色，杜绝“船到码头车到站”的懈怠心理。</p></div></div><div class="cardline "><div class="n">纪</div><div><h3>严守行为边界，绷紧纪律之弦</h3><p>严格用党章党规党纪校准言行，自觉净化社交圈、朋友圈、生活圈。不得利用原职务影响为本人或他人获取利益，做到明“纪”于心，守“纪”于行。</p></div></div><div class="cardline "><div class="n">家</div><div><h3>严树优良家风，守好家庭防线</h3><p>一以贯之推进家风家教建设，不因退休放松对配偶、子女等亲属教育约束力度，警惕间接围猎、借道围猎，共同建立退休干部家庭屏障。</p></div></div></div><span class="pageno">20</span></article></template><template data-title="时令养生｜立秋节气特点与养生总纲"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>立秋节气特点与养生总纲</h2><p class="body small">2026年8月7日交立秋，8月23日交处暑，此时段正处于“夏秋之交”的过渡期。中医认为，秋季主“收”，与肺相应，养生应以“养阴防燥、润肺益胃”为纲。老年人生理机能渐退，脏腑脆弱，对季节转换的适应能力下降，这一时期应格外注意顺时调养。</p><div class="quote">秋季主“收”，与肺相应。养生以“养阴防燥、润肺益胃”为纲，顺时调养，安度夏秋之交。</div></div><span class="pageno">21</span></article></template><template data-title="时令养生｜防“秋老虎”"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>防“秋老虎”——暑热未退，不可掉以轻心</h2><p class="body small">立秋并不代表酷热天气结束，此时仍处于三伏天之中，俗称“秋老虎”。金昌地区秋季昼夜温差开始拉大，白天依旧炎热，早晚转凉。老干部仍需做好防暑降温，同时注意温差变化，避免因出汗受风引发感冒。</p><div class="cardline green"><div class="n">1</div><div><h3>注意事项 · 空调调温</h3><p>空调使用依然必要，但温度可较盛夏适当调高1～2℃，设置在27～28℃为宜，避免贪凉引发“阴暑”。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>注意事项 · 夜间保暖</h3><p>夜间睡眠需注意腹部和肩颈保暖，加盖薄被，严防秋夜风寒侵入关节和腰背。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>注意事项 · 通风适应</h3><p>早晚可适度开窗通风，逐渐适应自然温差变化。</p></div></div></div><span class="pageno">22</span></article></template><template data-title="时令养生｜饮食调养"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>饮食调养——少辛增酸、滋阴润燥</h2><p class="body small">《黄帝内经》提出“秋冬养阴”，秋季饮食应遵循“少辛增酸、滋阴润肺”的原则：</p><div class="cardline green"><div class="n">1</div><div><h3>多吃酸味收敛食物</h3><p>秋季宜收不宜散，可适当食用山楂、葡萄、石榴、柠檬、苹果等酸味果蔬，收敛肺气、生津止渴。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>少吃辛辣发散食物</h3><p>减少辣椒、生姜、大葱、大蒜等辛辣之品，避免加重秋燥伤阴。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>滋阴润肺食材推荐</h3><p>梨、银耳、百合、山药、蜂蜜、芝麻、核桃、莲藕、荸荠等，可煮粥、炖汤或蒸食。</p></div></div><div class="quote"><strong>秋季润肺推荐食谱——冰糖雪梨银耳羹：</strong>银耳泡发撕小朵，雪梨去核切块（保留梨皮），加入适量冰糖、几粒枸杞，大火煮开后转小火慢炖40分钟至银耳出胶，温食即可。此羹润肺止咳、滋阴清燥，尤其适合老年人秋季常食。</div><div class="quote"><strong>特别提醒：</strong>老年人脾胃偏虚寒，秋季食补不宜过于滋腻，梨、银耳等偏凉性食材宜炖煮后温食，不宜生吃或冰镇食用。</div></div><span class="pageno">23</span></article></template><template data-title="时令养生｜秋季饮水"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>秋季饮水——主动补水防秋燥</h2><p class="body small">入秋后虽然气温逐渐下降，但秋燥容易导致口干、咽干、皮肤干燥、大便干结等问题。老年人对缺水敏感性降低，更应主动补水，不可等口渴再喝。</p><div class="cardline green"><div class="n">1</div><div><h3>饮水要点</h3><p>每日饮水量建议保持1500～1700毫升，以温开水、淡茶水为佳；早晨起床后空腹喝一杯温开水，润肠通便、稀释血液；睡前少量温水，预防夜间血液黏稠；可适当饮用蜂蜜水、梨水、百合水等滋阴润燥的养生茶饮。</p></div></div><div class="quote"><strong>特别提醒：</strong>心衰、肾功能不全患者仍需遵医嘱严格控水，不可盲目增加饮水量。</div></div><span class="pageno">24</span></article></template><template data-title="时令养生｜情志调养"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>情志调养——收敛神气，从容平和</h2><p class="body small">《黄帝内经·四气调神大论》指出：“秋三月……使志安宁，以缓秋刑，收敛神气，使秋气平。”秋季天地万物由盛转衰，草木凋零，容易引发老年人的悲秋情绪和低落心境。</p><div class="cardline green"><div class="n">1</div><div><h3>保持内心安宁</h3><p>多与家人、老同事交流，参与集体活动，避免独处时过度思虑。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>转移注意力</h3><p>读书、写字、养花、听音乐，让精神有所寄托，缓解季节转换带来的情绪波动。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>接纳自然变化</h3><p>以从容平和的心态看待季节更替，把秋日的晴空、红叶、丰收视为自然赠予，用积极乐观的心态度过每一天。</p></div></div></div><span class="pageno">25</span></article></template><template data-title="时令养生｜起居作息"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>起居作息——早睡早起，与鸡俱兴</h2><p class="body small">《黄帝内经》云：“秋三月，早卧早起，与鸡俱兴。”秋季应顺应自然界阳气收敛的趋势，逐渐调整作息节奏：</p><div class="cardline green"><div class="n">1</div><div><h3>早睡</h3><p>晚上尽量在10点前入睡，顺应阳气收敛之势。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>早起</h3><p>早晨6点左右起床，舒展肺气、迎接秋日清新空气。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>适当午休</h3><p>中午可小憩20～30分钟，缓解“秋乏”，保持精力充沛。</p></div></div></div><span class="pageno">26</span></article></template><template data-title="时令养生｜运动锻炼"><article class="page health"><div class="texture"></div><div class="inner"><div class="kicker">时令养生｜立秋处暑 顺时养收</div><h2>运动锻炼——舒缓为要，微汗为度</h2><p class="body small">秋季运动应遵循“收”的原则，避免大汗淋漓耗伤津液。</p><div class="cardline green"><div class="n">1</div><div><h3>推荐运动方式</h3><p>散步、八段锦、太极拳、五禽戏、慢走等舒缓有氧运动。</p></div></div><div class="cardline green"><div class="n">2</div><div><h3>最佳运动时间</h3><p>早晨或傍晚气温适宜时段，避开正午高温。</p></div></div><div class="cardline green"><div class="n">3</div><div><h3>运动强度</h3><p>以身体微微发热、微量出汗为宜，切忌大汗淋漓，防止津液过度耗伤。</p></div></div><div class="cardline green"><div class="n">4</div><div><h3>注意保暖</h3><p>运动出汗后及时更换干爽衣物，避免受风着凉引发感冒。</p></div></div></div><span class="pageno">27</span></article></template><template data-title="尾刊寄语"><article class="page closing"><div class="texture"></div><div class="inner"><div class="kicker">编后寄语</div><h2>金秋伊始 · 万象更新</h2><p class="body">金秋伊始，万象更新。衷心希望各位离退休老干部始终保持终身研读时政、深耕理论的学习热情，坚守遵纪守法的行为自觉，以案为鉴筑牢思想防线，顺应时节科学调养身心，在勤学、自律、平安、康健中安享幸福晚年。</p><div class="quote">下一步，我们将持续推送时政资讯、丰富理论学习载体、常态化开展反诈防骗宣传与警示教育、持续做好季节更替健康宣教服务，全方位做好离退休干部思想引领、关爱帮扶、风险防控各项工作，用心用情守护老干部的美好生活。</div><p class="blessing">祝愿全体老干部身体健康、阖家幸福，金秋安康、万事顺遂！</p><p class="producer">中国人民银行金昌市分行人事科制作</p><div class="illu"><svg viewBox="0 0 420 155" role="img" aria-label="晚霞、飞鸟与山峦插画"><circle cx="328" cy="43" r="34" fill="#e7bd69"/><path d="M0 101Q78 67 152 104T300 88T420 72V155H0Z" fill="#3d1110" opacity=".65"/><path d="M0 128Q92 102 174 132T420 105V155H0Z" fill="#250b0a"/><g fill="none" stroke="#f6d89c" stroke-width="2"><path d="M72 53q9-8 18 0q9-8 18 0"/><path d="M132 35q7-6 14 0q7-6 14 0"/></g></svg></div></div><span class="pageno">28</span></article></template></div>
+<script>
+(() => {
+  const pages = [...document.querySelectorAll('#templates template')].map(t => ({title:t.dataset.title, html:t.innerHTML.trim()}));
+  const articles = {"news1": {"title": "纪念江泽民同志诞辰100周年大会在京隆重举行 习近平发表重要讲话", "subtitle": "2026年8月17日", "url": "https://mp.weixin.qq.com/s/FcPX_GgqQpovGkXsMbx4QA", "paras": ["2026年8月17日上午，中共中央、全国人大常委会、国务院、全国政协、中央军委在人民大会堂隆重举行大会，纪念伟大的马克思主义者，伟大的无产阶级革命家、政治家、军事家、外交家，中国特色社会主义伟大事业的杰出领导者江泽民同志诞辰100周年。", "中共中央总书记、国家主席、中央军委主席习近平出席大会并发表重要讲话。习近平强调，要深切缅怀江泽民同志的丰功伟绩，深入学习江泽民同志的崇高风范，激励全党全国各族人民把中国特色社会主义事业不断推向前进。"], "source_note": "内容摘要依据终版期刊整理。"}, "news2": {"title": "李强主持召开国务院第十二次全体会议 强调努力完成全年经济社会发展目标任务", "subtitle": "2026年8月17日", "url": "https://mp.weixin.qq.com/s/HhxeuzdQn1HCUmg3mF_L3g", "paras": ["8月17日，国务院总理李强主持召开国务院第十二次全体会议，深入学习贯彻习近平总书记关于当前经济形势和经济工作的重要讲话精神，强调要切实把思想和行动统一到党中央对形势的科学判断和决策部署上来，扎实做好各项工作，努力完成全年经济社会发展目标任务，实现“十五五”良好开局。", "李强指出，今年以来，在以习近平同志为核心的党中央坚强领导下，我国经济运行总体平稳、稳中有进，呈现动能向新、结构向优的发展态势。要锚定发展目标，充分发挥存量政策效能，及时谋划出台务实管用的增量政策，推动经济持续向新向优向好发展。要扎实做好保障和改善民生工作，抓好就业增收，不断提升公共服务水平。"], "source_note": "内容摘要依据终版期刊整理。"}, "news3": {"title": "国家统计局发布1至7月经济数据 国民经济运行总体平稳", "subtitle": "2026年8月17日", "url": "https://mp.weixin.qq.com/s/f0n-ILtLnmgOfH3wqeeGug", "paras": ["国家统计局8月17日发布数据显示，2026年1至7月，全国规模以上工业增加值同比增长5.3%，全国服务业生产指数同比增长4.7%，货物进出口总额同比增长17.3%，社会消费商品和服务零售总额同比增长2.6%。各项指标显示，面对复杂严峻的外部环境和国内多重挑战，国民经济运行总体平稳、稳中有进，展现出强大韧性和活力。"], "source_note": "内容摘要依据终版期刊整理。"}, "theory1": {"title": "学习《习近平党建文选》——健全全面从严治党体系", "subtitle": "政治理论学习", "url": "https://mp.weixin.qq.com/s/MqimMK8-3pG50m5Iwdlkag", "paras": ["在庆祝中国共产党成立105周年大会上，习近平总书记指出，“坚定信心、接续奋斗，必须持之以恒推进全面从严治党”，强调“健全全面从严治党体系”。", "在《健全全面从严治党体系，推动新时代党的建设新的伟大工程向纵深发展》等重要篇目中，总书记指出，健全全面从严治党体系，“需要我们坚持制度治党、依规治党，更加突出党的各方面建设有机衔接、联动集成、协同协调，更加突出体制机制的健全完善和法规制度的科学有效，更加突出运用治理的理念、系统的观念、辩证的思维管党治党建设党”，并从健全组织体系、教育体系、监管体系、制度体系、责任体系五个方面作出重要部署。"], "source_note": "内容摘要依据终版期刊整理。"}, "theory2": {"title": "学习《求是》杂志发表习近平总书记重要文章——《提高防灾减灾救灾能力》", "subtitle": "政治理论学习", "url": "https://mp.weixin.qq.com/s/5hTuqL67I3oFhZgDqWkrhQ", "paras": ["文章强调，我国国土广袤、地理复杂、气候多样，自然灾害易发多发。党的十八大以来，党中央坚持把防灾减灾救灾工作作为关系人民安危和国家安全的大事来抓，在理念转变、体制改革、体系建设、能力提升等方面作出许多部署，带领广大干部群众战胜一系列重特大自然灾害，最大限度减少人员伤亡和财产损失，成效举世公认。", "做好防灾减灾救灾工作，必须坚持党的全面领导，坚持人民至上、生命至上，坚持尊重自然规律，坚持预防为主，坚持改革创新，坚持系统观念，坚持社会共治。这些宝贵经验要坚持好运用好，并结合新的实际不断丰富和发展。"], "source_note": "内容摘要依据终版期刊整理。"}};
+  const left = document.getElementById('left');
+  const right = document.getElementById('right');
+  const turn = document.getElementById('turner');
+  const front = document.getElementById('front');
+  const back = document.getElementById('back');
+  const swipeLayer = document.getElementById('swipeLayer');
+  const stage = document.getElementById('stage');
+  const topbarEl = document.querySelector('.topbar');
+  const toolbarEl = document.querySelector('.toolbar');
+
+  function getVisualViewportSize(){
+    const vv = window.visualViewport;
+    return {
+      width: Math.max(1, vv ? vv.width : document.documentElement.clientWidth),
+      height: Math.max(1, vv ? vv.height : document.documentElement.clientHeight)
+    };
+  }
+
+  function syncMobileGeometry(){
+    if(!matchMedia('(max-width:760px)').matches){
+      document.documentElement.style.removeProperty('--mobile-vvh');
+      document.documentElement.style.removeProperty('--page-w');
+      document.documentElement.style.removeProperty('--page-h');
+      return;
+    }
+    const vp = getVisualViewportSize();
+    const immersiveNow = document.body.classList.contains('mobile-immersive');
+    document.documentElement.style.setProperty('--mobile-vvh', `${vp.height.toFixed(1)}px`);
+
+    const topH = topbarEl ? topbarEl.getBoundingClientRect().height : 78;
+    const toolbarH = toolbarEl ? toolbarEl.getBoundingClientRect().height : 54;
+    const reserve = immersiveNow ? (topH + toolbarH + 18) : (topH + toolbarH + 30);
+    const availH = Math.max(300, vp.height - reserve);
+    const availW = Math.max(260, vp.width - (immersiveNow ? 6 : 12));
+    const pageW = Math.max(250, Math.min(440, availW, availH / 1.42));
+    document.documentElement.style.setProperty('--page-w', `${pageW.toFixed(1)}px`);
+    document.documentElement.style.setProperty('--page-h', `${(pageW * 1.42).toFixed(1)}px`);
+  }
+
+  function updateOverflowHints(root = right){
+    if(!mobile || !root) return;
+    requestAnimationFrame(() => {
+      root.querySelectorAll('.page').forEach(page => {
+        const inner = page.querySelector('.inner');
+        if(!inner) return;
+        const overflow = inner.scrollHeight > inner.clientHeight + 3;
+        page.classList.toggle('has-overflow', overflow);
+        page.classList.toggle('scrolled-end', !overflow || inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 4);
+        if(overflow && !inner.dataset.scrollBound){
+          inner.dataset.scrollBound = '1';
+          inner.addEventListener('scroll', () => {
+            page.classList.toggle('scrolled-end', inner.scrollTop + inner.clientHeight >= inner.scrollHeight - 4);
+          }, {passive:true});
+        }
+      });
+    });
+  }
+
+  // Scale typography from the actual rendered page size.
+  // Baseline: 460 × 650 px. The clamp prevents text from becoming
+  // too small to read or too large to disturb the established layout.
+  let fontScale = 1;
+  try{
+    const _v = parseFloat(localStorage.getItem('pbcJinchangFontScale') || '100');
+    if(_v >= 85 && _v <= 150) fontScale = _v / 100;
+  }catch(_){}
+  function updateResponsiveTypography(){
+    syncMobileGeometry();
+    const rect = stage.getBoundingClientRect();
+    if(!rect.width || !rect.height) return;
+    const isMobile = matchMedia('(max-width:760px)').matches;
+    const pageWidth = isMobile ? rect.width : rect.width / 2;
+
+    if(isMobile){
+      // 移动端优先保证可读性。若某页文字较长，允许页内纵向滚动，
+      // 不再为了“硬塞进一页”而把字体压得过小。
+      const widthFactor = Math.max(.92, Math.min(1.10, pageWidth / 390));
+      const base = Math.max(14.0, Math.min(15.4, 14.5 * widthFactor));
+      document.documentElement.style.setProperty('--page-font-base', `${(base * fontScale).toFixed(2)}px`);
+      updateOverflowHints(right);
+      return;
+    }
+
+    const scale = Math.max(.78, Math.min(1.24, Math.min(pageWidth / 460, rect.height / 650)));
+    document.documentElement.style.setProperty('--page-font-base', `${(13.3 * scale * fontScale).toFixed(2)}px`);
+  }
+  const label = document.getElementById('label');
+  const count = document.getElementById('count');
+  const prog = document.getElementById('prog');
+  const prevs = [document.getElementById('prev'), document.getElementById('prevA')];
+  const nexts = [document.getElementById('next'), document.getElementById('nextA')];
+  const drawer = document.getElementById('drawer');
+  const list = document.getElementById('drawerList');
+  const toast = document.getElementById('toast');
+
+  const articleModal = document.getElementById('articleModal');
+  const articleTitle = document.getElementById('articleTitle');
+  const articleBody = document.getElementById('articleBody');
+
+  const musicModal = document.getElementById('musicModal');
+  const bgm = document.getElementById('bgm');
+  const musicFile = document.getElementById('musicFile');
+  const musicStatus = document.getElementById('musicStatus');
+  const playMusic = document.getElementById('playMusic');
+
+
+  let mobile = matchMedia('(max-width:760px)').matches;
+  let mi = 0;
+  let spread = 0;
+  let busy = false;
+
+  let pointer = {
+    active:false, sx:0, sy:0, x:0, startedAt:0, dragging:false, direction:0, target:-1, raf:0
+  };
+
+  const blank = '<article class="page blank"></article>';
+  const get = i => (i >= 0 && i < pages.length) ? pages[i].html : blank;
+  const maxSpread = Math.ceil((pages.length - 1) / 2);
+  const inds = s => s === 0 ? {l:-1, r:0} : {l:2*s-1, r:2*s};
+  const idx = () => mobile ? mi : Math.min(inds(spread).r, pages.length - 1);
+
+
+  function decorateImages(){ /* 图片上传与替换功能已移除 */ }
+
+  function meta(){
+    const i = idx();
+    label.textContent = pages[i]?.title || '电子期刊';
+    count.textContent = `${i + 1} / ${pages.length}`;
+    prog.style.width = `${(i + 1) / pages.length * 100}%`;
+    const atStart = mobile ? mi === 0 : spread === 0;
+    const atEnd = mobile ? mi >= pages.length - 1 : spread >= maxSpread;
+    prevs.forEach(b => b.disabled = atStart);
+    nexts.forEach(b => b.disabled = atEnd);
+    [...list.children].forEach((b,n) => b.classList.toggle('active', n === i));
+  }
+
+  function bind(root=document){
+    root.querySelectorAll('[data-jump]').forEach(b => {
+      if(b.dataset.bound) return;
+      b.dataset.bound = '1';
+      b.addEventListener('click', () => go(+b.dataset.jump));
+    });
+    root.querySelectorAll('[data-article]').forEach(b => {
+      if(b.dataset.articleBound) return;
+      b.dataset.articleBound = '1';
+      b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openArticle(b.dataset.article);
+      });
+    });
+  }
+
+  function render(){
+    syncMobileGeometry();
+    if(mobile){
+      left.innerHTML = '';
+      right.innerHTML = get(mi);
+      decorateImages(right, mi);
+    }else{
+      const d = inds(spread);
+      left.innerHTML = get(d.l);
+      right.innerHTML = get(d.r);
+      decorateImages(left, d.l);
+      decorateImages(right, d.r);
+    }
+    bind();
+    meta();
+    if(mobile) updateOverflowHints(right);
+  }
+
+  function say(text){
+    toast.textContent = text;
+    toast.classList.add('show');
+    clearTimeout(say.t);
+    say.t = setTimeout(() => toast.classList.remove('show'), 1000);
+  }
+
+  function desktopNext(){
+    if(busy || spread >= maxSpread) return;
+    busy = true;
+    const c = inds(spread);
+    const ns = spread + 1;
+    const n = inds(ns);
+    right.innerHTML = get(n.r);
+    turn.className = 'turner next';
+    front.innerHTML = get(c.r);
+    back.innerHTML = get(n.l);
+    turn.style.display = 'block';
+    requestAnimationFrame(() => requestAnimationFrame(() => turn.classList.add('anim')));
+    setTimeout(() => {
+      spread = ns;
+      turn.style.display = 'none';
+      turn.classList.remove('anim');
+      busy = false;
+      render();
+    }, 740);
+  }
+
+  function desktopPrev(){
+    if(busy || spread <= 0) return;
+    busy = true;
+    const c = inds(spread);
+    const ps = spread - 1;
+    const p = inds(ps);
+
+    // 反向翻页：当前左页作为纸张正面，从左向右翻动；
+    // 翻转后的背面显示上一跨页的右页，底层左页提前露出。
+    left.innerHTML = get(p.l);
+    turn.className = 'turner prev';
+    front.innerHTML = get(c.l);
+    back.innerHTML = get(p.r);
+    turn.style.display = 'block';
+    turn.style.transform = 'rotateY(0deg)';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      turn.style.transform = '';
+      turn.classList.add('anim');
+    }));
+    setTimeout(() => {
+      spread = ps;
+      turn.style.display = 'none';
+      turn.classList.remove('anim');
+      turn.style.transform = '';
+      busy = false;
+      render();
+    }, 740);
+  }
+
+  function prepareMobileTurn(direction, target){
+    right.innerHTML = get(target);
+    swipeLayer.innerHTML = get(mi);
+    swipeLayer.classList.remove('forward','backward','turning');
+    swipeLayer.classList.add(direction > 0 ? 'forward' : 'backward');
+    swipeLayer.style.display = 'block';
+    swipeLayer.style.transition = 'none';
+    swipeLayer.style.opacity = '1';
+    swipeLayer.style.transform = 'translate3d(0,0,0) rotateY(0deg)';
+  }
+
+  function clearMobileTurn(){
+    swipeLayer.style.display = 'none';
+    swipeLayer.style.transition = 'none';
+    swipeLayer.style.transform = 'translate3d(0,0,0) rotateY(0deg)';
+    swipeLayer.style.opacity = '1';
+    swipeLayer.classList.remove('forward','backward','turning');
+  }
+
+  function mobileFlip(direction){
+    if(busy) return;
+    const target = mi + direction;
+    if(target < 0 || target >= pages.length) return;
+    busy = true;
+    prepareMobileTurn(direction, target);
+    const endAngle = direction > 0 ? -178 : 178;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      swipeLayer.classList.add('turning');
+      swipeLayer.style.transition = 'transform var(--mobile-turn) cubic-bezier(.22,.61,.36,1), opacity var(--mobile-turn) ease';
+      swipeLayer.style.transform = `translate3d(0,0,0) rotateY(${endAngle}deg)`;
+      swipeLayer.style.opacity = '.985';
+    }));
+    setTimeout(() => {
+      mi = target;
+      clearMobileTurn();
+      busy = false;
+      render();
+    }, 480);
+  }
+
+  function next(){ stopReading(true); mobile ? mobileFlip(1) : desktopNext(); }
+  function prev(){ stopReading(true); mobile ? mobileFlip(-1) : desktopPrev(); }
+
+  function go(i){
+    stopReading(true);
+    i = Math.max(0, Math.min(pages.length - 1, i));
+    if(mobile) mi = i;
+    else spread = i === 0 ? 0 : Math.ceil(i / 2);
+    render();
+    closeDrawer();
+    say('已跳转：' + pages[i].title);
+  }
+
+  function openDrawer(){ drawer.classList.add('open'); drawer.setAttribute('aria-hidden','false'); }
+  function closeDrawer(){ drawer.classList.remove('open'); drawer.setAttribute('aria-hidden','true'); }
+
+  function openArticle(id){
+    const a = articles[id];
+    if(!a) return;
+    articleTitle.textContent = a.title;
+    const paras = a.paras.map(p => `<p>${escapeHtml(p)}</p>`).join('');
+    const link = a.url ? `<a class="open-original" href="${escapeAttr(a.url)}" target="_blank" rel="noopener">打开原网页 ↗</a>` : '';
+    articleBody.innerHTML = `<div class="sub">${escapeHtml(a.subtitle || '')}</div>${paras}<div class="source-note">${escapeHtml(a.source_note || '')}</div>${link}`;
+    articleModal.classList.add('open');
+    articleModal.setAttribute('aria-hidden','false');
+  }
+  function closeArticle(){ articleModal.classList.remove('open'); articleModal.setAttribute('aria-hidden','true'); }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+  function escapeAttr(s){ return escapeHtml(s); }
+
+  // Natural narration: prefer pre-generated same-origin MP3 files for broad browser compatibility.
+  // If a page MP3 is unavailable, fall back to the browser speech engine when supported.
+  const readTop = document.getElementById('readTop');
+  const narrationAudio = document.getElementById('pageNarration');
+  const speechSupported = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  let speechState = 'idle'; // idle | loading | speaking | paused
+  let narrationMode = 'none'; // none | audio | speech
+  let narrationPage = -1;
+  let speechToken = 0;
+  let speechChunks = [];
+  let speechChunkIndex = 0;
+  let musicPausedForSpeech = false;
+  let audioFallbackStarted = false;
+
+  function updateReadButton(){
+    if(!readTop) return;
+    readTop.classList.toggle('reading', speechState === 'speaking');
+    readTop.classList.toggle('paused', speechState === 'paused');
+    readTop.classList.toggle('loading', speechState === 'loading');
+    readTop.setAttribute('aria-pressed', speechState !== 'idle' ? 'true' : 'false');
+    if(speechState === 'loading') readTop.title = '朗读加载中';
+    else if(speechState === 'speaking') readTop.title = '朗读中，点击暂停';
+    else if(speechState === 'paused') readTop.title = '朗读暂停，点击继续';
+    else readTop.title = '朗读当前页；朗读中点击可暂停或继续';
+  }
+
+  function extractPageSpeechText(i){
+    const holder = document.createElement('div');
+    holder.innerHTML = get(i);
+    holder.querySelectorAll('button,a,video,svg,.pageno,.video-caption').forEach(el => el.remove());
+    let text = (holder.textContent || '')
+      .replace(/[｜·]/g,'，')
+      .replace(/\s+/g,' ')
+      .replace(/([。！？；])\1+/g,'$1')
+      .trim();
+    const title = pages[i]?.title || '';
+    if(title && text && !text.startsWith(title)) text = `${title}。${text}`;
+    return text;
+  }
+
+  function splitSpeechText(text, maxLen=130){
+    const sentences = text.match(/[^。！？；.!?]+[。！？；.!?]?/g) || [text];
+    const chunks = [];
+    let buf = '';
+    for(const raw of sentences){
+      const part = raw.trim();
+      if(!part) continue;
+      if((buf + part).length > maxLen && buf){ chunks.push(buf); buf = part; }
+      else buf += part;
+    }
+    if(buf) chunks.push(buf);
+    return chunks;
+  }
+
+  function pickChineseVoice(){
+    const voices = speechSynthesis.getVoices ? speechSynthesis.getVoices() : [];
+    const zh = voices.filter(v => /^zh([_-]|$)/i.test(v.lang || ''));
+    const premium = /(Natural|Premium|Enhanced|Xiaoxiao|Ting|Meijia|Sinji|Microsoft)/i;
+    return zh.find(v => premium.test(v.name || '')) ||
+      zh.find(v => /zh[-_]CN/i.test(v.lang || '')) || zh[0] || null;
+  }
+
+  function pauseMusicForNarration(){
+    if(musicEnabled && !bgm.paused){
+      musicPausedForSpeech = true;
+      bgm.pause();
+    }
+  }
+
+  function resumeMusicAfterNarration(){
+    if(musicPausedForSpeech && musicEnabled){
+      musicPausedForSpeech = false;
+      startMusic();
+    }else{
+      musicPausedForSpeech = false;
+    }
+  }
+
+  function clearNarrationMedia(){
+    const mode = narrationMode;
+    narrationMode = 'none';
+    if(mode === 'audio'){
+      narrationAudio.pause();
+      narrationAudio.removeAttribute('src');
+      try{ narrationAudio.load(); }catch(_){}
+    }
+    if(mode === 'speech' && speechSupported){
+      speechSynthesis.cancel();
+    }
+  }
+
+  function finishReading(resumeMusic=true){
+    clearNarrationMedia();
+    speechState = 'idle';
+    narrationPage = -1;
+    speechChunks = [];
+    speechChunkIndex = 0;
+    audioFallbackStarted = false;
+    updateReadButton();
+    if(resumeMusic) resumeMusicAfterNarration();
+    else musicPausedForSpeech = false;
+  }
+
+  function stopReading(silent=false){
+    speechToken++;
+    const wasActive = speechState !== 'idle';
+    finishReading(true);
+    if(wasActive && !silent) say('朗读已停止');
+  }
+
+  function speakNextChunk(token){
+    if(token !== speechToken || narrationMode !== 'speech' || speechChunkIndex >= speechChunks.length){
+      if(token === speechToken && narrationMode === 'speech') finishReading(true);
+      return;
+    }
+    const utter = new SpeechSynthesisUtterance(speechChunks[speechChunkIndex]);
+    utter.lang = 'zh-CN';
+    utter.rate = .92;
+    utter.pitch = .98;
+    utter.volume = 1;
+    const voice = pickChineseVoice();
+    if(voice) utter.voice = voice;
+    utter.onend = () => {
+      if(token !== speechToken) return;
+      speechChunkIndex++;
+      speakNextChunk(token);
+    };
+    utter.onerror = ev => {
+      if(token !== speechToken || ev.error === 'canceled' || ev.error === 'interrupted') return;
+      finishReading(true);
+      say('当前浏览器无法继续朗读');
+    };
+    speechSynthesis.speak(utter);
+  }
+
+  function startBrowserFallback(text){
+    if(audioFallbackStarted) return;
+    audioFallbackStarted = true;
+    if(!speechSupported){
+      finishReading(true);
+      say('自然语音尚未生成，请先在服务器生成朗读音频');
+      return;
+    }
+    narrationMode = 'speech';
+    speechChunks = splitSpeechText(text);
+    speechChunkIndex = 0;
+    speechState = 'speaking';
+    updateReadButton();
+    const token = ++speechToken;
+    speechSynthesis.cancel();
+    speakNextChunk(token);
+    say('已切换为本机语音朗读');
+  }
+
+  function startCurrentPageReading(){
+    const pageIndex = idx();
+    const text = extractPageSpeechText(pageIndex);
+    if(!text){ say('当前页没有可朗读文字'); return; }
+
+    stopReading(true);
+    pauseMusicForNarration();
+    narrationPage = pageIndex;
+    narrationMode = 'audio';
+    speechState = 'loading';
+    audioFallbackStarted = false;
+    updateReadButton();
+
+    const file = `assets/tts/page-${String(pageIndex + 1).padStart(2,'0')}.mp3`;
+    narrationAudio.src = `${file}?v=20260818c`;
+    narrationAudio.currentTime = 0;
+    const p = narrationAudio.play();
+    if(p && typeof p.then === 'function'){
+      p.then(() => {
+        if(narrationPage !== pageIndex || narrationMode !== 'audio') return;
+        speechState = 'speaking';
+        updateReadButton();
+        say('开始自然语音朗读');
+      }).catch(() => {
+        if(narrationPage === pageIndex && narrationMode === 'audio') startBrowserFallback(text);
+      });
+    }
+  }
+
+  narrationAudio.addEventListener('error', () => {
+    if(narrationMode !== 'audio' || narrationPage < 0) return;
+    startBrowserFallback(extractPageSpeechText(narrationPage));
+  });
+  narrationAudio.addEventListener('ended', () => {
+    if(narrationMode === 'audio') finishReading(true);
+  });
+  narrationAudio.addEventListener('playing', () => {
+    if(narrationMode === 'audio'){
+      speechState = 'speaking';
+      updateReadButton();
+    }
+  });
+
+  function toggleReading(){
+    if(speechState === 'speaking'){
+      if(narrationMode === 'audio') narrationAudio.pause();
+      else if(narrationMode === 'speech' && speechSupported) speechSynthesis.pause();
+      speechState = 'paused';
+      updateReadButton();
+      say('朗读已暂停');
+      return;
+    }
+    if(speechState === 'paused'){
+      if(narrationMode === 'audio') narrationAudio.play().catch(() => startBrowserFallback(extractPageSpeechText(narrationPage)));
+      else if(narrationMode === 'speech' && speechSupported) speechSynthesis.resume();
+      speechState = 'speaking';
+      updateReadButton();
+      say('继续朗读');
+      return;
+    }
+    if(speechState === 'loading'){
+      stopReading(true);
+      return;
+    }
+    startCurrentPageReading();
+  }
+
+  if(readTop){
+    readTop.title = '优先播放服务器生成的自然中文语音；再次点击可暂停或继续';
+    readTop.addEventListener('click', toggleReading);
+    updateReadButton();
+  }
+
+  pages.forEach((p,i) => {
+    if(p.title === '尾刊寄语') return;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.innerHTML = `<b>${String(i+1).padStart(2,'0')} · ${p.title}</b><span>点击跳转到本页</span>`;
+    b.addEventListener('click', () => go(i));
+    list.appendChild(b);
+  });
+
+  nexts.forEach(b => b.addEventListener('click', next));
+  prevs.forEach(b => b.addEventListener('click', prev));
+  document.getElementById('home').addEventListener('click', () => go(0));
+  document.getElementById('toc').addEventListener('click', openDrawer);
+  document.getElementById('tocTop').addEventListener('click', openDrawer);
+  document.getElementById('closeDrawer').addEventListener('click', closeDrawer);
+  drawer.addEventListener('click', e => { if(e.target === drawer) closeDrawer(); });
+
+  document.getElementById('closeArticle').addEventListener('click', closeArticle);
+  articleModal.addEventListener('click', e => { if(e.target === articleModal) closeArticle(); });
+
+  
+  // 字号调节
+  const fontModal = document.getElementById('fontModal');
+  const fontBtn = document.getElementById('fontBtn');
+  const closeFont = document.getElementById('closeFont');
+  function applyFontScale(){
+    try{ localStorage.setItem('pbcJinchangFontScale', String(Math.round(fontScale * 100))); }catch(_){}
+    document.body.classList.toggle('font-bigger', Math.round(fontScale * 100) !== 100);
+    document.querySelectorAll('.font-preset').forEach(b => {
+      b.classList.toggle('current', Number(b.dataset.size) === Math.round(fontScale * 100));
+    });
+    updateResponsiveTypography();
+    render();
+  }
+  function openFontModal(){
+    if(!fontModal) return;
+    fontModal.classList.add('open');
+    fontModal.setAttribute('aria-hidden','false');
+  }
+  function closeFontModal(){
+    if(!fontModal) return;
+    fontModal.classList.remove('open');
+    fontModal.setAttribute('aria-hidden','true');
+  }
+  if(fontBtn) fontBtn.addEventListener('click', openFontModal);
+  if(closeFont) closeFont.addEventListener('click', closeFontModal);
+  if(fontModal) fontModal.addEventListener('click', e => { if(e.target === fontModal) closeFontModal(); });
+  document.querySelectorAll('.font-preset').forEach(b => {
+    b.addEventListener('click', () => {
+      fontScale = Number(b.dataset.size) / 100;
+      applyFontScale();
+      say('字号已调整');
+      closeFontModal();
+    });
+  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeFontModal(); });
+  applyFontScale();
+
+  
+
+  // 视频自定义全屏（不调用原生视频全屏，避免闪退）
+  const videoFsOverlay = document.getElementById('videoFsOverlay');
+  const videoFsClose = document.getElementById('videoFsClose');
+  function openVideoFullscreen(){
+    const video = document.getElementById('magazineVideo');
+    if(!videoFsOverlay || !video) return;
+    videoFsOverlay.appendChild(video);
+    videoFsOverlay.classList.add('open');
+    videoFsOverlay.setAttribute('aria-hidden','false');
+    try{ video.play().catch(() => {}); }catch(_){}
+  }
+  function closeVideoFullscreen(){
+    const video = document.getElementById('magazineVideo');
+    if(!videoFsOverlay || !video) return;
+    const wrap = document.getElementById('videoWrap');
+    if(wrap){ const frame = wrap.querySelector('.video-frame') || wrap; frame.appendChild(video); }
+    videoFsOverlay.classList.remove('open');
+    videoFsOverlay.setAttribute('aria-hidden','true');
+  }
+  document.addEventListener('click', e => {
+    if(e.target.closest('#videoFsBtn')){ openVideoFullscreen(); }
+    else if(e.target.closest('#videoFsClose')){ closeVideoFullscreen(); }
+    else if(e.target === videoFsOverlay){ closeVideoFullscreen(); }
+  });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeVideoFullscreen(); });
+
+  const fullBtn = document.getElementById('full');
+  let mobileImmersive = false;
+
+  function refreshLayoutAfterFullscreen(){
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      updateResponsiveTypography();
+      render();
+    }));
+  }
+
+  function setMobileImmersive(on){
+    mobileImmersive = !!on;
+    document.body.classList.toggle('mobile-immersive', mobileImmersive);
+    fullBtn.title = mobileImmersive ? '退出全屏' : '全屏';
+    fullBtn.setAttribute('aria-pressed', mobileImmersive ? 'true' : 'false');
+    window.scrollTo(0,0);
+    refreshLayoutAfterFullscreen();
+  }
+
+  fullBtn.addEventListener('click', async () => {
+    const isMobileNow = matchMedia('(max-width:760px)').matches;
+    if(!isMobileNow){
+      try{
+        if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+        else await document.exitFullscreen();
+      }catch(e){ say('当前浏览器不支持全屏'); }
+      return;
+    }
+    // 手机端优先使用系统全屏，失败时退回沉浸模式
+    try{
+      if(!document.fullscreenElement){
+        await document.documentElement.requestFullscreen();
+        setMobileImmersive(true);
+      }else{
+        await document.exitFullscreen();
+        setMobileImmersive(false);
+      }
+    }catch(e){
+      setMobileImmersive(!mobileImmersive);
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    const fs = !!document.fullscreenElement;
+    if(mobile){
+      setMobileImmersive(fs);
+    }else{
+      fullBtn.title = fs ? '退出全屏' : '全屏';
+      fullBtn.setAttribute('aria-pressed', fs ? 'true' : 'false');
+      refreshLayoutAfterFullscreen();
+    }
+  });
+
+  // Background music switch: packaged assets/music/bgm.mp3, default ON.
+  const musicTop = document.getElementById('musicTop');
+  let musicEnabled = true;
+
+  function updateMusicToggle(){
+    musicTop.classList.toggle('on', musicEnabled);
+    musicTop.classList.toggle('off', !musicEnabled);
+    musicTop.setAttribute('aria-pressed', musicEnabled ? 'true' : 'false');
+    musicTop.title = musicEnabled ? '背景音乐：开，点击关闭' : '背景音乐：关，点击开启';
+  }
+
+  async function startMusic(){
+    if(!musicEnabled || speechState !== 'idle') return;
+    try{
+      await bgm.play();
+    }catch(_){
+      // Most mobile/desktop browsers block audible autoplay until the first user gesture.
+      // The switch remains ON; the first interaction anywhere on the page will start playback.
+    }
+  }
+
+  function closeMusic(){
+    if(musicModal){
+      musicModal.classList.remove('open');
+      musicModal.setAttribute('aria-hidden','true');
+    }
+  }
+
+  function toggleMusic(){
+    musicEnabled = !musicEnabled;
+    if(musicEnabled){
+      startMusic();
+      say('背景音乐已开启');
+    }else{
+      bgm.pause();
+      say('背景音乐已关闭');
+    }
+    updateMusicToggle();
+  }
+
+  function resumeMusicOnFirstGesture(){
+    if(musicEnabled && bgm.paused) bgm.play().catch(() => {});
+  }
+
+  musicTop.addEventListener('click', toggleMusic);
+  ['pointerdown','touchstart','keydown'].forEach(type => {
+    document.addEventListener(type, resumeMusicOnFirstGesture, {once:true, capture:true});
+  });
+  bgm.addEventListener('error', () => say('背景音乐文件加载失败'));
+  updateMusicToggle();
+  startMusic();
+
+  
+
+
+  // 上下期切换
+  const issueModal = document.getElementById('issueModal');
+  const issueSwitch = document.getElementById('issueSwitch');
+  const closeIssue = document.getElementById('closeIssue');
+  function openIssueModal(){
+    if(!issueModal) return;
+    issueModal.classList.add('open');
+    issueModal.setAttribute('aria-hidden','false');
+  }
+  function closeIssueModal(){
+    if(!issueModal) return;
+    issueModal.classList.remove('open');
+    issueModal.setAttribute('aria-hidden','true');
+  }
+  if(issueSwitch) issueSwitch.addEventListener('click', openIssueModal);
+  if(closeIssue) closeIssue.addEventListener('click', closeIssueModal);
+  if(issueModal) issueModal.addEventListener('click', e => { if(e.target === issueModal) closeIssueModal(); });
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeIssueModal(); });
+  {
+    const path = location.pathname || '';
+    const links = document.querySelectorAll('.issue-link');
+    if(/\/1(\/|$)/.test(path)) links[0]?.classList.add('current');
+    else if(/\/2(\/|$)/.test(path)) links[1]?.classList.add('current');
+  }
+
+  document.addEventListener('keydown', e => {
+    if(e.key === 'ArrowRight' || e.key === 'PageDown') next();
+    if(e.key === 'ArrowLeft' || e.key === 'PageUp') prev();
+    if(e.key === 'Escape'){
+      closeDrawer(); closeArticle(); closeMusic();
+      if(mobileImmersive) setMobileImmersive(false);
+      stopReading(true);
+    }
+  });
+
+  // Smooth mobile swipe: transform-only, requestAnimationFrame, no layout thrashing.
+
+  function resetPointer(){
+    pointer.active = false;
+    pointer.dragging = false;
+    pointer.direction = 0;
+    pointer.target = -1;
+    if(pointer.raf) cancelAnimationFrame(pointer.raf);
+    pointer.raf = 0;
+  }
+
+  stage.addEventListener('pointerdown', e => {
+    if(!mobile || busy) return;
+    if(e.target.closest('button,a,video')) return;
+    pointer.active = true;
+    pointer.sx = pointer.x = e.clientX;
+    pointer.sy = e.clientY;
+    pointer.startedAt = performance.now();
+    try{ stage.setPointerCapture(e.pointerId); }catch(_){}
+  });
+
+  stage.addEventListener('pointermove', e => {
+    if(!mobile || !pointer.active || busy) return;
+    pointer.x = e.clientX;
+    const dx = pointer.x - pointer.sx;
+    const dy = e.clientY - pointer.sy;
+
+    if(!pointer.dragging){
+      if(Math.abs(dx) < 7) return;
+      if(Math.abs(dy) > Math.abs(dx)) {
+        resetPointer();
+        return;
+      }
+      pointer.direction = dx < 0 ? 1 : -1;
+      pointer.target = mi + pointer.direction;
+      if(pointer.target < 0 || pointer.target >= pages.length){
+        pointer.target = -1;
+        return;
+      }
+      pointer.dragging = true;
+      prepareMobileTurn(pointer.direction, pointer.target);
+      swipeLayer.classList.add('turning');
+    }
+
+    if(pointer.target < 0) return;
+    const w = stage.getBoundingClientRect().width || 1;
+    let dragX = dx;
+    if(pointer.direction === 1) dragX = Math.min(0, dx);
+    else dragX = Math.max(0, dx);
+    const progress = Math.min(1, Math.abs(dragX) / w);
+    if(pointer.raf) cancelAnimationFrame(pointer.raf);
+    pointer.raf = requestAnimationFrame(() => {
+      const angle = pointer.direction === 1 ? -178 * progress : 178 * progress;
+      swipeLayer.style.transform = `translate3d(0,0,0) rotateY(${angle}deg)`;
+      swipeLayer.style.opacity = String(1 - progress * .015);
+    });
+  });
+
+  stage.addEventListener('pointerup', e => {
+    if(!mobile || !pointer.active) return;
+    const dx = e.clientX - pointer.sx;
+    const dt = Math.max(1, performance.now() - pointer.startedAt);
+    const velocity = Math.abs(dx) / dt;
+    const width = stage.getBoundingClientRect().width || 1;
+
+    if(pointer.dragging && pointer.target >= 0){
+      const progress = Math.min(1, Math.abs(dx) / width);
+      const commit = progress > .22 || velocity > .5;
+      if(commit){
+        stopReading(true);
+        const endAngle = pointer.direction === 1 ? -178 : 178;
+        const duration = Math.max(170, Math.round((1 - progress) * 430));
+        swipeLayer.style.transition = `transform ${duration}ms cubic-bezier(.22,.61,.36,1), opacity ${duration}ms ease`;
+        swipeLayer.style.transform = `translate3d(0,0,0) rotateY(${endAngle}deg)`;
+        swipeLayer.style.opacity = '.985';
+        const target = pointer.target;
+        busy = true;
+        setTimeout(() => {
+          mi = target;
+          clearMobileTurn();
+          busy = false;
+          render();
+        }, duration + 24);
+      }else{
+        const duration = Math.max(150, Math.round(progress * 300));
+        swipeLayer.style.transition = `transform ${duration}ms cubic-bezier(.22,.61,.36,1), opacity ${duration}ms ease`;
+        swipeLayer.style.transform = 'translate3d(0,0,0) rotateY(0deg)';
+        swipeLayer.style.opacity = '1';
+        setTimeout(() => {
+          clearMobileTurn();
+          right.innerHTML = get(mi);
+          bind();
+        }, duration + 24);
+      }
+    }else{
+      // Tap zones if it was not a drag.
+      if(Math.abs(dx) < 8 && Math.abs(e.clientY - pointer.sy) < 8){
+        const r = stage.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        if(x > r.width * .68) next();
+        else if(x < r.width * .32) prev();
+      }
+    }
+    resetPointer();
+  });
+
+  stage.addEventListener('pointercancel', () => {
+    if(pointer.dragging){
+      clearMobileTurn();
+      right.innerHTML = get(mi);
+      bind();
+    }
+    resetPointer();
+  });
+
+  let viewportSyncRaf = 0;
+  function handleViewportChange(){
+    if(viewportSyncRaf) cancelAnimationFrame(viewportSyncRaf);
+    viewportSyncRaf = requestAnimationFrame(() => {
+      viewportSyncRaf = 0;
+      const n = matchMedia('(max-width:760px)').matches;
+      if(n !== mobile){
+        const i = idx();
+        mobile = n;
+        mi = i;
+        spread = i === 0 ? 0 : Math.ceil(i / 2);
+        clearMobileTurn();
+        if(!n && mobileImmersive) setMobileImmersive(false);
+        render();
+      }else{
+        syncMobileGeometry();
+        updateResponsiveTypography();
+        if(mobile) updateOverflowHints(right);
+      }
+    });
+  }
+
+  addEventListener('resize', handleViewportChange, {passive:true});
+  addEventListener('orientationchange', () => setTimeout(handleViewportChange, 160));
+  if(window.visualViewport){
+    window.visualViewport.addEventListener('resize', handleViewportChange, {passive:true});
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if(document.hidden && speechState !== 'idle') stopReading(true);
+  });
+  addEventListener('beforeunload', () => { try{ narrationAudio.pause(); }catch(_){} if(speechSupported) speechSynthesis.cancel(); });
+
+  syncMobileGeometry();
+  updateResponsiveTypography();
+  render();
+})();
+</script>
+</body>
+</html>
