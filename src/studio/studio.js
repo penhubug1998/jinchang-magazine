@@ -890,9 +890,30 @@ function insertPageAfterCurrent(page=newBlankPage(),{historyGroup='page-insert',
   toast(message);
   return true;
 }
-function insertBlankPage(){
-  if(!requireIssue('请先选择可编辑期刊')||!commitPage())return false;
-  return insertPageAfterCurrent(newBlankPage());
+function insertBlankPage(event){
+  // Page insertion should behave like a slide editor: an unfinished field or
+  // invalid advanced JSON on the current page must not make the button appear
+  // dead.  Keep the editable page metadata, preserve its existing block data
+  // when JSON cannot be applied, and always move focus to the new page.
+  event?.preventDefault?.();
+  if(!requireIssue('请先选择可编辑期刊'))return false;
+  let jsonBlocked=false;
+  try{
+    syncPageMeta();
+    if(state.editorMode==='json'&&!syncJsonToPage({notify:false}))jsonBlocked=true;
+  }catch(error){
+    jsonBlocked=true;
+    console.error('[Studio] insert page commit skipped',error);
+  }
+  try{
+    const inserted=insertPageAfterCurrent(newBlankPage(),{message:'已插入新页'});
+    if(inserted&&jsonBlocked)toast('已插入新页；当前页高级 JSON 仍有格式问题，请稍后修正',3600);
+    return inserted;
+  }catch(error){
+    console.error('[Studio] insert page failed',error);
+    toast(`插入新页失败：${error?.message||'请刷新后重试'}`,3600);
+    return false;
+  }
 }
 function pageTemplatePreview(id){
   const layouts={

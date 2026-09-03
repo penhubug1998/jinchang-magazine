@@ -54,7 +54,7 @@
       <div class="columns">
         <section class="card pages" id="pagesCard">
           <button id="pagesPanelToggle" class="pages-rail-toggle" type="button" title="收束页面导航" aria-expanded="true"><span class="rail-toggle-icon" aria-hidden="true">‹</span><span class="rail-toggle-label">收束页面</span></button>
-          <div class="section-head"><div><span class="eyebrow">PAGES</span><h2>页面结构 <small id="pageTotal"></small></h2></div><div class="page-actions"><button id="autoToc">自动目录</button><button id="insertPage">＋ 新页面</button><button id="addPage">＋ 模板页面</button></div></div>
+          <div class="section-head"><div><span class="eyebrow">PAGES</span><h2>页面结构 <small id="pageTotal"></small></h2></div><div class="page-actions"><button type="button" id="autoToc">自动目录</button><button type="button" id="insertPage">＋ 新页面</button><button type="button" id="addPage">＋ 模板页面</button></div></div>
           <label class="page-search">筛选页面<input id="pageSearch" maxlength="80" placeholder="标题 / 栏目 / 类型"></label>
           <div class="page-select-head"><button id="selectFilteredPages" type="button">选择筛选结果</button><span id="pageSelectHint">可多选后批量处理</span></div>
           <div id="batchPageBar" class="batch-page-bar hidden" aria-live="polite"><div><b id="batchPageCount">已选 0 页</b><button id="clearPageSelection" type="button">清除</button></div><div class="batch-page-actions"><button id="batchMoveUp" type="button">上移</button><button id="batchMoveDown" type="button">下移</button><button id="batchSetSection" type="button">设栏目</button><button id="batchDeletePages" type="button" class="danger-lite">删除</button></div></div>
@@ -73,7 +73,7 @@
             <div class="workspace-sync-state"><span id="workspaceSaveState">已保存</span><span id="workspaceReaderState">Reader 同步</span><span id="workspacePeerState" class="workspace-peer-state" role="status" title="多窗口同步状态">单窗口</span></div>
             <div class="workspace-toolbar-actions"><button type="button" id="workspaceUndoBtn" title="撤销">↶</button><button type="button" id="workspaceRedoBtn" title="重做">↷</button><button type="button" id="workspaceSaveBtn" class="primary">保存</button></div>
           </div>
-          <div class="section-head page-head"><div class="section-title"><span class="eyebrow">PAGE EDITOR</span><h2 id="pageHeading">页面编辑</h2></div><div class="page-head-actions"><button id="insertPageHeader" class="primary">插入新页</button><button id="duplicatePage">复制页</button><button id="applyPageTemplate">套用模板</button><button id="layoutLabBtn" class="layout-main">智能套版</button></div></div>
+          <div class="section-head page-head"><div class="section-title"><span class="eyebrow">PAGE EDITOR</span><h2 id="pageHeading">页面编辑</h2></div><div class="page-head-actions"><button type="button" id="insertPageHeader" class="primary">插入新页</button><button type="button" id="duplicatePage">复制页</button><button type="button" id="applyPageTemplate">套用模板</button><button type="button" id="layoutLabBtn" class="layout-main">智能套版</button></div></div>
           <section class="manager-page-dashboard" id="managerWorkspaceLauncher">
             <header class="manager-dashboard-head"><div><span class="eyebrow">PAGE DASHBOARD</span><strong id="managerWorkspaceTitle">选择页面查看制作状态</strong><p id="managerWorkspaceSummary">总览页面状态；详细排版进入工作区。</p></div><button type="button" id="managerWorkspaceEnter" class="primary">进入工作区 →</button></header>
             <div class="manager-dashboard-grid">
