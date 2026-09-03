@@ -201,12 +201,12 @@ dialog form{min-width:0}dialog input,dialog select,dialog textarea{max-width:100
 @media(max-width:620px){
   .page-editor>.page-head{display:grid!important;grid-template-columns:minmax(0,1fr);gap:8px;align-items:start}
   .page-editor>.page-head .section-title{width:100%}
-  .page-editor>.page-head .page-head-actions{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;width:100%;gap:5px}
+  .page-editor>.page-head .page-head-actions{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;width:100%;gap:5px}
   .page-editor>.page-head .page-head-actions button,
   .page-editor>.page-head .page-head-actions button:first-child{grid-column:auto!important;width:100%;min-width:0;min-height:34px;padding:6px 4px;white-space:nowrap;font-size:9.5px;line-height:1.2}
 }
 @media(max-width:340px){
-  .page-editor>.page-head .page-head-actions{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+  .page-editor>.page-head .page-head-actions{grid-template-columns:repeat(4,minmax(0,1fr))!important}
   .page-editor>.page-head .page-head-actions button{font-size:9px;padding-inline:2px}
 }
 

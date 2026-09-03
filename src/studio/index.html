@@ -54,7 +54,7 @@
       <div class="columns">
         <section class="card pages" id="pagesCard">
           <button id="pagesPanelToggle" class="pages-rail-toggle" type="button" title="收束页面导航" aria-expanded="true"><span class="rail-toggle-icon" aria-hidden="true">‹</span><span class="rail-toggle-label">收束页面</span></button>
-          <div class="section-head"><div><span class="eyebrow">PAGES</span><h2>页面结构 <small id="pageTotal"></small></h2></div><div class="page-actions"><button id="autoToc">自动目录</button><button id="addPage">＋ 模板页面</button></div></div>
+          <div class="section-head"><div><span class="eyebrow">PAGES</span><h2>页面结构 <small id="pageTotal"></small></h2></div><div class="page-actions"><button id="autoToc">自动目录</button><button id="insertPage">＋ 新页面</button><button id="addPage">＋ 模板页面</button></div></div>
           <label class="page-search">筛选页面<input id="pageSearch" maxlength="80" placeholder="标题 / 栏目 / 类型"></label>
           <div class="page-select-head"><button id="selectFilteredPages" type="button">选择筛选结果</button><span id="pageSelectHint">可多选后批量处理</span></div>
           <div id="batchPageBar" class="batch-page-bar hidden" aria-live="polite"><div><b id="batchPageCount">已选 0 页</b><button id="clearPageSelection" type="button">清除</button></div><div class="batch-page-actions"><button id="batchMoveUp" type="button">上移</button><button id="batchMoveDown" type="button">下移</button><button id="batchSetSection" type="button">设栏目</button><button id="batchDeletePages" type="button" class="danger-lite">删除</button></div></div>
@@ -69,11 +69,11 @@
               <button type="button" id="workspacePagePicker"><b id="workspacePageLabel">第 1 页</b><span id="workspacePageTitle">页面</span></button>
               <button type="button" id="workspaceNextPage" aria-label="下一页">›</button>
             </div>
-            <div class="workspace-page-actions-inline" aria-label="工作区页面管理"><button type="button" id="workspaceSelectPagesBtn" title="多选页面">多选</button><button type="button" id="workspaceDeletePageBtn" class="danger-lite" title="删除当前整页">删除整页</button></div>
+            <div class="workspace-page-actions-inline" aria-label="工作区页面管理"><button type="button" id="workspaceInsertPageBtn" class="primary" title="在当前页后插入新页">插入新页</button><button type="button" id="workspaceSelectPagesBtn" title="多选页面">多选</button><button type="button" id="workspaceDeletePageBtn" class="danger-lite" title="删除当前整页">删除整页</button></div>
             <div class="workspace-sync-state"><span id="workspaceSaveState">已保存</span><span id="workspaceReaderState">Reader 同步</span><span id="workspacePeerState" class="workspace-peer-state" role="status" title="多窗口同步状态">单窗口</span></div>
             <div class="workspace-toolbar-actions"><button type="button" id="workspaceUndoBtn" title="撤销">↶</button><button type="button" id="workspaceRedoBtn" title="重做">↷</button><button type="button" id="workspaceSaveBtn" class="primary">保存</button></div>
           </div>
-          <div class="section-head page-head"><div class="section-title"><span class="eyebrow">PAGE EDITOR</span><h2 id="pageHeading">页面编辑</h2></div><div class="page-head-actions"><button id="duplicatePage">复制页</button><button id="applyPageTemplate">套用模板</button><button id="layoutLabBtn" class="layout-main">智能套版</button></div></div>
+          <div class="section-head page-head"><div class="section-title"><span class="eyebrow">PAGE EDITOR</span><h2 id="pageHeading">页面编辑</h2></div><div class="page-head-actions"><button id="insertPageHeader" class="primary">插入新页</button><button id="duplicatePage">复制页</button><button id="applyPageTemplate">套用模板</button><button id="layoutLabBtn" class="layout-main">智能套版</button></div></div>
           <section class="manager-page-dashboard" id="managerWorkspaceLauncher">
             <header class="manager-dashboard-head"><div><span class="eyebrow">PAGE DASHBOARD</span><strong id="managerWorkspaceTitle">选择页面查看制作状态</strong><p id="managerWorkspaceSummary">总览页面状态；详细排版进入工作区。</p></div><button type="button" id="managerWorkspaceEnter" class="primary">进入工作区 →</button></header>
             <div class="manager-dashboard-grid">
@@ -82,7 +82,7 @@
                 <div class="manager-health-summary"><span class="eyebrow">PAGE HEALTH</span><strong id="managerHealthTitle">等待 Reader 测量</strong><p id="managerHealthText">查看当前页版面占用与内容块状态。</p></div><div class="manager-layout-recommendation"><span class="eyebrow">SMART LAYOUT</span><strong id="managerLayoutRecommendationTitle">正在分析内容指纹</strong><p id="managerLayoutRecommendationText">根据当前内容推荐版式。</p><button type="button" id="managerLayoutRecommendationOpen">查看版式推荐 →</button></div>
                 <div class="manager-metrics" id="managerPageMetrics"></div>
                 <div class="manager-page-outline"><span class="eyebrow">CONTENT OUTLINE</span><div id="managerPageOutline"></div></div>
-                <div class="manager-page-actions"><button type="button" data-manager-action="delete" class="danger-lite">删除整页</button></div>
+                <div class="manager-page-actions"><button type="button" data-manager-action="insert" class="primary">插入新页</button><button type="button" data-manager-action="delete" class="danger-lite">删除整页</button></div>
               </aside>
             </div>
           </section>
@@ -191,7 +191,7 @@
 
 
 <dialog id="visualHealthDialog" class="visual-health-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE VISUAL HEALTH</span><h3>当前页版面健康</h3><p>数据来自真实 Reader 当前页面测量，只用于制作建议，不参与 V3.0 正式门禁。</p></div><button value="cancel" aria-label="关闭">×</button></div><div id="visualHealthMetrics" class="visual-health-metrics"></div><div id="visualHealthAdvice" class="visual-health-advice"></div><div class="dialog-actions"><button type="button" id="visualHealthBalance">按建议调整间距</button><button value="cancel" class="primary">完成</button></div></form></dialog>
-<dialog id="workspacePageDialog" class="workspace-page-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE NAVIGATOR</span><h3>页面导航</h3><p id="workspacePageDialogMeta">当前期刊页面</p></div><button value="cancel" aria-label="关闭">×</button></div><label class="workspace-page-search">查找页面<input id="workspacePageSearch" maxlength="80" placeholder="标题 / 栏目 / 类型"></label><div class="workspace-page-dialog-actions"><button type="button" id="workspaceSelectFilteredPages">选择筛选结果</button><button type="button" id="workspaceDeleteSelectedPages" class="danger-lite">删除所选页面</button><span id="workspaceSelectedPageCount">未选择页面</span></div><div id="workspacePageList" class="workspace-page-list"></div></form></dialog>
+<dialog id="workspacePageDialog" class="workspace-page-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE NAVIGATOR</span><h3>页面导航</h3><p id="workspacePageDialogMeta">当前期刊页面</p></div><button value="cancel" aria-label="关闭">×</button></div><label class="workspace-page-search">查找页面<input id="workspacePageSearch" maxlength="80" placeholder="标题 / 栏目 / 类型"></label><div class="workspace-page-dialog-actions"><button type="button" id="workspaceInsertPageDialog" class="primary">插入新页</button><button type="button" id="workspaceSelectFilteredPages">选择筛选结果</button><button type="button" id="workspaceDeleteSelectedPages" class="danger-lite">删除所选页面</button><span id="workspaceSelectedPageCount">未选择页面</span></div><div id="workspacePageList" class="workspace-page-list"></div></form></dialog>
 <dialog id="workspaceAuditDialog" class="workspace-audit-dialog" aria-labelledby="workspaceAuditDialogTitle">
   <section class="workspace-audit-panel" id="workspaceAuditPanel" aria-live="polite">
     <div class="workspace-audit-head">
