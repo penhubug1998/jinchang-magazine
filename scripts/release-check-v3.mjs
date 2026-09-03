@@ -13,8 +13,8 @@ function run(label, script, scriptArgs = []) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
-run('1/5 数据校验', 'check-v3.mjs');
-run('2/5 构建', 'build-v3.mjs');
+run('1/5 数据校验', 'check-v3.mjs', issue ? ['--issue', issue] : []);
+run('2/5 构建', 'build-v3.mjs', issue ? ['--issue', issue] : []);
 run('3/5 静态 smoke', 'smoke-v3.mjs', issue ? ['--issue', issue] : []);
 if (strict && !skipBrowser) run('4/5 五档浏览器回归', 'browser-regression-v3.mjs', issue ? ['--issue', issue] : []);
 else if (!strict) console.log('\n=== 4/5 五档浏览器回归：提示项，不阻断正式发布 ===');

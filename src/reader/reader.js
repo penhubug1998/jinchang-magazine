@@ -6,6 +6,10 @@ const printMode = __V3_PRINT_MODE__;
 const mobileQuery = matchMedia("(max-width: 760px)");
 const urlParams = new URLSearchParams(location.search);
 const studioEmbed = window.__V3_STUDIO_EMBED__ === true || urlParams.get("studio") === "1" || urlParams.get("embed") === "1";
+// The editor works on one physical page at a time.  Keep the public Reader and
+// the manager dashboard as book spreads, but make the workspace iframe focus
+// the exact page requested by Studio so adjacent pages never look unchanged.
+const studioPageFocus = studioEmbed && urlParams.get("dashboard") !== "1" && urlParams.get("spread") !== "1";
 const acceptanceEmbed = urlParams.get("rc1Acceptance") === "1" && window.parent !== window;
 
 // Beta2 compatibility helpers: modern Edge/Chrome + Safari/iOS fallback.
@@ -47,6 +51,7 @@ const state = {
   pageIndex: 0,
   fontScale: 1,
   turning: false,
+  turnToken: 0,
   musicEnabled: false,
   musicPlaying: false,
   musicPausedForNarration: false,
@@ -76,6 +81,7 @@ const state = {
   videoSession: null,
   videoOrigin: null,
   publishingPlan: null,
+  postRenderFrame: 0,
 };
 
 const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({
@@ -95,7 +101,8 @@ function storageSet(key, value) {
 function currentPageId(){ return state.issue?.pages?.[state.pageIndex]?.id || null; }
 function findReaderPageIndexById(pageId){
   if (!pageId || !Array.isArray(state.issue?.pages)) return -1;
-  return state.issue.pages.findIndex(page => page?.id === pageId);
+  const wanted = String(pageId);
+  return state.issue.pages.findIndex(page => String(page?.id || '') === wanted);
 }
 function postStudio(type, detail = {}) {
   if (!studioEmbed || window.parent === window) return;
@@ -106,7 +113,7 @@ function postAcceptance(type, detail = {}) {
   try { window.parent.postMessage({ source:"v3-reader", type, issueId:state.issue?.id || null, mobile:isMobile(), ...detail }, "*"); } catch {}
 }
 
-const clampPage = (index) => Math.max(0, Math.min(Number(index) || 0, Math.max(0, state.issue.pages.length - 1)));
+const clampPage = (index) => Math.max(0, Math.min(Number(index) || 0, Math.max(0, (state.issue?.pages?.length || 0) - 1)));
 
 function toast(message) {
   const el = $("toast");
@@ -121,7 +128,7 @@ function pageArt(type) {
   return `<div class="magazine-art" aria-hidden="true"><svg viewBox="0 0 420 155" focusable="false"><circle cx="328" cy="43" r="34" fill="#e7bd69"/><path d="M0 101Q78 67 152 104T300 88T420 72V155H0Z" fill="#3d1110" opacity=".65"/><path d="M0 128Q92 102 174 132T420 105V155H0Z" fill="#250b0a"/><g fill="none" stroke="#f6d89c" stroke-width="2"><path d="M72 53q9-8 18 0q9-8 18 0"/><path d="M132 35q7-6 14 0q7-6 14 0"/></g></svg></div>`;
 }
 
-function studioTextAttrs(field){return studioEmbed?` data-studio-edit-field="${field}" title="单击直接编辑文字，双击打开设计"`:'';}
+function studioTextAttrs(field){return studioEmbed?` data-studio-edit-field="${field}" title="单击选中，双击编辑文字"`:'';}
 
 function renderBlockContent(block,ctx={}) {
   if (!block || typeof block !== "object") return "";
@@ -155,8 +162,11 @@ function renderBlockContent(block,ctx={}) {
       return `<div class="case-pair"><div class="case-box"><h4>案例</h4><p${studioTextAttrs("case")}>${escapeHtml(block.case || "")}</p></div><div class="case-box warn"><h4>警示</h4><p${studioTextAttrs("warning")}>${escapeHtml(block.warning || "")}</p></div></div>`;
     case "toc":
       return `<div class="toc-block">${(block.items || []).map((item) => `<button class="toc-jump" type="button" data-jump-page="${Number(item.page) - 1}"><b>${escapeHtml(item.number || "")}</b><span><strong>${escapeHtml(item.title || "")}</strong><small>${escapeHtml(item.subtitle || "")}</small></span></button>`).join("")}</div>`;
-    case "articleLink":
-      return `<button class="article-link" type="button" data-article-id="${escapeHtml(block.articleId || "")}">查看链接内容 <span>↗</span></button>`;
+    case "articleLink": {
+      const article=state.issue?.articles?.[block.articleId]||{};
+      const label=block.title||article.linkTitle||article.title||"查看链接内容";
+      return `<button class="article-link" type="button" data-article-id="${escapeHtml(block.articleId || "")}"><span class="article-link-label"${studioTextAttrs("title")}>${escapeHtml(label)}</span> <span aria-hidden="true">↗</span></button>`;
+    }
     case "video":
       return `<div class="media video-media"><div class="video-frame"><video src="${escapeHtml(block.src || "")}"${block.poster ? ` poster="${escapeHtml(block.poster)}"` : ""} controls playsinline webkit-playsinline preload="metadata" controlsList="nodownload"></video><button class="video-full-button" type="button" data-video-full title="全屏观看" aria-label="全屏观看视频">⛶</button></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
     case "image": {
@@ -192,6 +202,16 @@ function renderBlockContent(block,ctx={}) {
 
 function clampNumber(value,min,max,fallback){ const n=Number(value); return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback; }
 function safeHex(value,fallback=''){ return /^#[0-9a-fA-F]{6}$/.test(String(value||'')) ? String(value) : fallback; }
+function safePageBackgroundAsset(value){
+  const raw=String(value||'').split(/[?#]/)[0].replace(/^\.\//,'').replaceAll('\\','/');
+  const parts=raw.split('/');
+  if(!raw.startsWith('assets/')||parts.length<2||parts.some(part=>!part||part==='.'||part==='..'))return '';
+  return parts.map(encodeURIComponent).join('/');
+}
+function hexWithAlpha(hex,alpha){
+  const value=safeHex(hex,'#fffaf0'),number=Number.parseInt(value.slice(1),16);
+  return `rgba(${number>>16&255},${number>>8&255},${number&255},${clampNumber(alpha,0,.92,.72)})`;
+}
 function designStyle(design={}) {
   if(!design||typeof design!=='object') return '';
   const out=[];
@@ -225,8 +245,15 @@ function applyIssueDesign(issue){
   const spacing=clampNumber(t.spacing,4,24,null); if(spacing!=null) root.setProperty('--design-spacing',`${spacing}px`);
 }
 function pageDesignStyle(page){
-  const d=page?.design||{}, out=[]; const bg=safeHex(d.background), color=safeHex(d.color), accent=safeHex(d.accent);
-  if(bg) out.push(`background:${bg}`); if(color) out.push(`color:${color}`); if(accent) out.push(`--red:${accent}`);
+  const d=page?.design||{}, out=[]; const bg=safeHex(d.background), color=safeHex(d.color), accent=safeHex(d.accent),image=safePageBackgroundAsset(d.backgroundImage);
+  if(image){
+    const paper=bg||safeHex(state.issue?.design?.tokens?.paper,'#fffaf0');
+    const fit=d.backgroundFit==='contain'?'contain':'cover';
+    const position=['center','top','bottom','left','right'].includes(String(d.backgroundPosition))?d.backgroundPosition:'center';
+    const overlay=hexWithAlpha(paper,d.backgroundOverlay);
+    out.push(`background-color:${paper}`,`background-image:linear-gradient(${overlay},${overlay}),url("${image}")`,`background-size:${fit}`,`background-position:${position}`, 'background-repeat:no-repeat');
+  }else if(bg) out.push(`background:${bg}`);
+  if(color) out.push(`color:${color}`); if(accent) out.push(`--red:${accent}`);
   return out.join(';');
 }
 function pageScrollDesignStyle(page){ const d=page?.design||{},out=[]; const padding=clampNumber(d.padding,0,12,null),width=clampNumber(d.contentWidth,60,100,null); if(padding!=null)out.push(`padding:${padding}%`); if(width!=null&&width<100)out.push(`width:${width}%;margin-left:auto;margin-right:auto`); return out.join(';'); }
@@ -251,33 +278,38 @@ function renderPage(page, index = -1) {
 
 function spreadNumberForPage(index) {
   const page = clampPage(index);
+  if (studioPageFocus) return page;
   return page === 0 ? 0 : Math.ceil(page / 2);
 }
 
 function maxSpreadNumber() {
-  return Math.ceil((state.issue.pages.length - 1) / 2);
+  const pages=state.issue?.pages||[];
+  if (studioPageFocus) return Math.max(0, pages.length - 1);
+  return Math.ceil((pages.length - 1) / 2);
 }
 
 function primaryPageForSpread(spreadNumber) {
+  if (studioPageFocus) return clampPage(spreadNumber);
   if (spreadNumber <= 0) return 0;
-  return Math.min(spreadNumber * 2, state.issue.pages.length - 1);
+  return Math.min(spreadNumber * 2, Math.max(0,(state.issue?.pages?.length||0)-1));
 }
 
 function spreadAt(index) {
-  if (isMobile()) return [{ page: state.issue.pages[clampPage(index)], index: clampPage(index) }];
+  const pages=state.issue?.pages||[];
+  if (studioPageFocus || isMobile()) return [{ page: pages[clampPage(index)], index: clampPage(index) }];
   const spread = spreadNumberForPage(index);
-  if (spread === 0) return [{ page: null, index: -1 }, { page: state.issue.pages[0], index: 0 }];
+  if (spread === 0) return [{ page: null, index: -1 }, { page: pages[0]||null, index: pages.length?0:-1 }];
   const leftIndex = spread * 2 - 1;
   const rightIndex = spread * 2;
   return [
-    { page: state.issue.pages[leftIndex] || null, index: leftIndex < state.issue.pages.length ? leftIndex : -1 },
-    { page: state.issue.pages[rightIndex] || null, index: rightIndex < state.issue.pages.length ? rightIndex : -1 },
+    { page: pages[leftIndex] || null, index: leftIndex < pages.length ? leftIndex : -1 },
+    { page: pages[rightIndex] || null, index: rightIndex < pages.length ? rightIndex : -1 },
   ];
 }
 
 function spreadHtml(index) {
   const entries = spreadAt(index);
-  return `<div class="spread" data-current-page="${clampPage(index)}" data-spread="${spreadNumberForPage(index)}">${entries.map((entry) => renderPage(entry.page, entry.index)).join("")}</div>`;
+  return `<div class="spread${studioPageFocus ? " studio-page-focus" : ""}" data-current-page="${clampPage(index)}" data-spread="${spreadNumberForPage(index)}">${entries.map((entry) => renderPage(entry.page, entry.index)).join("")}</div>`;
 }
 
 function viewportSize() {
@@ -348,7 +380,7 @@ function bindPageActions() {
     state.pageIndex = clampPage(Number(button.dataset.jumpPage));
     render();
   }));
-  document.querySelectorAll("[data-article-id]").forEach((button) => button.addEventListener("click", () => openArticle(button.dataset.articleId)));
+  document.querySelectorAll("[data-article-id]").forEach((button) => button.addEventListener("click", (event) => { if (studioEmbed) { event.preventDefault(); return; } openArticle(button.dataset.articleId); }));
   document.querySelectorAll("[data-video-full]").forEach((button) => button.addEventListener("click", () => openVideoFullscreen(button)));
   document.querySelectorAll("video").forEach((video) => {
     if (video.dataset.v3PlayerBound === "1") return;
@@ -363,7 +395,8 @@ function bindPageActions() {
 }
 
 function updateUi() {
-  const total = state.issue.pages.length;
+  if(!state.issue)return;
+  const total = state.issue.pages?.length||0;
   const current = state.issue.pages[state.pageIndex];
   $("pageLabel").textContent = current?.navTitle || current?.title || `第 ${state.pageIndex + 1} 页`;
   $("pageCount").textContent = `${state.pageIndex + 1} / ${total}`;
@@ -384,7 +417,7 @@ function updateUi() {
 function ensureStudioMediaToolbar(){let bar=$('studioMediaToolbar');if(bar)return bar;bar=document.createElement('div');bar.id='studioMediaToolbar';bar.className='studio-media-toolbar';bar.hidden=true;document.body.appendChild(bar);bar.addEventListener('pointerdown',e=>e.preventDefault());bar.addEventListener('click',e=>{const b=e.target.closest('[data-media-action]');if(!b)return;const i=Number(bar.dataset.blockIndex);if(!Number.isInteger(i))return;postStudio('canvas-media',{blockIndex:i,blockId:bar.dataset.blockId||null,action:b.dataset.mediaAction});});return bar;}
 function updateStudioMediaToolbar(){const bar=ensureStudioMediaToolbar();if(!studioEmbed||!state.canvasMode){bar.hidden=true;return;}const target=studioTopTargets().find(el=>el.classList.contains('studio-canvas-selected'));const type=target?.dataset.studioBlockType||'';const index=Number(target?.dataset.designBlock);if(!target||!['image','video'].includes(type)||!Number.isInteger(index)){bar.hidden=true;return;}bar.dataset.blockIndex=String(index);bar.dataset.blockId=target?.dataset.blockId||'';bar.dataset.blockType=type;bar.innerHTML=type==='image'?'<b>图片</b><button type="button" data-media-action="replace">替换</button><button type="button" data-media-action="adjust">裁切 / 焦点</button><button type="button" data-media-action="fit">完整 / 填满</button><button type="button" data-media-action="ratio">切换比例</button>':'<b>视频</b><button type="button" data-media-action="replace">替换视频</button><button type="button" data-media-action="poster">更换封面</button>';bar.hidden=false;}
 function ensureStudioCanvasTransformToolbar(){let bar=$('studioCanvasTransformToolbar');if(bar)return bar;bar=document.createElement('div');bar.id='studioCanvasTransformToolbar';bar.className='studio-canvas-transform-toolbar';bar.hidden=true;bar.setAttribute('aria-label','画布变换');document.body.appendChild(bar);bar.addEventListener('pointerdown',e=>e.preventDefault());bar.addEventListener('click',e=>{const button=e.target.closest('[data-canvas-transform-action]');if(!button)return;const target=studioAllTargets().find(el=>el.classList.contains('studio-canvas-selected'));if(!target)return;const changes={x:Number(target.dataset.designX)||0,y:Number(target.dataset.designY)||0,rotate:Number(target.dataset.designRotate)||0,scale:Number(target.dataset.designScale)||1};switch(button.dataset.canvasTransformAction){case 'left':changes.x-=12;break;case 'right':changes.x+=12;break;case 'up':changes.y-=12;break;case 'down':changes.y+=12;break;case 'rotate-left':changes.rotate-=15;break;case 'rotate-right':changes.rotate+=15;break;case 'scale-down':changes.scale-=.05;break;case 'scale-up':changes.scale+=.05;break;default:return;}changes.x=Math.max(-240,Math.min(240,Math.round(changes.x)));changes.y=Math.max(-240,Math.min(240,Math.round(changes.y)));changes.rotate=Math.max(-180,Math.min(180,Math.round(changes.rotate)));changes.scale=Math.max(.5,Math.min(1.8,Number(changes.scale.toFixed(2))));postStudio('canvas-transform',{blockIndex:Number(target.dataset.designBlock),blockId:target.dataset.blockId||null,changes});});return bar;}
-function updateStudioCanvasTransformToolbar(){const bar=ensureStudioCanvasTransformToolbar();if(!studioEmbed||state.mobileStudioMode){bar.hidden=true;return;}const target=studioAllTargets().find(el=>el.classList.contains('studio-canvas-selected'));if(!target){bar.hidden=true;return;}bar.innerHTML='<b>移动 / 变换</b><button type="button" data-canvas-transform-action="left" title="左移">←</button><button type="button" data-canvas-transform-action="right" title="右移">→</button><button type="button" data-canvas-transform-action="up" title="上移">↑</button><button type="button" data-canvas-transform-action="down" title="下移">↓</button><button type="button" data-canvas-transform-action="rotate-left" title="逆时针旋转">↺</button><button type="button" data-canvas-transform-action="rotate-right" title="顺时针旋转">↻</button><button type="button" data-canvas-transform-action="scale-down" title="缩小">−</button><button type="button" data-canvas-transform-action="scale-up" title="放大">＋</button>';bar.hidden=false;}
+function updateStudioCanvasTransformToolbar(){const bar=ensureStudioCanvasTransformToolbar();if(!studioEmbed||!state.canvasMode){bar.hidden=true;return;}const target=studioAllTargets().find(el=>el.classList.contains('studio-canvas-selected'));if(!target){bar.hidden=true;return;}bar.innerHTML='<b>移动 / 变换</b><button type="button" data-canvas-transform-action="left" title="左移">←</button><button type="button" data-canvas-transform-action="right" title="右移">→</button><button type="button" data-canvas-transform-action="up" title="上移">↑</button><button type="button" data-canvas-transform-action="down" title="下移">↓</button><button type="button" data-canvas-transform-action="rotate-left" title="逆时针旋转">↺</button><button type="button" data-canvas-transform-action="rotate-right" title="顺时针旋转">↻</button><button type="button" data-canvas-transform-action="scale-down" title="缩小">−</button><button type="button" data-canvas-transform-action="scale-up" title="放大">＋</button>';bar.hidden=false;}
 function reportStudioVisualMetrics(){if(!studioEmbed||!state.issue)return;requestAnimationFrame(()=>{const pages=[...document.querySelectorAll('#stage .page[data-page-index]')].map(page=>{const pageIndex=Number(page.dataset.pageIndex),scroller=page.querySelector('.page-scroll');if(!Number.isInteger(pageIndex)||pageIndex<0||!scroller)return null;const sr=scroller.getBoundingClientRect(),children=[...scroller.children].filter(x=>!x.classList.contains('texture')),last=children.at(-1),lr=last?.getBoundingClientRect();const contentBottom=lr?Math.max(0,lr.bottom-sr.top+scroller.scrollTop):0;const fillRatio=Math.max(0,Math.min(1.5,contentBottom/Math.max(1,scroller.clientHeight)));return {pageIndex,pageId:page.dataset.pageId||state.issue?.pages?.[pageIndex]?.id||null,fillRatio:Number(fillRatio.toFixed(3)),overflow:scroller.scrollHeight>scroller.clientHeight+3,scrollHeight:scroller.scrollHeight,clientHeight:scroller.clientHeight,blockCount:page.querySelectorAll('.studio-design-target[data-design-block]').length};}).filter(Boolean);postStudio('visual-metrics',{pages,at:Date.now()});});}
 function studioTopTargets(){return [...document.querySelectorAll('#stage .studio-design-target[data-design-block]')].filter(el=>el.dataset.designColumn==null&&el.dataset.designChild==null&&Number(el.dataset.designPage)===state.pageIndex);}
 function studioAllTargets(){return [...document.querySelectorAll('#stage .studio-design-target[data-design-block]')].filter(el=>Number(el.dataset.designPage)===state.pageIndex);}
@@ -396,6 +429,7 @@ let activeRichTextEditor=null;
 let activeRichTextMeta=null;
 let activeRichTextNode=null;
 let richTextSyncTimer=0;
+let richToolbarInteractionUntil=0;
 function studioTextToolbar(show=true){const bar=$("studioTextToolbar");if(!bar)return;bar.hidden=!show;bar.classList.toggle('rich-active',Boolean(show&&activeRichTextEditor));if(!show)hideRichBubble();}
 function richEditorRuntime(){return activeRichTextEditor?.richTextRuntime||activeRichTextEditor?.mode||getRichTextRuntimeStatus().mode||'fallback';}
 function updateRichEngineBadge(){const badge=$("richEngineBadge");if(!badge)return;const mode=richEditorRuntime();badge.dataset.runtime=mode;badge.textContent=mode==='tiptap'?'Tiptap Core · 本地 · JSON':'离线结构化 · JSON';}
@@ -404,18 +438,39 @@ function richSelectionInfo(editor){
   try{const sel=editor.state?.selection;if(sel&&Number.isFinite(sel.from)&&Number.isFinite(sel.to))return {empty:sel.empty,from:sel.from,to:sel.to};}catch{}
   const selection=getSelection();if(!selection?.rangeCount)return {empty:true};const range=selection.getRangeAt(0),root=activeRichTextNode;if(root&&(!root.contains(range.commonAncestorContainer)&&range.commonAncestorContainer!==root))return {empty:true};return {empty:selection.isCollapsed,range};
 }
+function ensureRichSelection(editor){
+  const info=richSelectionInfo(editor);
+  if(!info.empty)return false;
+  const root=activeRichTextNode||editor?.element;
+  if(!root||!String(root.textContent||'').trim())return false;
+  try{
+    if(typeof editor?.commands?.selectAll==='function'){
+      editor.commands.selectAll();
+      return true;
+    }
+  }catch{}
+  try{
+    const range=document.createRange();
+    range.selectNodeContents(root);
+    const selection=getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+    return true;
+  }catch{}
+  return false;
+}
 function hideRichBubble(){const bubble=$("studioRichBubble");if(bubble)bubble.hidden=true;}
 function positionRichBubble(editor){const bubble=$("studioRichBubble");if(!bubble||!editor){hideRichBubble();return;}const info=richSelectionInfo(editor);if(info.empty){hideRichBubble();return;}let rect=null;try{if(info.range)rect=info.range.getBoundingClientRect();else{const a=editor.view.coordsAtPos(info.from),b=editor.view.coordsAtPos(info.to);rect={left:Math.min(a.left,b.left),right:Math.max(a.right,b.right),top:Math.min(a.top,b.top),bottom:Math.max(a.bottom,b.bottom),width:Math.max(1,Math.max(a.right,b.right)-Math.min(a.left,b.left))};}}catch{}if(!rect||(!rect.width&&rect.left===rect.right)){hideRichBubble();return;}const x=Math.max(54,Math.min(innerWidth-54,(rect.left+rect.right)/2)),y=Math.max(54,rect.top-8);bubble.style.left=`${x}px`;bubble.style.top=`${y}px`;bubble.hidden=false;for(const b of bubble.querySelectorAll('[data-rich-bubble-command]')){const c=b.dataset.richBubbleCommand;b.classList.toggle('active',(c==='bold'&&editor.isActive('bold'))||(c==='italic'&&editor.isActive('italic'))||(c==='underline'&&editor.isActive('underline')));}}
 function canRichHistory(editor,kind){try{const can=editor?.can?.();if(typeof can?.[kind]==='function')return Boolean(can[kind]());const chain=can?.chain?.().focus?.();if(typeof chain?.[kind]==='function')return Boolean(chain[kind]().run());}catch{}return true;}
 function syncRichToolbarState(){const e=activeRichTextEditor,bar=$("studioTextToolbar");if(!e||!bar){hideRichBubble();return;}for(const b of bar.querySelectorAll('[data-rich-command]')){const c=b.dataset.richCommand;const active=(c==='bold'&&e.isActive('bold'))||(c==='italic'&&e.isActive('italic'))||(c==='underline'&&e.isActive('underline'))||(c==='quote'&&e.isActive('blockquote'))||(c==='bulletList'&&e.isActive('bulletList'))||(c==='orderedList'&&e.isActive('orderedList'));b.classList.toggle('active',active);if(c==='undo')b.disabled=!canRichHistory(e,'undo');if(c==='redo')b.disabled=!canRichHistory(e,'redo');}const block=bar.querySelector('[data-rich-block]');if(block){if(e.isActive('heading',{level:1}))block.value='h1';else if(e.isActive('heading',{level:2}))block.value='h2';else if(e.isActive('heading',{level:3}))block.value='h3';else block.value='p';}const align=bar.querySelector('[data-rich-align]');if(align){align.value=['center','right','justify'].find(a=>e.isActive({textAlign:a}))||'left';}const size=bar.querySelector('[data-rich-size]');if(size){const v=e.getAttributes('textStyle')?.fontSize;size.value=v||'';}updateRichEngineBadge();positionRichBubble(e);}
 function postRichTextSnapshot(doc,final=false){if(!activeRichTextMeta)return;clearTimeout(richTextSyncTimer);const send=()=>postStudio('canvas-richtext-edit',{...activeRichTextMeta,richText:doc,plainText:richTextPlainText(doc),final});if(final)send();else richTextSyncTimer=setTimeout(send,180);}
 function destroyRichTextEditor({hide=true}={}){clearTimeout(richTextSyncTimer);hideRichBubble();if(activeRichTextEditor){try{postRichTextSnapshot(activeRichTextEditor.getJSON(),true);}catch{}try{activeRichTextEditor.destroy();}catch{}}activeRichTextEditor=null;activeRichTextMeta=null;activeRichTextNode=null;if(hide)studioTextToolbar(false);}
-function richEditorUiHasFocus(node){const active=document.activeElement;return Boolean(node?.contains(active)||$("studioTextToolbar")?.contains(active)||$("studioRichBubble")?.contains(active));}
-async function beginStudioRichTextEdit(node,blockIndex,blockId=null){if(!studioEmbed||!node)return false;const blocks=state.issue?.pages?.[state.pageIndex]?.blocks||[],block=blockId?findStudioBlockById(blocks,blockId):blocks[blockIndex];if(!block||!['paragraph','quote'].includes(block.type))return false;postStudio('canvas-select',{blockIndex,blockId,additive:false});destroyRichTextEditor({hide:false});node.classList.add('studio-inline-editing','studio-richtext-editing');activeRichTextMeta={blockIndex,blockId,field:'text',sessionId:`rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`};activeRichTextNode=node;studioTextToolbar(true);try{activeRichTextEditor=await createRichTextEditor({element:node,content:normalizeRichText(block.richText,block.text||''),onUpdate:doc=>{postRichTextSnapshot(doc,false);syncRichToolbarState();},onSelectionUpdate:syncRichToolbarState,onBlur:doc=>{postRichTextSnapshot(doc,true);setTimeout(()=>{if(activeRichTextEditor&&!richEditorUiHasFocus(node)){node.classList.remove('studio-inline-editing','studio-richtext-editing');node.removeAttribute('data-rich-runtime');destroyRichTextEditor();}},100);}});node.dataset.richRuntime=richEditorRuntime();activeRichTextEditor.commands.focus('end');syncRichToolbarState();return true;}catch(error){console.warn('Rich text editor initialization failed',error);activeRichTextEditor=null;activeRichTextMeta=null;activeRichTextNode=null;node.classList.remove('studio-richtext-editing');node.removeAttribute('data-rich-runtime');studioTextToolbar(false);return false;}}
+function richEditorUiHasFocus(node){const active=document.activeElement;return Boolean(Date.now()<richToolbarInteractionUntil||node?.contains(active)||$("studioTextToolbar")?.contains(active)||$("studioRichBubble")?.contains(active));}
+async function beginStudioRichTextEdit(node,blockIndex,blockId=null){if(!studioEmbed||!node)return false;const blocks=state.issue?.pages?.[state.pageIndex]?.blocks||[],block=blockId?findStudioBlockById(blocks,blockId):blocks[blockIndex];if(!block||!['paragraph','quote'].includes(block.type))return false;postStudio('canvas-select',{blockIndex,blockId,additive:false});destroyRichTextEditor({hide:false});node.classList.add('studio-inline-editing','studio-richtext-editing');activeRichTextMeta={blockIndex,blockId,field:'text',sessionId:`rt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`};activeRichTextNode=node;studioTextToolbar(true);try{activeRichTextEditor=await createRichTextEditor({element:node,content:normalizeRichText(block.richText,block.text||''),onUpdate:doc=>{postRichTextSnapshot(doc,false);syncRichToolbarState();},onSelectionUpdate:syncRichToolbarState,onBlur:doc=>{postRichTextSnapshot(doc,true);setTimeout(()=>{if(activeRichTextEditor&&!richEditorUiHasFocus(node)){node.classList.remove('studio-inline-editing','studio-richtext-editing');node.removeAttribute('data-rich-runtime');destroyRichTextEditor();}},650);}});node.dataset.richRuntime=richEditorRuntime();activeRichTextEditor.commands.focus('end');syncRichToolbarState();return true;}catch(error){console.warn('Rich text editor initialization failed',error);activeRichTextEditor=null;activeRichTextMeta=null;activeRichTextNode=null;node.classList.remove('studio-richtext-editing');node.removeAttribute('data-rich-runtime');studioTextToolbar(false);return false;}}
 function beginStudioInlineEdit(node,blockIndex,blockId=null){if(!studioEmbed||!node)return;const field=node.dataset.studioEditField;if(!field)return;if(node.dataset.studioRichtext==='true'){beginStudioRichTextEdit(node,blockIndex,blockId).then(ok=>{if(!ok)beginStudioNativeTextEdit(node,blockIndex,blockId,{resetRichText:true});});return;}beginStudioNativeTextEdit(node,blockIndex,blockId);}
 function beginStudioNativeTextEdit(node,blockIndex,blockId=null,{resetRichText=false}={}){const field=node.dataset.studioEditField;if(!field)return;postStudio('canvas-select',{blockIndex,blockId,additive:false});node.dataset.studioOriginal=node.textContent||'';node.setAttribute('contenteditable','true');node.setAttribute('spellcheck','true');node.classList.add('studio-inline-editing');studioTextToolbar(false);node.focus({preventScroll:true});const range=document.createRange();range.selectNodeContents(node);range.collapse(false);const sel=getSelection();sel.removeAllRanges();sel.addRange(range);const commit=()=>{node.removeEventListener('blur',commit);node.removeAttribute('contenteditable');node.classList.remove('studio-inline-editing');const value=(node.innerText??node.textContent??'').trimEnd();postStudio('canvas-text-edit',{blockIndex,blockId,field,value,resetRichText});};node.addEventListener('blur',commit,{once:true});node.onkeydown=e=>{if(e.key==='Escape'){e.preventDefault();node.textContent=node.dataset.studioOriginal||'';node.blur();}else if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){e.preventDefault();node.blur();}};}
-function runRichCommand(ed,c){if(!ed)return false;const ch=ed.chain().focus();if(c==='undo')ch.undo().run();else if(c==='redo')ch.redo().run();else if(c==='bold')ch.toggleBold().run();else if(c==='italic')ch.toggleItalic().run();else if(c==='underline')ch.toggleUnderline().run();else if(c==='quote')ch.toggleBlockquote().run();else if(c==='bulletList')ch.toggleBulletList().run();else if(c==='orderedList')ch.toggleOrderedList().run();else if(c==='link'){const current=ed.getAttributes('link')?.href||'';const href=prompt('链接地址',current||'https://');if(href===null)return false;if(!href.trim())ch.unsetLink().run();else ch.extendMarkRange('link').setLink({href:href.trim()}).run();}else if(c==='highlight'){const color=prompt('高亮颜色（HEX）','#fff1a8');if(color)ch.toggleHighlight({color}).run();else return false;}else if(c==='clear')ch.unsetAllMarks().clearNodes().run();else return false;syncRichToolbarState();return true;}
-function bindStudioTextToolbar(){const bar=$("studioTextToolbar"),bubble=$("studioRichBubble");if(!bar||bar.dataset.bound)return;bar.dataset.bound='1';bar.addEventListener('pointerdown',e=>{if(e.target.closest('button'))e.preventDefault();});bar.addEventListener('click',e=>{const b=e.target.closest('[data-rich-command]');if(!b||!activeRichTextEditor)return;runRichCommand(activeRichTextEditor,b.dataset.richCommand);});bar.addEventListener('change',e=>{const ed=activeRichTextEditor;if(!ed)return;const ch=ed.chain().focus();if(e.target.matches('[data-rich-block]')){const v=e.target.value;if(v==='p')ch.setParagraph().run();else ch.toggleHeading({level:Number(v.slice(1))}).run();}else if(e.target.matches('[data-rich-align]'))ch.setTextAlign(e.target.value).run();else if(e.target.matches('[data-rich-size]')){const v=e.target.value;v?ch.setFontSize(v).run():ch.unsetFontSize().run();}else if(e.target.matches('[data-rich-color]'))ch.setColor(e.target.value).run();syncRichToolbarState();});if(bubble&&!bubble.dataset.bound){bubble.dataset.bound='1';bubble.addEventListener('pointerdown',e=>e.preventDefault());bubble.addEventListener('click',e=>{const b=e.target.closest('[data-rich-bubble-command]');if(!b||!activeRichTextEditor)return;runRichCommand(activeRichTextEditor,b.dataset.richBubbleCommand);});}window.addEventListener('resize',()=>positionRichBubble(activeRichTextEditor),{passive:true});window.addEventListener('scroll',()=>positionRichBubble(activeRichTextEditor),{passive:true,capture:true});}
+function runRichCommand(ed,c){if(!ed)return false;if(!['undo','redo'].includes(c))ensureRichSelection(ed);const ch=ed.chain().focus();if(c==='undo')ch.undo().run();else if(c==='redo')ch.redo().run();else if(c==='bold')ch.toggleBold().run();else if(c==='italic')ch.toggleItalic().run();else if(c==='underline')ch.toggleUnderline().run();else if(c==='quote')ch.toggleBlockquote().run();else if(c==='bulletList')ch.toggleBulletList().run();else if(c==='orderedList')ch.toggleOrderedList().run();else if(c==='link'){const current=ed.getAttributes('link')?.href||'';const href=prompt('链接地址',current||'https://');if(href===null)return false;if(!href.trim())ch.unsetLink().run();else ch.extendMarkRange('link').setLink({href:href.trim()}).run();}else if(c==='highlight'){const color=prompt('高亮颜色（HEX）','#fff1a8');if(color)ch.toggleHighlight({color}).run();else return false;}else if(c==='clear')ch.unsetAllMarks().clearNodes().run();else return false;syncRichToolbarState();return true;}
+function bindStudioTextToolbar(){const bar=$("studioTextToolbar"),bubble=$("studioRichBubble");if(!bar||bar.dataset.bound)return;bar.dataset.bound='1';const hold=e=>{if(e.target.closest('button,select,input')){richToolbarInteractionUntil=Date.now()+900;e.preventDefault();}};bar.addEventListener('pointerdown',hold);bar.addEventListener('mousedown',hold);bar.addEventListener('click',e=>{const b=e.target.closest('[data-rich-command]');if(!b||!activeRichTextEditor)return;richToolbarInteractionUntil=Date.now()+900;runRichCommand(activeRichTextEditor,b.dataset.richCommand);});bar.addEventListener('change',e=>{const ed=activeRichTextEditor;if(!ed)return;richToolbarInteractionUntil=Date.now()+900;ensureRichSelection(ed);const ch=ed.chain().focus();if(e.target.matches('[data-rich-block]')){const v=e.target.value;if(v==='p')ch.setParagraph().run();else ch.toggleHeading({level:Number(v.slice(1))}).run();}else if(e.target.matches('[data-rich-align]'))ch.setTextAlign(e.target.value).run();else if(e.target.matches('[data-rich-size]')){const v=e.target.value;v?ch.setFontSize(v).run():ch.unsetFontSize().run();}else if(e.target.matches('[data-rich-color]'))ch.setColor(e.target.value).run();syncRichToolbarState();});if(bubble&&!bubble.dataset.bound){bubble.dataset.bound='1';bubble.addEventListener('pointerdown',e=>{if(e.target.closest('button')){richToolbarInteractionUntil=Date.now()+900;e.preventDefault();}});bubble.addEventListener('mousedown',e=>{if(e.target.closest('button')){richToolbarInteractionUntil=Date.now()+900;e.preventDefault();}});bubble.addEventListener('click',e=>{const b=e.target.closest('[data-rich-bubble-command]');if(!b||!activeRichTextEditor)return;richToolbarInteractionUntil=Date.now()+900;runRichCommand(activeRichTextEditor,b.dataset.richBubbleCommand);});}window.addEventListener('resize',()=>positionRichBubble(activeRichTextEditor),{passive:true});window.addEventListener('scroll',()=>positionRichBubble(activeRichTextEditor),{passive:true,capture:true});}
 window.__V3_RICH_TEXT_ENGINE__={info:RICH_TEXT_ENGINE_INFO,get active(){return Boolean(activeRichTextEditor)},get runtime(){return getRichTextRuntimeStatus()},normalizeRichText,richTextPlainText};
 window.__V3_LAYOUT_ENGINE__={info:LAYOUT_ENGINE_INFO,get plan(){return state.publishingPlan},rebuild(){state.publishingPlan=buildPublishingPlan(state.issue||{});return state.publishingPlan;}};
 function bindStudioCanvasTransformDrag(el,index,blockId){if(!el||!Number.isInteger(index))return;el.onpointerdown=ev=>{if(ev.button!==0||ev.target.closest('[data-studio-edit-field],button,a,input,select,textarea,.studio-canvas-grip,.studio-canvas-resize'))return;ev.stopPropagation();const sx=ev.clientX,sy=ev.clientY,rect=el.getBoundingClientRect(),baseX=Number(el.dataset.designX)||0,baseY=Number(el.dataset.designY)||0,rotate=Number(el.dataset.designRotate)||0,scale=Number(el.dataset.designScale)||1;let dx=0,dy=0,moved=false;el.setPointerCapture?.(ev.pointerId);const move=e=>{dx=e.clientX-sx;dy=e.clientY-sy;if(Math.hypot(dx,dy)<4)return;moved=true;e.preventDefault();el.classList.add('studio-canvas-dragging');el.style.transform=`translate(${baseX+dx}px,${baseY+dy}px) rotate(${rotate}deg) scale(${scale})`;};const up=()=>{el.releasePointerCapture?.(ev.pointerId);el.removeEventListener('pointermove',move);el.removeEventListener('pointerup',up);el.removeEventListener('pointercancel',up);el.classList.remove('studio-canvas-dragging');el.style.transform='';if(moved)postStudio('canvas-transform',{blockIndex:index,blockId,changes:{x:Math.round(baseX+dx),y:Math.round(baseY+dy)}});};el.addEventListener('pointermove',move);el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);};}
@@ -432,21 +487,26 @@ function decorateStudioCanvasTargets(){if(!studioEmbed)return;syncStudioCanvasTa
 
 function pageScrollSnapshot(){const out={};document.querySelectorAll('#stage .page[data-page-index] .page-scroll').forEach(el=>{const page=el.closest('.page'),idx=page?.dataset.pageIndex;if(idx!=null&&idx!=='-1')out[idx]=el.scrollTop;});return out;}
 function restorePageScroll(snapshot={}){document.querySelectorAll('#stage .page[data-page-index] .page-scroll').forEach(el=>{const idx=el.closest('.page')?.dataset.pageIndex;if(idx!=null&&Object.prototype.hasOwnProperty.call(snapshot,idx))el.scrollTop=Number(snapshot[idx])||0;});}
-function render({ preserveScroll=false } = {}) {
-  if (state.videoSession) void closeVideoFullscreen();
-  const savedScroll=preserveScroll?pageScrollSnapshot():null;
-  state.pageIndex = clampPage(state.pageIndex);
-  $("stage").innerHTML = spreadHtml(state.pageIndex);
-  bindPageActions();
-  updateUi();
-  requestAnimationFrame(() => {
+function schedulePostRender(savedScroll=null){
+  if(state.postRenderFrame)cancelAnimationFrame(state.postRenderFrame);
+  state.postRenderFrame=requestAnimationFrame(()=>{
+    state.postRenderFrame=0;
     if(savedScroll)restorePageScroll(savedScroll);
     updateResponsiveTypography();
     updateOverflowHints();
     decorateStudioCanvasTargets();
     reportStudioVisualMetrics();
-    postStudio("page", { total:state.issue?.pages?.length || 0 });
   });
+}
+function render({ preserveScroll=false } = {}) {
+  if (state.videoSession) void closeVideoFullscreen();
+  if(!state.issue){$("stage").innerHTML="";return;}
+  const savedScroll=preserveScroll?pageScrollSnapshot():null;
+  state.pageIndex = clampPage(state.pageIndex);
+  $("stage").innerHTML = spreadHtml(state.pageIndex);
+  bindPageActions();
+  updateUi();
+  schedulePostRender(savedScroll);
 }
 
 function animateMove(direction) {
@@ -476,6 +536,7 @@ function animateMove(direction) {
   }
 
   state.turning = true;
+  const turnToken = ++state.turnToken;
   const stage = $("stage");
   // A two-sided 3D sheet can expose the back face upside-down or mirrored
   // on some GPU/Safari compositors. Render the destination first and slide
@@ -485,7 +546,7 @@ function animateMove(direction) {
   const overlay = stage.querySelector(".spread-turn-overlay");
   let settled = false;
   const settle = () => {
-    if (settled) return;
+    if (settled || turnToken !== state.turnToken) return;
     settled = true;
     overlay?.remove();
     state.pageIndex = target;
@@ -505,12 +566,7 @@ function animateMove(direction) {
     });
     bindPageActions();
     updateUi();
-    requestAnimationFrame(() => {
-      updateResponsiveTypography();
-      updateOverflowHints();
-      decorateStudioCanvasTargets();
-      reportStudioVisualMetrics();
-    });
+    schedulePostRender();
   };
   overlay?.addEventListener("transitionend", (event) => {
     if (event.target === overlay && event.propertyName === "transform") settle();
@@ -531,18 +587,19 @@ function animateMobileButtonMove(direction, target) {
   const stage = $("stage");
   stopNarration();
   state.turning = true;
+  const turnToken = ++state.turnToken;
   stage.innerHTML = `<div class="spread">${renderPage(state.issue.pages[target], target)}</div><div class="swipe-layer mode-${mode} ${direction > 0 ? "forward" : "backward"}">${renderPage(state.issue.pages[state.pageIndex], state.pageIndex)}</div>`;
   const overlay = stage.querySelector(".swipe-layer");
   const duration = mode === "three-d" ? 420 : mode === "fade" ? 240 : 300;
   requestAnimationFrame(() => requestAnimationFrame(() => {
-    if (!overlay) return;
+    if (!overlay || turnToken !== state.turnToken) return;
     overlay.style.transition = `transform ${duration}ms cubic-bezier(.22,.61,.36,1), opacity ${Math.min(duration,260)}ms ease`;
     if (mode === "fade") { overlay.style.opacity = "0"; return; }
     if (mode === "three-d") { overlay.style.transform = `rotateY(${direction > 0 ? -86 : 86}deg)`; overlay.style.opacity = "0"; return; }
     overlay.style.transform = `translate3d(${direction > 0 ? -104 : 104}%,0,0)`;
     overlay.style.opacity = mode === "slide" ? ".08" : ".18";
   }));
-  setTimeout(() => { state.pageIndex = target; state.turning = false; render(); }, duration + 30);
+  setTimeout(() => { if (turnToken !== state.turnToken) return; state.pageIndex = target; state.turning = false; render(); }, duration + 30);
 }
 
 function buildToc() {
@@ -606,13 +663,19 @@ function toggleReadShortcut() {
   }
 }
 
-function openArticle(id) {
-  const article = state.issue.articles?.[id];
-  if (!article) return toast("链接内容未配置");
-  $("articleTitle").textContent = article.title || "链接内容";
-  $("articleBody").innerHTML = `${article.subtitle ? `<div class="meta">${escapeHtml(article.subtitle)}</div>` : ""}${(article.paras || []).map((p) => `<p>${escapeHtml(p)}</p>`).join("")}${article.sourceNote ? `<div class="source-note">${escapeHtml(article.sourceNote)}</div>` : ""}${article.url ? `<a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a>` : ""}`;
-  $("articleDialog").showModal();
+let aiSummaryEndpointPromise=null;
+async function aiSummaryEndpoint(){const configured=state.issue?.features?.aiSummary?.publicEndpoint||state.issue?.aiSummaryEndpoint;if(configured)return String(configured);if(!aiSummaryEndpointPromise)aiSummaryEndpointPromise=fetch("/new-jc-magazine/api/public/ai/config",{headers:{Accept:"application/json"}}).then(async response=>{if(!response.ok)throw new Error("AI 配置接口不可用");const data=await response.json();return String(data?.publicEndpoint||"");}).catch(()=>"");const endpoint=await aiSummaryEndpointPromise;return endpoint||"/new-jc-magazine/api/public/ai/summarize";}
+async function requestArticleAiSummary(article,id){const response=await fetch(await aiSummaryEndpoint(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:article?.url||"",articleId:id})});let data={};try{data=await response.json();}catch{}if(!response.ok)throw new Error(data?.error||"AI 总结失败，请稍后再试");return data;}
+function renderArticleDialog(article,id){
+  const summary=String(article?.aiSummary||"").trim();
+  const editorialParas=Array.isArray(article?.paras)?article.paras.map((p)=>String(p||"").trim()).filter(Boolean):[];
+  $("articleTitle").textContent=article?.title||"链接内容";
+  const editorialMarkup=editorialParas.length?editorialParas.map((p)=>`<p>${escapeHtml(p)}</p>`).join(""):'<div class="article-editorial-summary-empty">后台尚未填写编辑摘要</div>';
+  $("articleBody").innerHTML=`${article?.subtitle?`<div class="meta">${escapeHtml(article.subtitle)}</div>`:""}${article?.url?`<div class="article-ai-summary"><div class="article-ai-summary-head"><strong>AI 摘要</strong><button id="articleAiSummaryBtn" type="button">${summary?"重新总结":"一键 AI 总结"}</button></div><div id="articleAiSummaryText" class="article-ai-summary-text">${summary?escapeHtml(summary):"点击按钮后，服务端会读取原文并生成摘要。相同链接会复用缓存结果。"}</div></div><div class="article-editorial-summary"><div class="article-editorial-summary-label">编辑摘要</div>${editorialMarkup}</div>`:""}${article?.sourceNote?`<div class="source-note">${escapeHtml(article.sourceNote)}</div>`:""}${article?.url?`<a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a>`:""}`;
+  const button=$("articleAiSummaryBtn"),target=$("articleAiSummaryText");
+  if(button)button.onclick=async()=>{button.disabled=true;button.textContent="总结中…";try{const result=await requestArticleAiSummary(article,id);target.textContent=String(result.summary||"");button.textContent=result.cached?"已使用缓存 · 重新总结":"重新总结";}catch(error){target.textContent=error.message||"AI 总结失败";button.textContent="重试总结";}finally{button.disabled=false;}};
 }
+function openArticle(id) {const article=state.issue.articles?.[id];if(!article)return toast("链接内容未配置");renderArticleDialog(article,id);$("articleDialog").showModal();}
 
 function syncUrl() {
   if (studioEmbed) return;
@@ -1020,6 +1083,13 @@ function resetPointer() {
   pointer.raf = 0;
 }
 
+function cancelReaderTurnAnimation() {
+  state.turnToken += 1;
+  state.turning = false;
+  resetPointer();
+  document.querySelectorAll('#stage .spread-turn-overlay, #stage .swipe-layer').forEach((el) => el.remove());
+}
+
 function handlePointerDown(event) {
   if (!isMobile() || state.turning || event.target.closest("button,a,video,select,input")) return;
   const pointer = state.pointer;
@@ -1092,7 +1162,9 @@ function finishSwipe(commit, progress = 0) {
     overlay.style.opacity = commit ? (mode === "slide" ? ".08" : ".18") : "1";
   }
   state.turning = true;
+  const turnToken = ++state.turnToken;
   setTimeout(() => {
+    if (turnToken !== state.turnToken) return;
     if (commit) {
       stopNarration();
       state.pageIndex = target;
@@ -1261,6 +1333,7 @@ if (studioEmbed) {
     if (data.type === "issue" && data.issue && Array.isArray(data.issue.pages) && data.issue.pages.length) {
       const current = Number.isFinite(Number(data.pageIndex)) ? Number(data.pageIndex) : state.pageIndex;
       stopNarration({ keepStatus:true, resumeMusic:false });
+      cancelReaderTurnAnimation();
       state.issue = data.issue;
       state.publishingPlan = buildPublishingPlan(state.issue);
       applyIssueDesign(state.issue);
@@ -1276,14 +1349,18 @@ if (studioEmbed) {
       state.canvasMode = Boolean(data.enabled);
       state.canvasSelectedBlocks = new Set((data.selectedBlocks || []).map(Number).filter(Number.isInteger));
       state.canvasSelectedBlockIds = new Set((data.selectedBlockIds || []).map(String).filter(Boolean));
-      if (Number.isFinite(Number(data.pageIndex)) && Number(data.pageIndex) !== state.pageIndex) state.pageIndex = clampPage(Number(data.pageIndex));
+      // Canvas selection does not navigate. Older builds updated pageIndex here
+      // without rendering, leaving the DOM on the cover while Reader claimed to
+      // be on the requested page. The explicit `page` message owns navigation.
       syncStudioCanvasTargets(); bindStudioCanvasDirectEditing();
       return;
     }
     if (data.type === "mobile-studio-mode") {
       state.mobileStudioMode = Boolean(data.enabled);
       document.body.classList.toggle("studio-mobile-edit-mode", state.mobileStudioMode);
-      if (state.mobileStudioMode && state.canvasMode) { state.canvasMode = false; syncStudioCanvasTargets(); }
+      // Mobile Studio uses the same canvas selection model as desktop. Keep
+      // canvas mode enabled so selecting a block exposes the PPT-like handles.
+      syncStudioCanvasTargets(); bindStudioCanvasDirectEditing();
       return;
     }
     if (data.type === "mobile-edit-block") {
@@ -1300,28 +1377,64 @@ if (studioEmbed) {
     }
     if (data.type === "page") {
       const byId = findReaderPageIndexById(data.pageId);
-      const next = clampPage(byId >= 0 ? byId : Number(data.pageIndex));
-      if (next !== state.pageIndex) { stopNarration(); state.pageIndex = next; render(); }
+      const requestedIndex = Number(data.pageIndex);
+      const next = Number.isInteger(requestedIndex) ? clampPage(requestedIndex) : clampPage(byId);
+      cancelReaderTurnAnimation();
+      const renderedIndex=Number(document.querySelector('#stage > .spread')?.dataset.currentPage);
+      // An interrupted iframe message can leave state ahead of the DOM. Render
+      // the requested page in that case instead of acknowledging stale output.
+      if (next !== state.pageIndex || renderedIndex !== next) { stopNarration(); state.pageIndex = next; render({ preserveScroll:true }); }
       else postStudio("page", { total:state.issue?.pages?.length || 0 });
-      requestAnimationFrame(()=>postStudio("page-ack", { pageIndex:state.pageIndex, pageId:currentPageId(), requestId:data.requestId || null, total:state.issue?.pages?.length || 0 }));
+      requestAnimationFrame(()=>{
+        const rendered = [...document.querySelectorAll('#stage .page[data-page-index]')].some(page=>Number(page.dataset.pageIndex)===state.pageIndex);
+        postStudio("page-ack", { pageIndex:state.pageIndex, renderedPageIndex:rendered?state.pageIndex:-1, pageId:currentPageId(), requestId:data.requestId || null, total:state.issue?.pages?.length || 0 });
+      });
     }
   });
 }
 
 if (studioEmbed) {
   bindStudioTextToolbar();
-  let studioTextClickTimer=0;
+  let studioTextClickTimer=0,studioLastClickAt=0,studioLastClickTarget=null;
   const studioTargetDetail=target=>{const detail={pageIndex:Number(target.dataset.designPage),blockIndex:Number(target.dataset.designBlock),blockId:target.dataset.blockId||null};if(target.dataset.designColumn!=null)detail.columnIndex=Number(target.dataset.designColumn);if(target.dataset.designChild!=null)detail.childIndex=Number(target.dataset.designChild);return detail;};
-  document.addEventListener('dblclick',event=>{if(!studioEmbed)return;const target=event.target.closest('.studio-design-target[data-design-block]');if(!target)return;clearTimeout(studioTextClickTimer);event.preventDefault();event.stopPropagation();postStudio('design-target',studioTargetDetail(target));},true);
+  document.addEventListener('dblclick',event=>{if(!studioEmbed)return;const target=event.target.closest('.studio-design-target[data-design-block]');if(!target)return;clearTimeout(studioTextClickTimer);event.preventDefault();event.stopPropagation();const text=event.target.closest('[data-studio-edit-field]');if(text){beginStudioInlineEdit(text,Number(target.dataset.designBlock),target.dataset.blockId||null);return;}postStudio('design-target',studioTargetDetail(target));},true);
   document.addEventListener("click", (event) => {
-    if (event.target.closest("button,a,video,input,select,textarea,.studio-canvas-grip,.studio-canvas-resize")) return;
+    const articleText=event.target.closest(".article-link [data-studio-edit-field]");
+    if (event.target.closest("button,a,video,input,select,textarea,.studio-canvas-grip,.studio-canvas-resize") && !(studioEmbed&&articleText)) return;
     const target=event.target.closest(".studio-design-target[data-design-block]");
     if(!target)return;
     event.preventDefault();event.stopPropagation();
     if(target.dataset.studioSuppressClick==='1'){delete target.dataset.studioSuppressClick;return;}
     const detail=studioTargetDetail(target),text=event.target.closest('[data-studio-edit-field]');
-    if(text){clearTimeout(studioTextClickTimer);studioTextClickTimer=setTimeout(()=>beginStudioInlineEdit(text,Number(target.dataset.designBlock),target.dataset.blockId||null),220);return;}
-    if((state.canvasMode||state.mobileStudioMode) && target.dataset.designColumn==null && target.dataset.designChild==null){postStudio('canvas-select',{...detail,additive:state.canvasMode&&(event.metaKey||event.ctrlKey)});return;}
+    if(state.canvasMode||state.mobileStudioMode){
+      postStudio('canvas-select',{...detail,additive:state.canvasMode&&(event.metaKey||event.ctrlKey)});
+      if(text){
+        const now=Date.now();
+        const isSecondTap=studioLastClickTarget===text&&now-studioLastClickAt<360;
+        clearTimeout(studioTextClickTimer);
+        if(isSecondTap){
+          studioLastClickTarget=null;studioLastClickAt=0;
+          beginStudioInlineEdit(text,Number(target.dataset.designBlock),target.dataset.blockId||null);
+        }else{
+          studioLastClickTarget=text;studioLastClickAt=now;
+          studioTextClickTimer=setTimeout(()=>{studioLastClickTarget=null;studioLastClickAt=0;},380);
+        }
+      }
+      return;
+    }
+    if(text){
+      const now=Date.now();
+      const isSecondTap=studioLastClickTarget===text&&now-studioLastClickAt<360;
+      clearTimeout(studioTextClickTimer);
+      if(isSecondTap){
+        studioLastClickTarget=null;studioLastClickAt=0;
+        beginStudioInlineEdit(text,Number(target.dataset.designBlock),target.dataset.blockId||null);
+      }else{
+        studioLastClickTarget=text;studioLastClickAt=now;
+        studioTextClickTimer=setTimeout(()=>{studioLastClickTarget=null;studioLastClickAt=0;},380);
+      }
+      return;
+    }
     postStudio("design-target",detail);
   }, true);
 }

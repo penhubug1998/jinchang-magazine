@@ -2,6 +2,12 @@ import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const root = process.cwd();
+// When a release targets one issue, validate only that issue's assets. The
+// previous all-issues scan made an unrelated draft (for example 004) appear
+// in the 003 publish dialog and obscured the actual blocker.
+const issueArgIndex = process.argv.findIndex((value) => value === '--issue' || value === '--id');
+const issueEqualsArg = process.argv.find((value) => value.startsWith('--issue=') || value.startsWith('--id='));
+const targetIssue = String(issueEqualsArg?.split('=').slice(1).join('=') || (issueArgIndex >= 0 ? process.argv[issueArgIndex + 1] : '') || '').trim();
 const errors = [];
 const warnings = [];
 const allowedPageTypes = new Set(["cover","article","toc","news","theory","safety","discipline","health","closing"]);
@@ -12,12 +18,23 @@ const allowedContainerAlign = new Set(["start","center","stretch"]);
 const allowedContainerMobile = new Set(["stack","preserve"]);
 const MAX_PAGE_BLOCK_NODES = 160;
 const designHex=/^#[0-9a-fA-F]{6}$/;
+function validPageBackgroundAsset(value){
+  const raw=String(value??'').split(/[?#]/)[0].replace(/^\.\//,'').replaceAll('\\','/');
+  const parts=raw.split('/');
+  return raw.startsWith('assets/')&&parts.length>1&&parts.every(part=>part&&part!=='.'&&part!=='..');
+}
 function validateDesign(design,at,scope){
   if(design==null)return;if(!design||typeof design!=="object"||Array.isArray(design))return fail(`${at}: design 必须为对象`);
   const ranges=scope==='theme'?{fontBase:[11,18],radius:[0,24],spacing:[4,24]}:scope==='page'?{padding:[0,12],contentWidth:[60,100]}:{fontSize:[10,48],padding:[0,48],margin:[0,48],radius:[0,40],borderWidth:[0,6],width:[25,100]};
   const colors=scope==='theme'?['accent','paper','text','muted']:scope==='page'?['background','color','accent']:['color','background','borderColor'];
   for(const key of colors)if(design[key]!=null&&!designHex.test(String(design[key])))fail(`${at}: design.${key} 必须为 #RRGGBB`);
   for(const [key,[min,max]] of Object.entries(ranges))if(design[key]!=null&&(!Number.isFinite(Number(design[key]))||Number(design[key])<min||Number(design[key])>max))fail(`${at}: design.${key} 必须在 ${min}–${max}`);
+  if(scope==='page'){
+    if(design.backgroundImage!=null&&!validPageBackgroundAsset(design.backgroundImage))fail(`${at}: design.backgroundImage 必须是 assets/ 下的安全资源路径`);
+    if(design.backgroundOverlay!=null&&(!Number.isFinite(Number(design.backgroundOverlay))||Number(design.backgroundOverlay)<0||Number(design.backgroundOverlay)>.92))fail(`${at}: design.backgroundOverlay 必须在 0–0.92`);
+    if(design.backgroundFit!=null&&!['cover','contain'].includes(String(design.backgroundFit)))fail(`${at}: design.backgroundFit 不受支持`);
+    if(design.backgroundPosition!=null&&!['center','top','bottom','left','right'].includes(String(design.backgroundPosition)))fail(`${at}: design.backgroundPosition 不受支持`);
+  }
   if(scope==='block'){
     if(design.fontWeight!=null&&!['400','500','600','700','800'].includes(String(design.fontWeight)))fail(`${at}: design.fontWeight 不受支持`);
     if(design.shadow!=null&&!['none','sm','md','lg'].includes(String(design.shadow)))fail(`${at}: design.shadow 不受支持`);
@@ -116,6 +133,7 @@ async function inspectDir(dir, options){
   const entries = await readdir(dir, { withFileTypes:true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    if (options.issue && dir === path.join(root, 'issues') && entry.name !== options.issue) continue;
     const issueFile = path.join(dir, entry.name, "issue.json");
     const issue = await readJson(issueFile);
     validateIssue(issue, rel(issueFile), options);
@@ -149,7 +167,7 @@ async function inspectDir(dir, options){
   }
 }
 
-await inspectDir(path.join(root, "issues"), { allowLegacy:true });
+await inspectDir(path.join(root, "issues"), { allowLegacy:true, issue:targetIssue });
 await inspectDir(path.join(root, "examples"), { allowLegacy:false });
 
 for (const warning of warnings) console.warn(`V3 警告：${warning}`);

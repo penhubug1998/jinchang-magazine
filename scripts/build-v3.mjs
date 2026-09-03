@@ -2,18 +2,32 @@ import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/pro
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { buildArchiveHtml, catalogHref } from "./lib-v3-catalog.mjs";
-import { V3_VERSION, collectReferencedAssets, stripAssetsPrefix } from "./lib-v3-production.mjs";
+import { V3_VERSION, collectReferencedAssets, normalizeIssueId, parseArgs, stripAssetsPrefix } from "./lib-v3-production.mjs";
 
 const root = process.cwd();
+const args = parseArgs();
 const output = path.join(root, "dist-v3");
 const readerSource = path.join(root, "src", "reader");
-const readerAssetTag = `${V3_VERSION}-reader-parity`;
+const readerAssetTag = `${V3_VERSION}-ai-link-20260902-06`;
+const selectedIssue = String(args.issue || "").trim() ? normalizeIssueId(args.issue) : "";
 const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 
-const check = spawnSync(process.execPath, [path.join(root, "scripts", "check-v3.mjs")], { cwd:root, stdio:"inherit" });
+const checkArgs = selectedIssue ? ["--issue", selectedIssue] : [];
+const check = spawnSync(process.execPath, [path.join(root, "scripts", "check-v3.mjs"), ...checkArgs], { cwd:root, stdio:"inherit" });
 if (check.status !== 0) process.exit(check.status ?? 1);
 
-await rm(output, { recursive:true, force:true });
+if (selectedIssue) {
+  const selectedFile = path.join(root, "issues", selectedIssue, "issue.json");
+  if (!(await exists(selectedFile))) {
+    console.error(`找不到 issues/${selectedIssue}`);
+    process.exit(1);
+  }
+  // Issue-scoped builds preserve the other preview artifacts. This prevents a
+  // quick edit of one issue from blanking the remaining Reader previews.
+  await rm(path.join(output, selectedIssue), { recursive:true, force:true });
+} else {
+  await rm(output, { recursive:true, force:true });
+}
 await mkdir(output, { recursive:true });
 const readJson = async (file) => JSON.parse(await readFile(file, "utf8"));
 
@@ -26,8 +40,8 @@ async function emitV3Issue(issueDir, targetName){
   await cp(readerSource, target, { recursive:true });
   const readerIndex=path.join(target,"index.html");
   const stamped=(await readFile(readerIndex,"utf8"))
-    .replace('./reader.css',`./reader.css?v=${readerAssetTag}`)
-    .replace('./reader.js',`./reader.js?v=${readerAssetTag}`);
+    .replace(/\.\/reader\.css(?:\?[^"']*)?/,`./reader.css?v=${readerAssetTag}`)
+    .replace(/\.\/reader\.js(?:\?[^"']*)?/,`./reader.js?v=${readerAssetTag}`);
   await writeFile(readerIndex,stamped,"utf8");
   const readerJs=path.join(target,'reader.js');
   await writeFile(readerJs,(await readFile(readerJs,'utf8')).replace("'./rich-text.js'",`'./rich-text.js?v=${V3_VERSION}'`).replace("'./layout-engine.js'",`'./layout-engine.js?v=${V3_VERSION}'`),'utf8');
@@ -63,6 +77,7 @@ for (const base of ["examples", "issues"]) {
   const entries = await readdir(dir, { withFileTypes:true });
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
+    if (selectedIssue && (base === "examples" || entry.name !== selectedIssue)) continue;
     const name = base === "examples" ? `preview-${entry.name}` : entry.name;
     await emitV3Issue(path.join(dir, entry.name), name);
   }
@@ -83,4 +98,4 @@ for (const entry of entries) {
 catalog.sort((a,b) => b.id.localeCompare(a.id, "zh-CN"));
 await writeFile(path.join(output, "catalog.json"), `${JSON.stringify(catalog, null, 2)}\n`, "utf8");
 await writeFile(path.join(output, "index.html"), buildArchiveHtml(catalog, { subtitle:"归档阅读 · V3 构建预览" }), "utf8");
-console.log(`V3 构建完成：${path.relative(root, output)}`);
+console.log(`V3 构建完成${selectedIssue ? `（仅 ${selectedIssue}）` : ""}：${path.relative(root, output)}`);

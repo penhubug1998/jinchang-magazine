@@ -14,6 +14,41 @@ function decodeXml(s='') {
 }
 function cleanText(s='') { return String(s).replace(/\r/g,'').replace(/[\t\u00a0]+/g,' ').replace(/ +\n/g,'\n').replace(/\n{4,}/g,'\n\n\n').trim(); }
 function stripMarkdownInline(s='') { return String(s).replace(/!\[[^\]]*\]\([^)]*\)/g,'').replace(/\[([^\]]+)\]\([^)]*\)/g,'$1').replace(/[*_~`]/g,'').trim(); }
+const IMPORT_URL_RE = /(?:https?:\/\/|www\.)[^\s<>"'“”‘’（）()[\]{}<>]+/gi;
+function safeImportUrl(raw='') {
+  let value=String(raw||'').trim();
+  if(/^www\./i.test(value)) value=`https://${value}`;
+  value=value.replace(/[.,，。；;:：!?！？、）)】》」』]+$/g,'');
+  try { const parsed=new URL(value); return ['http:','https:'].includes(parsed.protocol)?parsed.href:''; } catch { return ''; }
+}
+function linkLabelFromUrl(url='') { try { return new URL(url).hostname.replace(/^www\./i,'')||'原文链接'; } catch { return '原文链接'; } }
+function makeLinkId(url,index=0) {
+  let hash=2166136261; for(const ch of String(url)){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}
+  return `importLink_${(hash>>>0).toString(36)}${index?`_${index}`:''}`.slice(0,64);
+}
+function createLinkRegistry() {
+  const articles={}; const byUrl=new Map(); let sequence=0;
+  const register=(label,url,context='')=>{
+    const href=safeImportUrl(url); if(!href)return null;
+    const existing=byUrl.get(href); if(existing)return existing;
+    let id=makeLinkId(href,++sequence); while(articles[id]) id=makeLinkId(href,++sequence);
+    const title=cleanText(label||linkLabelFromUrl(href)).slice(0,200)||'原文链接';
+    const contextText=cleanText(context).slice(0,12000);
+    const paras=contextText&&contextText!==href&&!/^https?:\/\//i.test(contextText)?[contextText]:[];
+    articles[id]={title,subtitle:'原文链接',url:href,paras,sourceNote:'一键导入识别的原文链接'};
+    const item={articleId:id,title,url:href}; byUrl.set(href,item); return item;
+  };
+  return {articles,register};
+}
+function parseInlineLinks(value,registry) {
+  const links=[]; let text=String(value||'');
+  text=text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g,'');
+  text=text.replace(/\[([^\]]{1,200})\]\(([^)\s]+)\)/g,(_,label,url)=>{const item=registry?.register(label,url,label);if(item)links.push(item);return label;});
+  text=text.replace(IMPORT_URL_RE,(url)=>{const item=registry?.register('',url,url);if(item)links.push(item);return item?'':url;});
+  text=text.replace(/[*_~`]/g,'').replace(/\s{2,}/g,' ').trim();
+  return {text,links};
+}
+function articleLinkBlocks(items=[]) { return items.map(item=>({type:'articleLink',articleId:item.articleId})); }
 function sentenceChunks(text,max=520) {
   const t=cleanText(text); if(t.length<=max)return [t];
   const parts=t.match(/[^。！？!?；;]+[。！？!?；;]?/g)||[t]; const out=[]; let buf='';
@@ -78,14 +113,14 @@ function semanticBodyBlock(p,pageType,{lead=false}={}){
 function semanticBlocks(paras=[],pageType='article'){
   if(pageType==='discipline'){
     const c=paras.findIndex(p=>p.level===3&&/^案例(?:回放)?$/.test(cleanText(p.text)));const w=paras.findIndex((p,i)=>i>c&&p.level===3&&/^警示/.test(cleanText(p.text)));
-    if(c>=0&&w>c){const before=semanticBlocksBasic(paras.slice(0,c),pageType);const caseParas=paras.slice(c+1,w),warnParas=paras.slice(w+1);const source=warnParas.filter(p=>isSourceText(p.text));const warningBody=warnParas.filter(p=>!isSourceText(p.text));const caseText=caseParas.map(p=>cleanText(p.text)).filter(Boolean).join('\n');const warningText=warningBody.map(p=>cleanText(p.text)).filter(Boolean).join('\n');return [...before,{type:'casePair',case:caseText||'请核对案例内容。',warning:warningText||'请核对警示内容。'},...source.map(p=>paragraphBlock(p.text,'xsmall'))];}
+    if(c>=0&&w>c){const before=semanticBlocksBasic(paras.slice(0,c),pageType);const caseParas=paras.slice(c+1,w),warnParas=paras.slice(w+1);const source=warnParas.filter(p=>isSourceText(p.text));const warningBody=warnParas.filter(p=>!isSourceText(p.text));const caseText=caseParas.map(p=>cleanText(p.text)).filter(Boolean).join('\n');const warningText=warningBody.map(p=>cleanText(p.text)).filter(Boolean).join('\n');const links=caseParas.concat(warnParas).flatMap(p=>p.links||[]);return [...before,{type:'casePair',case:caseText||'请核对案例内容。',warning:warningText||'请核对警示内容。'},...source.map(p=>paragraphBlock(p.text,'xsmall')),...articleLinkBlocks(links)];}
   }
   return semanticBlocksBasic(paras,pageType);
 }
 function semanticBlocksBasic(paras=[],pageType='article'){
-  if(paras.length>=3&&paras.every(p=>Number(p.level||0)>=3)){return [{type:'chips',items:paras.map(p=>({text:cleanText(p.text).replace(/^[★☆]\s*/,'').trim(),tone:pageType==='health'?'green':''})).filter(x=>x.text)}];}
+  if(paras.length>=3&&paras.every(p=>Number(p.level||0)>=3)){return [{type:'chips',items:paras.map(p=>({text:cleanText(p.text).replace(/^[★☆]\s*/,'').trim(),tone:pageType==='health'?'green':''})).filter(x=>x.text)},...articleLinkBlocks(paras.flatMap(p=>p.links||[]))];}
   const out=[];let seenBody=false;
-  for(const p of paras){const text=cleanText(p.text);if(!text)continue;if(p.level>=3){out.push(paragraphBlock(text.replace(/^[★☆]\s*/,''),'subhead'));continue;}const block=semanticBodyBlock(p,pageType,{lead:!seenBody&&p.style==='FirstParagraph'});if(block){out.push(block);seenBody=true;}}
+  for(const p of paras){const text=cleanText(p.text);if(!text){if(p.links?.length)out.push(...articleLinkBlocks(p.links));continue;}if(p.level>=3){out.push(paragraphBlock(text.replace(/^[★☆]\s*/,''),'subhead'));out.push(...articleLinkBlocks(p.links||[]));continue;}const block=semanticBodyBlock(p,pageType,{lead:!seenBody&&p.style==='FirstParagraph'});if(block){out.push(block);seenBody=true;}out.push(...articleLinkBlocks(p.links||[]));}
   return out;
 }
 
@@ -109,33 +144,32 @@ export function detectPublicationStructure(paras=[],title=''){
 
 export function parseMarkdown(text,{filename=''}={}) {
   text=cleanText(text); if(text.length>MAX_IMPORT_TEXT)throw new Error(`导入文本超过 ${MAX_IMPORT_TEXT} 字符上限`);
-  const lines=text.split('\n'); let title=''; const blocks=[]; let paragraph=[]; let quote=[]; let list=[]; let listOrdered=false;
-  const flushParagraph=()=>{const t=paragraph.join(' ').trim();if(t)blocks.push(paragraphBlock(t));paragraph=[]};
-  const flushQuote=()=>{const t=quote.join(' ').trim();if(t)blocks.push(quoteBlock(t));quote=[]};
-  const flushList=()=>{if(list.length){list.forEach((x,i)=>blocks.push(itemBlock(x,listOrdered?String(i+1):'•')));list=[];} listOrdered=false;};
+  const lines=text.split('\n'); let title=''; const blocks=[]; const registry=createLinkRegistry(); let paragraph=[]; let paragraphLinks=[]; let quote=[]; let quoteLinks=[]; let list=[]; let listOrdered=false;
+  const flushParagraph=()=>{const t=paragraph.join(' ').trim();if(t)blocks.push(paragraphBlock(t));if(paragraphLinks.length)blocks.push(...articleLinkBlocks(paragraphLinks));paragraph=[];paragraphLinks=[]};
+  const flushQuote=()=>{const t=quote.join(' ').trim();if(t)blocks.push(quoteBlock(t));if(quoteLinks.length)blocks.push(...articleLinkBlocks(quoteLinks));quote=[];quoteLinks=[]};
+  const flushList=()=>{if(list.length){list.forEach((x,i)=>{blocks.push(itemBlock(x.text,listOrdered?String(i+1):'•'));if(x.links?.length)blocks.push(...articleLinkBlocks(x.links));});list=[];} listOrdered=false;};
   const flushAll=()=>{flushParagraph();flushQuote();flushList()};
   for(const raw of lines){const line=raw.trim();if(!line){flushAll();continue;}
-    let m=line.match(/^(#{1,6})\s+(.+)$/); if(m){flushAll();const level=m[1].length,v=stripMarkdownInline(m[2]);if(!title&&level===1){title=v.slice(0,MAX_TITLE);continue;}blocks.push(paragraphBlock(v,'subhead'));continue;}
-    m=line.match(/^>\s?(.*)$/); if(m){flushParagraph();flushList();quote.push(stripMarkdownInline(m[1]));continue;}
-    m=line.match(/^[-*+]\s+(.+)$/); if(m){flushParagraph();flushQuote();listOrdered=false;list.push(stripMarkdownInline(m[1]));continue;}
-    m=line.match(/^\d+[.)、]\s*(.+)$/); if(m){flushParagraph();flushQuote();listOrdered=true;list.push(stripMarkdownInline(m[1]));continue;}
-    flushQuote();flushList();paragraph.push(stripMarkdownInline(line));
+    let m=line.match(/^(#{1,6})\s+(.+)$/); if(m){flushAll();const level=m[1].length,v=parseInlineLinks(m[2],registry);if(!title&&level===1){title=v.text.slice(0,MAX_TITLE);if(v.links.length)blocks.push(...articleLinkBlocks(v.links));continue;}blocks.push(paragraphBlock(v.text,'subhead'));if(v.links.length)blocks.push(...articleLinkBlocks(v.links));continue;}
+    m=line.match(/^>\s?(.*)$/); if(m){flushParagraph();flushList();const v=parseInlineLinks(m[1],registry);if(v.text)quote.push(v.text);quoteLinks.push(...v.links);continue;}
+    m=line.match(/^[-*+]\s+(.+)$/); if(m){flushParagraph();flushQuote();listOrdered=false;list.push(parseInlineLinks(m[1],registry));continue;}
+    m=line.match(/^\d+[.)、]\s*(.+)$/); if(m){flushParagraph();flushQuote();listOrdered=true;list.push(parseInlineLinks(m[1],registry));continue;}
+    flushQuote();flushList();const v=parseInlineLinks(line,registry);if(v.text)paragraph.push(v.text);paragraphLinks.push(...v.links);
   }
   flushAll(); if(!title)title=deriveTitle(blocks,filename);
-  return finalizeDocument({title,blocks,format:'markdown',sourceName:filename});
+  return finalizeDocument({title,blocks,articles:registry.articles,format:'markdown',sourceName:filename});
 }
 
 export function parsePlainText(text,{filename=''}={}) {
   text=cleanText(text); if(text.length>MAX_IMPORT_TEXT)throw new Error(`导入文本超过 ${MAX_IMPORT_TEXT} 字符上限`);
-  const paras=text.split(/\n\s*\n/).map(x=>cleanText(x)).filter(Boolean); let title=''; const blocks=[];
-  if(paras.length&&paras[0].length<=80&&!/[。！？!?；;]$/.test(paras[0]))title=paras.shift().replace(/^#+\s*/,'').slice(0,MAX_TITLE);
+  const paras=text.split(/\n\s*\n/).map(x=>cleanText(x)).filter(Boolean); let title=''; const blocks=[]; const registry=createLinkRegistry();
+  if(paras.length&&paras[0].length<=80&&!/[。！？!?；;]$/.test(paras[0])){const first=parseInlineLinks(paras.shift().replace(/^#+\s*/,''),registry);title=first.text.slice(0,MAX_TITLE);if(first.links.length)blocks.push(...articleLinkBlocks(first.links));}
   for(const para of paras){const lines=para.split('\n').map(x=>x.trim()).filter(Boolean);
-    if(lines.length>1&&lines.every(x=>/^([-*+]\s+|\d+[.)、]\s*)/.test(x))){lines.forEach((x,i)=>{const ordered=/^\d/.test(x);blocks.push(itemBlock(x.replace(/^([-*+]\s+|\d+[.)、]\s*)/,''),ordered?String(i+1):'•'))});continue;}
-    if(/^([>＞]|“[^”]{20,}”$)/.test(para)){blocks.push(quoteBlock(para.replace(/^[>＞]\s*/,'')));continue;}
-    if(lines.length===1&&para.length<=50&&!/[。！？!?；;]$/.test(para)){blocks.push(paragraphBlock(para,'subhead'));continue;}
-    blocks.push(paragraphBlock(para));
+    if(lines.length>1&&lines.every(x=>/^([-*+]\s+|\d+[.)、]\s*)/.test(x))){lines.forEach((x,i)=>{const ordered=/^\d/.test(x);const v=parseInlineLinks(x.replace(/^([-*+]\s+|\d+[.)、]\s*)/,''),registry);blocks.push(itemBlock(v.text,ordered?String(i+1):'•'));if(v.links.length)blocks.push(...articleLinkBlocks(v.links));});continue;}
+    if(/^([>＞]|“[^”]{20,}”$)/.test(para)){const v=parseInlineLinks(para.replace(/^[>＞]\s*/,''),registry);if(v.text)blocks.push(quoteBlock(v.text));if(v.links.length)blocks.push(...articleLinkBlocks(v.links));continue;}
+    const v=parseInlineLinks(para,registry);if(lines.length===1&&v.text.length<=50&&!/[。！？!?；;]$/.test(v.text)){blocks.push(paragraphBlock(v.text,'subhead'));}else if(v.text){blocks.push(paragraphBlock(v.text));}if(v.links.length)blocks.push(...articleLinkBlocks(v.links));
   }
-  if(!title)title=deriveTitle(blocks,filename); return finalizeDocument({title,blocks,format:'text',sourceName:filename});
+  if(!title)title=deriveTitle(blocks,filename); return finalizeDocument({title,blocks,articles:registry.articles,format:'text',sourceName:filename});
 }
 
 function deriveTitle(blocks,filename='') {
@@ -143,17 +177,17 @@ function deriveTitle(blocks,filename='') {
   const first=blocks.find(b=>b.text)?.text||''; if(first&&first.length<=80)return first.slice(0,MAX_TITLE);
   return path.basename(filename,path.extname(filename)).slice(0,MAX_TITLE)||'导入文章';
 }
-function finalizeDocument(doc) { doc.blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline').slice(0,500); doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
+function finalizeDocument(doc) { doc.blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink').slice(0,500);doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length; doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
 
-function parseDocxXml(xml,filename='') {
-  const paras=[]; const re=/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g; let m;
-  while((m=re.exec(xml))){const p=m[1];const texts=[...p.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const text=cleanText(texts);if(!text)continue;const style=(p.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const list=/<w:numPr\b/.test(p);paras.push({text,style,list,level:headingLevel(style)});}
+function parseDocxXml(xml,filename='',relationships={}) {
+  const registry=createLinkRegistry(); const paras=[]; const re=/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g; let m;
+  while((m=re.exec(xml))){const p=m[1];const texts=[...p.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const rawText=cleanText(texts);if(!rawText)continue;const style=(p.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const list=/<w:numPr\b/.test(p);const inline=parseInlineLinks(rawText,registry);const links=[...inline.links];for(const hm of p.matchAll(/<w:hyperlink\b[^>]*\br:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g)){const label=cleanText([...hm[2].matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(''));const item=registry.register(label,relationships[hm[1]]||'',label);if(item&&!links.some(x=>x.articleId===item.articleId))links.push(item);}paras.push({text:inline.text,style,list,level:headingLevel(style),links});}
   let title=''; const blocks=[]; let listNo=0;
-  for(const p of paras){const style=p.style.toLowerCase();if(!title&&(/title|标题|heading1/.test(style)||blocks.length===0&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE); if(/title|标题|heading1/.test(style))continue;}
-    if(/heading|标题/.test(style)){blocks.push(paragraphBlock(p.text,'subhead'));continue;}
-    if(/quote|引用/.test(style)){blocks.push(quoteBlock(p.text));continue;}
-    if(p.list){listNo++;blocks.push(itemBlock(p.text,String(listNo)));continue;} listNo=0;blocks.push(paragraphBlock(p.text));}
-  if(!title)title=deriveTitle(blocks,filename);const publication=detectPublicationStructure(paras,title);const doc={title,blocks,format:'docx',sourceName:filename};if(publication){doc.structure=publication.summary;doc.publication=publication;}return finalizeDocument(doc);
+  for(const p of paras){const style=p.style.toLowerCase();if(!title&&(/title|标题|heading1/.test(style)||blocks.length===0&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE);if(p.links?.length)blocks.push(...articleLinkBlocks(p.links));if(/title|标题|heading1/.test(style))continue;}
+    if(/heading|标题/.test(style)){blocks.push(paragraphBlock(p.text,'subhead'));blocks.push(...articleLinkBlocks(p.links||[]));continue;}
+    if(/quote|引用/.test(style)){blocks.push(quoteBlock(p.text));blocks.push(...articleLinkBlocks(p.links||[]));continue;}
+    if(p.list){listNo++;blocks.push(itemBlock(p.text,String(listNo)));blocks.push(...articleLinkBlocks(p.links||[]));continue;} listNo=0;blocks.push(paragraphBlock(p.text));blocks.push(...articleLinkBlocks(p.links||[]));}
+  if(!title)title=deriveTitle(blocks,filename);const publication=detectPublicationStructure(paras,title);const doc={title,blocks,articles:registry.articles,format:'docx',sourceName:filename};if(publication){doc.structure=publication.summary;doc.publication=publication;}return finalizeDocument(doc);
 }
 
 function commandExists(cmd){const r=spawnSync(process.platform==='win32'?'where':'which',[cmd],{encoding:'utf8'});return r.status===0;}
@@ -171,12 +205,12 @@ export async function parseImportedBuffer(buffer,{filename='import.txt'}={}) {
   if(['.txt','.text'].includes(ext)||!ext)return parsePlainText(buffer.toString('utf8'),{filename});
   if(ext==='.doc')return parseDocBuffer(buffer,filename);
   if(ext==='.docx'){
-    const dir=await mkdtemp(path.join(os.tmpdir(),'v3-docx-'));const file=path.join(dir,'input.docx');await writeFile(file,buffer);try{const r=spawnSync('unzip',['-p',file,'word/document.xml'],{encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0||!r.stdout)throw new Error('DOCX 结构无法读取，请确认文件未损坏');return parseDocxXml(r.stdout,filename);}finally{await rm(dir,{recursive:true,force:true});}
+    const dir=await mkdtemp(path.join(os.tmpdir(),'v3-docx-'));const file=path.join(dir,'input.docx');await writeFile(file,buffer);try{const r=spawnSync('unzip',['-p',file,'word/document.xml'],{encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0||!r.stdout)throw new Error('DOCX 结构无法读取，请确认文件未损坏');const rel=spawnSync('unzip',['-p',file,'word/_rels/document.xml.rels'],{encoding:'utf8',maxBuffer:4*1024*1024});const relationships={};if(rel.status===0&&rel.stdout){for(const rm of rel.stdout.matchAll(/<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*>/g)){relationships[rm[1]]=decodeXml(rm[2]);}}return parseDocxXml(r.stdout,filename,relationships);}finally{await rm(dir,{recursive:true,force:true});}
   }
   throw new Error(`暂不支持 ${ext||'未知'} 文件；支持 .docx / .doc / .md / .txt`);
 }
 
-export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
+export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
 function expandBlocks(blocks=[]){const expanded=[];for(const b of blocks){if(b.type==='paragraph'&&String(b.text||'').length>620&&b.style!=='subhead'){sentenceChunks(b.text,520).forEach(t=>expanded.push({...b,text:t}));}else expanded.push(b);}return expanded;}
 function semanticGroupWeight(group=[]){return group.reduce((n,b)=>n+blockWeight(b),0);}
 function rebalanceContinuationGroups(groups=[],target=760){
@@ -210,14 +244,14 @@ export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}
   }
   if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){closeTitle=cleanText(closeParas.shift().text).replace(/[。！？!?]$/,'');}pages.push({type:'closing',navTitle:'尾刊寄语',kicker:'尾刊寄语',title:closeTitle,section:'',blocks:semanticBlocks(closeParas,'article')});}
   if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
-  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary};
+  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
 }
 export function paginateImportedDocument(doc,{targetChars=760,maxPages=80,pageType='article',section='',kicker='',structureMode='auto'}={}) {
   if(structureMode!=='article'&&doc.publication&&(structureMode==='periodical'||structureMode==='auto'))return paginatePublicationDocument(doc,{targetChars,maxPages});
   const target=Math.max(320,Math.min(1400,Number(targetChars)||760)); const expanded=expandBlocks(doc.blocks||[]);
   const groups=[];let cur=[];let weight=0;for(const b of expanded){const w=blockWeight(b);if(cur.length&&(weight+w>target||cur.length>=MAX_BLOCKS)){groups.push(cur);cur=[];weight=0;}cur.push(b);weight+=w;}if(cur.length)groups.push(cur);if(!groups.length)groups.push([]);if(groups.length>maxPages)throw new Error(`自动分页将生成 ${groups.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);
   const pages=groups.map((blocks,i)=>({type:pageType,navTitle:groups.length===1?doc.title:`${doc.title}（${i+1}）`,title:groups.length===1?doc.title:`${doc.title}（${i+1}）`,kicker:kicker||section||'导入内容',section,blocks}));
-  return {pages,recommendedPages:groups.length,targetChars:target,totalWeight:expanded.reduce((n,b)=>n+blockWeight(b),0),strategy:'article-flow',structure:null};
+  return {pages,recommendedPages:groups.length,targetChars:target,totalWeight:expanded.reduce((n,b)=>n+blockWeight(b),0),strategy:'article-flow',structure:null,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
 }
 
 export function parsePastedText(text,{format='auto',filename='粘贴正文'}={}) {const fmt=format==='markdown'||(format==='auto'&&/(^|\n)#{1,3}\s|(^|\n)>\s|(^|\n)[-*+]\s/m.test(text))?'markdown':'text';return fmt==='markdown'?parseMarkdown(text,{filename}):parsePlainText(text,{filename});}
