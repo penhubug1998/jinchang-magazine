@@ -1,5 +1,11 @@
 
 .DS_Store
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+*.log
 .tmp-v3-*/
 .v3-drafts/
 .v3-snapshots/

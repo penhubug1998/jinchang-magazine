@@ -13,10 +13,17 @@
 
 ```text
 index.html            期刊入口页
-1/                    第一期（index.html + assets）
-2/                    第二期（index.html + assets）
-assets/               各期独立资源（music 背景音乐、video 视频、tts 逐页朗读音频）
+1/、2/                已发布期刊（页面与静态资源）
+src/                  阅读器与管理后台源代码
+scripts/              校验、构建、发布与回滚脚本
+issues/               V3 期刊制作源稿与期刊资源
+baselines/            发布基线与验收快照
+deploy/               部署配置与公开站点入口
+docs/                 使用、发布、架构与版本文档
+dist-v3/              本地构建产物（已加入 .gitignore）
 ```
+
+历史版本的发布说明统一归档在 [`docs/deploy-history/`](docs/deploy-history/)，不参与运行时。
 
 ## 功能
 
@@ -41,3 +48,5 @@ python -m http.server 8080
 
 将整个文件夹原样上传到站点根目录（例如 `/var/www/jilv.online/jinchang-magazine/`），
 并确保 `assets/` 目录属主为 Web 服务用户（如 `www-data`）。
+
+管理后台和 V3 制作源的流程说明见 [`docs/README.md`](docs/README.md)。
