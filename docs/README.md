@@ -7,6 +7,7 @@
 - 管理后台登录：[`ADMIN_LOGIN.md`](ADMIN_LOGIN.md)
 - V3 制作与发布流程：[`V3_PRODUCTION_WORKFLOW.md`](V3_PRODUCTION_WORKFLOW.md)、[`V3_STUDIO_AND_RELEASE.md`](V3_STUDIO_AND_RELEASE.md)
 - 发布与缓存：[`V3_DEPLOYMENT_AND_CACHE.md`](V3_DEPLOYMENT_AND_CACHE.md)
+- 管理端反向代理：[`deploy/jinchang-magazine-admin-nginx.conf`](../deploy/jinchang-magazine-admin-nginx.conf)
 - 公开链接交接：[`PUBLICATION_SHARE_HANDOFF.md`](PUBLICATION_SHARE_HANDOFF.md)
 - 架构说明：[`V3_ARCHITECTURE.md`](V3_ARCHITECTURE.md)
 - 历史发布说明：[`deploy-history/`](deploy-history/)
