@@ -20,7 +20,8 @@ assert(schema.evidenceBinding?.verifiedParentFullSourceR1Sha256==='f465866e97bf5
 
 const [html,css,studio,reader,server]=await Promise.all(['src/studio/index.html','src/studio/studio.css','src/studio/studio.js','src/reader/reader.js','scripts/studio-v3.mjs'].map(f=>readFile(f,'utf8')));
 assert(html.includes('V3.1 自由创作期刊制作中心')||html.includes('V3.1 alpha11 · 沉浸式工作区 / 双屏编辑')||html.includes('V3.1 alpha12 · 整期结构快速导入')||html.includes('V3.1 alpha13 · 动态板块语义识别')||html.includes('V3.1 alpha15 · 所见即所得工作区 / 制作中心瘦身')||html.includes('V3.1 alpha16 · 媒体直编 / 多窗口同步 / 版面健康')||html.includes('V3.1 alpha17 · Reader 最大化 / 页面控制台')||html.includes('V3.1 alpha18 · 交互修复 / 页面同步 / 移动增强'),'Alpha11 Studio 历史/稳定版标识缺失');
-for(const id of ['immersiveWorkspaceToolbar','workspaceBackBtn','workspacePagePicker','workspacePageDialog','enterWorkspaceBtn'])assert(html.includes(`id="${id}"`),`Alpha11 UI 缺少 ${id}`);
+for(const id of ['immersiveWorkspaceToolbar','workspaceBackBtn','workspacePagePicker','workspacePageDialog'])assert(html.includes(`id="${id}"`),`Alpha11 UI 缺少 ${id}`);
+assert(html.includes('id="enterWorkspaceBtn"')||html.includes('id="managerWorkspaceEnter"'),'Alpha11 UI 缺少可达的沉浸式工作区入口');
 const canvasAt=html.indexOf('class="block-canvas"'),metaAt=html.indexOf('id="pageMetaCard"'),limitAt=html.indexOf('id="blockLimitNote"');
 assert(canvasAt>=0&&metaAt>canvasAt&&limitAt>metaAt,'页面信息块没有进入内容块画布首部');
 assert(css.includes('V3.1-alpha11 · 沉浸式工作区 / 双屏编辑')&&css.includes('body.workspace-mode #visualEditor'),'Alpha11 沉浸式工作区 CSS 缺失');
