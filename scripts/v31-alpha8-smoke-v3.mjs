@@ -22,7 +22,8 @@ assert(schema.evidenceBinding?.verifiedParentOverlaySha256==='110906fa3ef3360b93
 
 const [studio,html,css,server]=await Promise.all(['src/studio/studio.js','src/studio/index.html','src/studio/studio.css','scripts/studio-v3.mjs'].map(f=>readFile(f,'utf8')));
 for(const token of ['openReviewWorkspace','loadReviewWorkspace','saveReviewWorkspace','reviewWorkspaceAnalysis','importAuditReviewFinding','runReviewAudit','reviewAuditKey','locateReviewItem'])assert(studio.includes(token),`Studio Alpha8 缺少 ${token}`);
-for(const id of ['reviewWorkspaceBtn','reviewWorkspaceDialog','reviewWorkspaceMetrics','reviewAuditFindings','reviewWorkspaceList','reviewRunAudit','reviewAddManual','reviewSaveWorkspace'])assert(html.includes(`id="${id}"`),`Studio Alpha8 UI 缺少 ${id}`);
+assert(html.includes('id="reviewWorkspaceBtn"')||html.includes('id="reviewWorkspaceFromAudit"'),'Studio Alpha8 UI 缺少可达的内部校审入口');
+for(const id of ['reviewWorkspaceDialog','reviewWorkspaceMetrics','reviewAuditFindings','reviewWorkspaceList','reviewRunAudit','reviewAddManual','reviewSaveWorkspace'])assert(html.includes(`id="${id}"`),`Studio Alpha8 UI 缺少 ${id}`);
 assert(html.includes('V3.1 alpha8 · 内部校审 / 问题闭环')||(html.includes('V3.1 alpha9 · 校审轮次 / 交接签收')||html.includes('V3.1 alpha10 · 交接基线 / 复核差异')||html.includes('V3.1 alpha11 · 沉浸式工作区 / 双屏编辑')||html.includes('V3.1 alpha12 · 整期结构快速导入')||(html.includes('V3.1 alpha13 · 动态板块语义识别')||(html.includes('V3.1 alpha15 · 所见即所得工作区 / 制作中心瘦身')||(html.includes('V3.1 alpha16 · 媒体直编 / 多窗口同步 / 版面健康')||(html.includes('V3.1 alpha17 · Reader 最大化 / 页面控制台')||html.includes('V3.1 alpha18 · 交互修复 / 页面同步 / 移动增强')))))),'Studio Alpha8/Alpha9 标识缺失');
 assert(css.includes('V3.1-alpha8 · internal editorial review workspace'),'Studio Alpha8 样式缺失');
 for(const token of ['review-workspace','.v3-review-workspaces','sanitizeReviewWorkspace','REVIEW_WORKSPACE_LIMIT','V3_REVIEW_WORKSPACE_DIR'])assert(server.includes(token),`Studio API Alpha8 缺少 ${token}`);
