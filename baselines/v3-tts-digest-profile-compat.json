@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "defaultProfile": "article-summary-v2",
+  "publishedCompatibility": {
+    "001": {
+      "sourceDigest": "57ee744b73de558349c3c48f764bb7c718a2aa5877c03c5e25aafd43ebdb53df",
+      "digestProfile": "page-v1",
+      "reason": "Alpha12 已发布 TTS 基线未朗读 articleLink 离线摘要；保留原音频语义。"
+    },
+    "002": {
+      "sourceDigest": "acb99a625ea7cb0b81d61a2873665ffdf82ba939688736c7f01240180d63fbba",
+      "digestProfile": "page-v1",
+      "reason": "Alpha12 已发布 TTS 基线未朗读 articleLink 离线摘要；保留原音频语义。"
+    }
+  }
+}
