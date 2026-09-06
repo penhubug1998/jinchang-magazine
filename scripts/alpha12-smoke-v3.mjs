@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import crypto from 'node:crypto';
-import { narrationPageDigests, narrationSourceDigest, V3_VERSION } from './lib-v3-production.mjs';
+import { narrationPageDigests, narrationSourceDigest } from './lib-v3-production.mjs';
+import { V3_VERSION } from './lib-v3-production.mjs';
 
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
@@ -16,42 +16,14 @@ for(const token of ['imageAdjustDialog','cleanupUnusedMedia','deleteSelectedMedi
 const server=await readFile(path.join(root,'scripts','studio-v3.mjs'),'utf8');
 for(const token of ["assets'&&seg[4]==='delete'","assets'&&seg[4]==='cleanup'","assets'&&seg[4]==='poster'","tts'&&seg[4]==='baseline'",'ASSET_IN_USE'])assert(server.includes(token),`Studio API 缺少 Alpha12 路由/保护：${token}`);
 
-function blockSpeechWithoutArticleLink(block={}){
-  switch(block.type){
-    case 'paragraph': case 'heading': case 'textFlow': case 'sectionHeading': case 'blessing': case 'producer': case 'coverMeta': return block.text||block.title||'';
-    case 'pullQuote': return [block.label,block.text,block.attribution].filter(Boolean).join('。');
-    case 'sidebar': case 'quote': case 'cardline': return [block.title,block.text].filter(Boolean).join('。');
-    case 'chips': return (block.items||[]).map(x=>x?.text||'').filter(Boolean).join('，');
-    case 'casePair': return [block.case,block.warning].filter(Boolean).join('。');
-    case 'video': case 'image': return block.caption||'';
-    case 'coverSections': return (block.items||[]).filter(Boolean).join('，');
-    case 'cards': return (block.items||[]).flatMap(x=>[x?.title,x?.text,x?.body]).filter(Boolean).join('。');
-    case 'articleLink': return '';
-    case 'container': return (block.columns||[]).flatMap(column=>(column.blocks||[]).map(blockSpeechWithoutArticleLink)).filter(Boolean).join('。');
-    default: return '';
-  }
-}
-function pageDigestWithoutArticleLink(issue){
-  return (issue.pages||[]).map(page=>{
-    const text=[page.kicker,page.title,page.subtitle,...(page.body||[]),...(page.blocks||[]).map(blockSpeechWithoutArticleLink)].filter(Boolean).join('。').replace(/\s+/g,' ').trim();
-    return crypto.createHash('sha256').update(text).digest('hex').slice(0,20);
-  });
-}
-function sourceDigest(pageDigests){return crypto.createHash('sha256').update(pageDigests.join('|')).digest('hex')}
+const ttsBase={pages:[{title:'页面正文',blocks:[{type:'paragraph',text:'页面内可朗读内容'}]}],articles:{demo:{title:'扩展阅读',subtitle:'弹窗内容',paras:['这段内容只应在扩展阅读中朗读。']}}};
+const ttsWithArticleLink=structuredClone(ttsBase);
+ttsWithArticleLink.pages[0].blocks.push({type:'articleLink',articleId:'demo'});
+assert(narrationSourceDigest(ttsWithArticleLink)===narrationSourceDigest(ttsBase),'articleLink 交互入口不应改变页面 TTS 指纹或重复朗读扩展文章');
 
-const issues=[];
 for(const id of ['001','002']){
   const issue=JSON.parse(await readFile(path.join(root,'issues',id,'issue.json'),'utf8'));
-  const digests=narrationPageDigests(issue);
-  const sourceDigestCurrent=narrationSourceDigest(issue);
-  const withoutArticleLink=pageDigestWithoutArticleLink(issue);
-  issues.push({id,storedSourceDigest:issue.features?.narration?.sourceDigest,currentSourceDigest:sourceDigestCurrent,withoutArticleLinkSourceDigest:sourceDigest(withoutArticleLink),storedPageDigests:issue.features?.narration?.pageDigests,currentPageDigests:digests,withoutArticleLinkPageDigests:withoutArticleLink});
-  assert(issue.features?.narration?.pageDigests?.length===issue.pages.length,`${id} 缺少 TTS 页级基线`);
+  const digests=narrationPageDigests(issue);assert(issue.features?.narration?.pageDigests?.length===issue.pages.length,`${id} 缺少 TTS 页级基线`);assert(issue.features.narration.sourceDigest===narrationSourceDigest(issue),`${id} 当前内容与 TTS 基线不一致`);assert(JSON.stringify(digests)===JSON.stringify(issue.features.narration.pageDigests),`${id} TTS 页级指纹不一致`);
   const changed=structuredClone(issue);changed.pages[1].title+='（变更）';assert(narrationSourceDigest(changed)!==issue.features.narration.sourceDigest,`${id} 文本变更未触发 TTS digest 变化`);
-}
-const mismatch=issues.find(item=>item.storedSourceDigest!==item.currentSourceDigest||JSON.stringify(item.storedPageDigests)!==JSON.stringify(item.currentPageDigests));
-if(mismatch){
-  console.error('TTS_BASELINE_DIAGNOSTIC '+JSON.stringify(issues));
-  throw new Error(`${mismatch.id} 当前内容与 TTS 基线不一致`);
 }
 console.log('V3 alpha12 smoke 通过：图片焦点/视频封面、媒体引用保护、TTS 正文指纹与两期基线均正常。');
