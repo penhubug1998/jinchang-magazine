@@ -25,7 +25,8 @@ assert(html.includes('id="enterWorkspaceBtn"')||html.includes('id="managerWorksp
 const canvasAt=html.indexOf('class="block-canvas"'),metaAt=html.indexOf('id="pageMetaCard"'),limitAt=html.indexOf('id="blockLimitNote"');
 assert(canvasAt>=0&&metaAt>canvasAt&&limitAt>metaAt,'页面信息块没有进入内容块画布首部');
 assert(css.includes('V3.1-alpha11 · 沉浸式工作区 / 双屏编辑')&&css.includes('body.workspace-mode #visualEditor'),'Alpha11 沉浸式工作区 CSS 缺失');
-for(const token of ['WORKSPACE_MODE','workspaceRouteUrl','goToPage','openWorkspacePageDialog','scheduleReaderPreviewSync(delay=100)'])assert(studio.includes(token),`Alpha11 Studio 缺少 ${token}`);
+for(const token of ['WORKSPACE_MODE','workspaceRouteUrl','goToPage','openWorkspacePageDialog'])assert(studio.includes(token),`Alpha11 Studio 缺少 ${token}`);
+assert(studio.includes('readerSyncInFlight')&&studio.includes('readerSyncQueued'),'Alpha11 Reader 同步串行/排队状态缺失');
 assert(studio.indexOf("frame.contentWindow?.postMessage({source:'v3-studio',type:'issue'")<studio.indexOf('await api(`/api/issues/${encodeURIComponent(state.issue.id)}/live-preview`'),'Alpha11 应先即时 postMessage 再等待 live-preview 后台持久化');
 assert(reader.includes('function pageScrollSnapshot()')&&reader.includes('render({ preserveScroll:true })'),'Reader 未保留页内滚动位置');
 assert(server.includes("u.pathname==='/workspace'")&&server.includes("seg[0]==='workspace'&&seg.length>1"),'Studio server 未提供 workspace 路由/静态资源');
