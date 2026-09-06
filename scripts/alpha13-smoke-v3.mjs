@@ -45,7 +45,7 @@ async function freePort(){return await new Promise((resolve,reject)=>{const s=ne
 const root=process.cwd();const sandbox=path.join(root,'.tmp-v3-alpha13-api');
 const {cp}=await import('node:fs/promises');
 await rm(sandbox,{recursive:true,force:true});await mkdir(path.join(sandbox,'scripts'),{recursive:true});await mkdir(path.join(sandbox,'src'),{recursive:true});await mkdir(path.join(sandbox,'issues','001'),{recursive:true});await mkdir(path.join(sandbox,'issues','002'),{recursive:true});
-for(const f of ['lib-v3-production.mjs','lib-v3-history.mjs','lib-v3-import.mjs','lib-v3-publication.mjs','sync-assets-v3.mjs','studio-v3.mjs'])await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
+for(const f of ['lib-v3-production.mjs','lib-v3-history.mjs','lib-v3-import.mjs','lib-v3-publication.mjs','lib-v3-catalog.mjs','lib-v3-deploy.mjs','sync-assets-v3.mjs','studio-v3.mjs'])await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
 await cp(path.join(root,'src','studio'),path.join(sandbox,'src','studio'),{recursive:true});
 await cp(path.join(root,'src','reader'),path.join(sandbox,'src','reader'),{recursive:true});
 await cp(path.join(root,'package.json'),path.join(sandbox,'package.json'));
