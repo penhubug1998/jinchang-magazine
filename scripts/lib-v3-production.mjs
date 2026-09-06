@@ -20,6 +20,12 @@ export const V3_VERSION = PACKAGE_META.version;
 export const V3_STABLE_VERSION = PACKAGE_META.v3StableVersion || V3_VERSION;
 export const V31_SCHEMA_VERSION = PACKAGE_META.v31SchemaVersion || null;
 export const MiB = 1024 * 1024;
+export const TTS_DIGEST_PROFILE_PAGE_V1 = 'page-v1';
+export const TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2 = 'article-summary-v2';
+let TTS_DIGEST_PROFILE_COMPAT = { defaultProfile: TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2, publishedCompatibility: {} };
+try {
+  TTS_DIGEST_PROFILE_COMPAT = JSON.parse(readFileSync(path.join(moduleRoot, 'baselines', 'v3-tts-digest-profile-compat.json'), 'utf8'));
+} catch {}
 export const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 export const posix = (file) => file.replaceAll('\\', '/');
 export const rel = (file) => posix(path.relative(root, file));
@@ -97,9 +103,6 @@ export function collectReferencedAssets(issue) {
     if (block.type === 'container') for (const [ci,column] of (block.columns || []).entries()) for (const [bi,child] of (column.blocks || []).entries()) walkBlockAssets(child,pageIndex,blockIndex,`columns.${ci}.blocks.${bi}`);
   };
   for (const [pageIndex, page] of (issue.pages || []).entries()) {
-    // A page background is a real asset dependency too.  Keep it in the same
-    // reference graph as normal image blocks so cleanup and publishing never
-    // silently remove it.
     add(page?.design?.backgroundImage, 'image', { page: pageIndex + 1, field: 'design.backgroundImage', source: 'page.design.backgroundImage' });
     for (const [blockIndex, block] of (page.blocks || []).entries()) walkBlockAssets(block,pageIndex,blockIndex);
   }
@@ -115,7 +118,17 @@ export function collectReferencedAssets(issue) {
   return [...dedup.values()].sort((a, b) => a.path.localeCompare(b.path, 'zh-CN'));
 }
 
-function blockSpeechText(block = {}, articles = {}) {
+export function narrationDigestProfile(issue = {}) {
+  const explicit = String(issue?.features?.narration?.digestProfile || '').trim();
+  if ([TTS_DIGEST_PROFILE_PAGE_V1, TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2].includes(explicit)) return explicit;
+  const compat = TTS_DIGEST_PROFILE_COMPAT?.publishedCompatibility?.[String(issue?.id || '')];
+  if (compat && compat.sourceDigest && compat.sourceDigest === issue?.features?.narration?.sourceDigest) {
+    return compat.digestProfile || TTS_DIGEST_PROFILE_PAGE_V1;
+  }
+  return TTS_DIGEST_PROFILE_COMPAT?.defaultProfile || TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2;
+}
+
+function blockSpeechText(block = {}, articles = {}, digestProfile = TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2) {
   switch (block.type) {
     case 'paragraph': case 'heading': case 'textFlow': case 'sectionHeading':
     case 'blessing': case 'producer': case 'coverMeta': return block.text || block.title || '';
@@ -130,21 +143,24 @@ function blockSpeechText(block = {}, articles = {}) {
     case 'coverSections': return (block.items || []).filter(Boolean).join('，');
     case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
     case 'articleLink': {
+      if (digestProfile === TTS_DIGEST_PROFILE_PAGE_V1) return block.title || '';
       const article = articles?.[block.articleId] || {};
       return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join('。');
     }
-    case 'container': return (block.columns || []).flatMap(column => (column.blocks || []).map(child => blockSpeechText(child, articles))).filter(Boolean).join('。');
+    case 'container': return (block.columns || []).flatMap(column => (column.blocks || []).map(child => blockSpeechText(child, articles, digestProfile))).filter(Boolean).join('。');
     default: return '';
   }
 }
 
-export function narrationPageText(page = {}, articles = {}) {
-  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, articles))]
+export function narrationPageText(page = {}, articles = {}, options = {}) {
+  const digestProfile = options.digestProfile || TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2;
+  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, articles, digestProfile))]
     .filter(Boolean).join('。').replace(/\s+/g, ' ').trim();
 }
 
 export function narrationPageDigests(issue = {}) {
-  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {})).digest('hex').slice(0, 20));
+  const digestProfile = narrationDigestProfile(issue);
+  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {}, { digestProfile })).digest('hex').slice(0, 20));
 }
 
 export function narrationSourceDigest(issue = {}) {
