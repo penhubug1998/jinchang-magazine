@@ -97,7 +97,7 @@ export function collectReferencedAssets(issue) {
     if (block.type === 'container') for (const [ci,column] of (block.columns || []).entries()) for (const [bi,child] of (column.blocks || []).entries()) walkBlockAssets(child,pageIndex,blockIndex,`columns.${ci}.blocks.${bi}`);
   };
   for (const [pageIndex, page] of (issue.pages || []).entries()) {
-    // A page background is a real asset dependency too.  Keep it in the same
+    // A page background is a real asset dependency too. Keep it in the same
     // reference graph as normal image blocks so cleanup and publishing never
     // silently remove it.
     add(page?.design?.backgroundImage, 'image', { page: pageIndex + 1, field: 'design.backgroundImage', source: 'page.design.backgroundImage' });
@@ -129,10 +129,10 @@ function blockSpeechText(block = {}, articles = {}) {
     case 'image': return block.caption || '';
     case 'coverSections': return (block.items || []).filter(Boolean).join('，');
     case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
-    case 'articleLink': {
-      const article = articles?.[block.articleId] || {};
-      return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join('。');
-    }
+    // articleLink opens a separate reading surface. Its linked article must not
+    // be injected into the current page narration, otherwise the same content
+    // is spoken twice and an interaction-only link invalidates existing TTS.
+    case 'articleLink': return '';
     case 'container': return (block.columns || []).flatMap(column => (column.blocks || []).map(child => blockSpeechText(child, articles))).filter(Boolean).join('。');
     default: return '';
   }
