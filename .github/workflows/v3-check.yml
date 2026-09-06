@@ -7,11 +7,18 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      CHROMIUM: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Browser runtime preflight
+        run: |
+          test -x "$CHROMIUM"
+          "$CHROMIUM" --version
+          command -v xvfb-run
       - run: npm run verify:v31
       - name: Verify complete repository media
         run: npm run media:check -- --strict
