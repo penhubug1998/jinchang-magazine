@@ -3,14 +3,15 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import {
   exists, narrationPageDigests, narrationPageText, narrationSourceDigest,
-  normalizeIssueId, parseArgs, readJson, root, writeJson
+  normalizeIssueId, parseArgs, readJson, root, writeJson,
+  TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2, TTS_DIGEST_PROFILE_PAGE_V1
 } from './lib-v3-production.mjs';
 import { snapshotIssue } from './lib-v3-history.mjs';
 
 const args = parseArgs();
 const id = normalizeIssueId(args.issue || args.id || args._[0] || '');
 if (!id) {
-  console.error('用法：node scripts/generate-tts-v3.mjs --issue 003 [--voice zh-CN-XiaoxiaoNeural] [--rate 1]');
+  console.error('用法：node scripts/generate-tts-v3.mjs --issue 003 [--voice zh-CN-XiaoxiaoNeural] [--rate 1] [--digest-profile article-summary-v2]');
   process.exit(2);
 }
 
@@ -29,10 +30,18 @@ const rateValue = Number(args.rate || 1);
 const rate = Number.isFinite(rateValue) ? Math.max(0.5, Math.min(2, rateValue)) : 1;
 const ratePercent = Math.round((rate - 1) * 100);
 const rateArg = `${ratePercent >= 0 ? '+' : ''}${ratePercent}%`;
+const digestProfile = String(args['digest-profile'] || TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2);
+if (![TTS_DIGEST_PROFILE_PAGE_V1, TTS_DIGEST_PROFILE_ARTICLE_SUMMARY_V2].includes(digestProfile)) {
+  throw new Error(`不支持的 TTS digest profile：${digestProfile}`);
+}
 const generator = String(args.bin || process.env.V3_TTS_BIN || path.join(root, '.venv', 'bin', 'edge-tts'));
 if (!path.basename(generator).toLowerCase().includes('edge-tts') || !(await exists(generator))) {
   throw new Error('未找到 edge-tts 神经语音生成器；请先安装并配置 .venv/bin/edge-tts。');
 }
+
+issue.features ||= {};
+issue.features.narration ||= {};
+issue.features.narration.digestProfile = digestProfile;
 
 const token = `${Date.now()}-${process.pid}`;
 const staging = path.join(assetRoot, `.tts-staging-${token}`);
@@ -46,7 +55,7 @@ try {
   const generated = [];
   for (const [index, page] of issue.pages.entries()) {
     const number = index + 1;
-    const text = narrationPageText(page, issue.articles || {});
+    const text = narrationPageText(page, issue.articles || {}, { digestProfile });
     if (!text) throw new Error(`第 ${number} 页没有可朗读正文，未生成不完整发布音频。`);
     const name = `page-${String(number).padStart(2, '0')}.mp3`;
     const file = path.join(staging, name);
@@ -68,7 +77,6 @@ try {
   await rename(staging, target);
   swapped = true;
 
-  issue.features ||= {};
   issue.features.narration = {
     ...(issue.features.narration || {}),
     pattern: 'assets/tts/page-{page}.mp3',
@@ -77,6 +85,7 @@ try {
     rate,
     generator: 'edge-neural',
     voice,
+    digestProfile,
     generatedAt: new Date().toISOString(),
     sourceDigest: narrationSourceDigest(issue),
     pageDigests: narrationPageDigests(issue),
@@ -92,7 +101,7 @@ try {
     ok: true, issue: id, pages: generated.length,
     bytes: generated.reduce((sum, item) => sum + item.bytes, 0),
     snapshot: snapshot.id, backup: path.relative(root, backup),
-    pattern: issue.features.narration.pattern, voice,
+    pattern: issue.features.narration.pattern, voice, digestProfile,
     sourceDigest: issue.features.narration.sourceDigest
   }, null, 2));
 } catch (error) {
