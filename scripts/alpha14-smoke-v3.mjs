@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, cp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, cp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import net from 'node:net';
 import os from 'node:os';
@@ -29,7 +29,8 @@ try{
   await mkdir(path.join(sandbox,'scripts'),{recursive:true});
   await mkdir(path.join(sandbox,'src'),{recursive:true});
   await mkdir(path.join(sandbox,'issues','002'),{recursive:true});
-  for(const f of ['lib-v3-production.mjs','lib-v3-history.mjs','lib-v3-import.mjs','lib-v3-publication.mjs','studio-v3.mjs']) await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
+  const studioSupport=(await readdir(path.join(root,'scripts'))).filter(f=>/^lib-v3-.*\.mjs$/.test(f));
+  for(const f of [...new Set([...studioSupport,'sync-assets-v3.mjs','studio-v3.mjs'])]) await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
   await cp(path.join(root,'src','studio'),path.join(sandbox,'src','studio'),{recursive:true});
   await cp(path.join(root,'src','reader'),path.join(sandbox,'src','reader'),{recursive:true});
   await cp(path.join(root,'package.json'),path.join(sandbox,'package.json'));
