@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import {
   narrationPageDigests,
   narrationSourceDigest,
@@ -13,6 +14,46 @@ const explicit = normalizeIssueId(args.issue || args.id || args._?.[0] || '');
 const ids = explicit ? [explicit] : ['001', '002'];
 const reportOnly = Boolean(args['report-only']);
 const rows = [];
+
+function candidateBlockSpeechText(block = {}, articles = {}, articleMode = 'current') {
+  switch (block.type) {
+    case 'paragraph': case 'heading': case 'textFlow': case 'sectionHeading':
+    case 'blessing': case 'producer': case 'coverMeta': return block.text || block.title || '';
+    case 'pullQuote': return [block.label, block.text, block.attribution].filter(Boolean).join('。');
+    case 'sidebar': return [block.title, block.text].filter(Boolean).join('。');
+    case 'quote': return [block.title, block.text].filter(Boolean).join('。');
+    case 'chips': return (block.items || []).map(x => x?.text || '').filter(Boolean).join('，');
+    case 'cardline': return [block.title, block.text].filter(Boolean).join('。');
+    case 'casePair': return [block.case, block.warning].filter(Boolean).join('。');
+    case 'video': return block.caption || '';
+    case 'image': return block.caption || '';
+    case 'coverSections': return (block.items || []).filter(Boolean).join('，');
+    case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
+    case 'articleLink': {
+      const article = articles?.[block.articleId] || {};
+      if (articleMode === 'omit-link') return '';
+      if (articleMode === 'link-title-only') return block.title || '';
+      if (articleMode === 'article-meta') return [block.title, article.title, article.subtitle].filter(Boolean).join('。');
+      if (articleMode === 'article-without-block-title') return [article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join('。');
+      return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join('。');
+    }
+    case 'container': return (block.columns || []).flatMap(column => (column.blocks || []).map(child => candidateBlockSpeechText(child, articles, articleMode))).filter(Boolean).join('。');
+    default: return '';
+  }
+}
+
+function candidatePageDigest(page = {}, articles = {}, articleMode = 'current') {
+  const text = [
+    page.kicker,
+    page.title,
+    page.subtitle,
+    ...(page.body || []),
+    ...(page.blocks || []).map(block => candidateBlockSpeechText(block, articles, articleMode))
+  ].filter(Boolean).join('。').replace(/\s+/g, ' ').trim();
+  return crypto.createHash('sha256').update(text).digest('hex').slice(0, 20);
+}
+
+const candidateModes = ['link-title-only', 'article-meta', 'article-without-block-title', 'omit-link'];
 
 for (const id of ids) {
   const file = path.join(root, 'issues', id, 'issue.json');
@@ -32,12 +73,18 @@ for (const id of ids) {
   for (let index = 0; index < max; index++) {
     if (storedPages[index] === currentPages[index]) continue;
     const page = issue.pages?.[index] || {};
+    const compatibilityCandidates = Object.fromEntries(candidateModes.map(mode => [mode, candidatePageDigest(page, issue.articles || {}, mode)]));
+    const compatibilityMatches = Object.entries(compatibilityCandidates)
+      .filter(([, digest]) => digest === storedPages[index])
+      .map(([mode]) => mode);
     changedPages.push({
       page: index + 1,
       navTitle: page.navTitle || null,
       title: page.title || null,
       storedDigest: storedPages[index] || null,
-      currentDigest: currentPages[index] || null
+      currentDigest: currentPages[index] || null,
+      compatibilityMatches,
+      compatibilityCandidates
     });
   }
 
@@ -86,7 +133,8 @@ for (const row of rows) {
   }
   for (const page of row.changedPages) {
     const label = page.navTitle || page.title || `第 ${page.page} 页`;
-    console.error(`  page ${page.page} ${label}: ${page.storedDigest || 'missing'} -> ${page.currentDigest || 'missing'}`);
+    const compat = page.compatibilityMatches.length ? ` · legacy=${page.compatibilityMatches.join(',')}` : '';
+    console.error(`  page ${page.page} ${label}: ${page.storedDigest || 'missing'} -> ${page.currentDigest || 'missing'}${compat}`);
   }
 }
 
