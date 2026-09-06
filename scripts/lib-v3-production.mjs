@@ -96,7 +96,13 @@ export function collectReferencedAssets(issue) {
     if (block.type === 'image') add(block.src, 'image', { page: pageIndex + 1, blockIndex, field: `${prefix}src` });
     if (block.type === 'container') for (const [ci,column] of (block.columns || []).entries()) for (const [bi,child] of (column.blocks || []).entries()) walkBlockAssets(child,pageIndex,blockIndex,`columns.${ci}.blocks.${bi}`);
   };
-  for (const [pageIndex, page] of (issue.pages || []).entries()) for (const [blockIndex, block] of (page.blocks || []).entries()) walkBlockAssets(block,pageIndex,blockIndex);
+  for (const [pageIndex, page] of (issue.pages || []).entries()) {
+    // A page background is a real asset dependency too.  Keep it in the same
+    // reference graph as normal image blocks so cleanup and publishing never
+    // silently remove it.
+    add(page?.design?.backgroundImage, 'image', { page: pageIndex + 1, field: 'design.backgroundImage', source: 'page.design.backgroundImage' });
+    for (const [blockIndex, block] of (page.blocks || []).entries()) walkBlockAssets(block,pageIndex,blockIndex);
+  }
   const dedup = new Map();
   for (const item of refs) {
     const key = `${item.kind}:${item.path}`;

@@ -33,7 +33,9 @@ const checkArgs=['--issue',id,'--strict','--skip-browser'];
 run('发布前完整门禁','release-check-v3.mjs',checkArgs);
 
 const snapshot = await snapshotIssue(id, 'pre-publish');
-run('生成最新构建','build-v3.mjs');
+// Publish only the selected issue. A release of one issue must not rebuild
+// every preview and temporarily invalidate the other issue readers.
+run('生成最新构建','build-v3.mjs',['--issue',id]);
 const built = path.join(root,'dist-v3',id);
 if (!(await exists(path.join(built,'index.html')))) { console.error(`构建产物不存在：dist-v3/${id}`); process.exit(1); }
 

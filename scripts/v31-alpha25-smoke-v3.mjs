@@ -12,7 +12,7 @@ const evidence={devices:{mobile:'pass',desktop:'pass',checkedAt:new Date().toISO
 const good=buildPublicationStatus(issue,audit,evidence);
 assert(good.canPublish&&good.metrics.content===100&&good.metrics.pageHealth===100&&good.metrics.media===100&&good.metrics.accessibility===100,`publish metrics ${JSON.stringify(good)}`);
 assert(good.metrics.links.status==='pass'&&good.metrics.narration.label==='2 / 2','link/narration metric failed');
-assert(publicationReadinessLabel(good)==='可以发布'&&publicationOutputLabel('pdf')==='Print PDF','labels failed');
+assert(publicationReadinessLabel(good)==='严格门禁通过 · 可以正式发布'&&publicationOutputLabel('pdf')==='Print PDF','labels failed');
 const bad=buildPublicationStatus({...issue,pages:[{title:'正文',blocks:[{type:'paragraph',richText:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'坏链接',marks:[{type:'link',attrs:{href:'javascript:alert(1)'}}]}]}]}}]}]},audit,evidence);
 assert(!bad.canPublish&&bad.metrics.links.status==='fail','unsafe link must block publication');
 const [studio,html,css,server,readerCss,readerJs]=await Promise.all([readFile('src/studio/studio.js','utf8'),readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('scripts/studio-v3.mjs','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8')]);
