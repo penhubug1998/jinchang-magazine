@@ -3,8 +3,8 @@ import crypto from 'node:crypto';
 import { DESIGN_PRESETS } from '../src/studio/design-presets.js';
 
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-if(!['3.1.0-alpha.3','3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version))throw new Error(`V3.1 alpha3 回归不支持当前版本：${pkg.version}`);
-if(!['3.1-alpha3','3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion))throw new Error(`V3.1 alpha3 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
+if(pkg.version!=='3.1.0'&&!['3.1.0-alpha.3','3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version))throw new Error(`V3.1 alpha3 回归不支持当前版本：${pkg.version}`);
+if(pkg.v31SchemaVersion!=='3.1-alpha24'&&!['3.1-alpha3','3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion))throw new Error(`V3.1 alpha3 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
 if(pkg.v3StableVersion!=='3.0.0')throw new Error('V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha3.json','utf8'));
 if(schema.designWorkflow?.themePresets!==true||schema.designWorkflow?.readerDirectTargeting!=='studio-embed-only')throw new Error('Alpha3 设计工作流 schema 不完整');
