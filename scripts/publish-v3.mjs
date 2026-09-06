@@ -20,7 +20,7 @@ const issueFile = path.join(root, 'issues', id, 'issue.json');
 if (!(await exists(issueFile))) { console.error(`找不到 issues/${id}`); process.exit(1); }
 let issue = await readJson(issueFile);
 if (issue.engine !== 'v3') { console.error(`${id} 不是 V3 期刊，发布器已停止。`); process.exit(1); }
-if (!['draft','review','ready','published'].includes(String(issue.status || 'draft'))) { console.error(`发布器要求 status=draft、review、ready 或 published，当前为 ${issue.status || 'unknown'}`); process.exit(1); }
+if (!['ready','published'].includes(String(issue.status || 'draft'))) { console.error(`发布器要求 status=ready 或 published，当前为 ${issue.status || 'unknown'}；draft/review 请继续使用 Studio 预览或归档导出。`); process.exit(1); }
 
 function run(label, script, scriptArgs=[]) {
   console.log(`\n=== ${label} ===`);
