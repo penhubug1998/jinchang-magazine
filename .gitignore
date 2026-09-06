@@ -6,10 +6,14 @@
 .vscode/
 .idea/
 *.log
+node_modules/
+.venv/
 .tmp-v3-*/
 .v3-drafts/
 .v3-snapshots/
 .v3-templates/
+.v3-ai-config.json
+.v3-ai-cache/
 dist-v3/
 release-v3/
 reports/
