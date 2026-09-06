@@ -8,8 +8,8 @@ import path from 'node:path';
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha6 版本错误：${pkg.version}`);
-assert(['3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha6 schema 版本错误：${pkg.v31SchemaVersion}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha6 版本错误：${pkg.version}`);
+assert(pkg.v31SchemaVersion==='3.1-alpha24'||['3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha6 schema 版本错误：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha6.json','utf8'));
 assert(schema.editorialPlanning?.storedOutsideIssueJson===true,'Alpha6 整刊计划必须存储在 issue.json 之外');
@@ -43,7 +43,7 @@ const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1'
 let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);const base=`http://127.0.0.1:${port}`;
 try{
   let health=null;for(let i=0;i<120;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(50)}
-  assert(health?.ok&&['3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`Alpha6 Studio health 异常：${logs}`);
+  assert(health?.ok&&(health.version==='3.1.0'||['3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version)),`Alpha6 Studio health 异常：${logs}`);
   let r=await fetch(`${base}/api/editorial-plan/001`),j=await r.json();assert(r.ok&&j.issueId==='001'&&Array.isArray(j.entries)&&j.entries.length===0,'Alpha6 整刊计划初始状态异常');
   const valid={issueId:'001',title:'第三期制作计划',entries:[{title:'理论学习专题',section:'理论学习',pageType:'theory',pages:2,layoutPreset:'two-balanced',status:'planned',notes:'等待最终稿'},{title:'夏季健康提示',section:'时令养生',pageType:'health',pages:1,layoutPreset:'single-focus',status:'hold',notes:''}]};
   r=await fetch(`${base}/api/editorial-plan/001`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(valid)});j=await r.json();assert(r.ok&&j.entries.length===2&&j.entries[0].id&&j.entries[0].pages===2,'Alpha6 整刊计划保存失败');
