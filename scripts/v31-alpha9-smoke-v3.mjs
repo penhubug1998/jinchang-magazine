@@ -8,8 +8,8 @@ import path from 'node:path';
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha9 版本错误：${pkg.version}`);
-assert(['3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha9 schema 版本错误：${pkg.v31SchemaVersion}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha9 版本错误：${pkg.version}`);
+assert(pkg.v31SchemaVersion==='3.1-alpha24'||['3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha9 schema 版本错误：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schemaText=await readFile('baselines/v3-schema-3.1-alpha9.json','utf8'),schema=JSON.parse(schemaText),digest=crypto.createHash('sha256').update(schemaText).digest('hex').slice(0,16);
 assert(schema.reviewHandoff?.storedOutsideIssueJson===true&&schema.reviewHandoff?.readerRuntimeDependency===false,'Alpha9 交接记录必须与 issue.json / Reader 隔离');
@@ -40,7 +40,7 @@ const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1'
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(url){for(let i=0;i<120;i++){try{const r=await fetch(url);if(r.ok)return r}catch{}await sleep(50)}throw new Error(`Studio 未就绪：${logs.join('')}`)}
 try{
-  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&['3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`Alpha9 Studio health 异常：${JSON.stringify(health)}`);
+  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&(health.version==='3.1.0'||['3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version)),`Alpha9 Studio health 异常：${JSON.stringify(health)}`);
   const issueRaw=await readFile('issues/001/issue.json','utf8'),beforeHash=crypto.createHash('sha256').update(issueRaw).digest('hex'),before=JSON.parse(issueRaw),beforeStatus=before.status;
   let r=await fetch(`http://127.0.0.1:${port}/api/issues/001/review-handoffs`),j=await r.json();assert(r.ok&&j.issueId==='001'&&Array.isArray(j.handoffs)&&j.handoffs.length===0,'Alpha9 交接记录初始状态异常');
   const now=new Date().toISOString(),valid={version:1,issueId:'001',handoffs:[{id:'alpha9-round-1',round:1,title:'第一轮内部校审交接',recipient:'复核编辑',role:'reviewer',status:'handed_off',note:'重点检查图片说明。',decisionNote:'',requiredItems:[{id:'review-a',title:'图片替代文字待复核',page:3,severity:'important'},{id:'review-b',title:'标题来源待复核',page:5,severity:'normal'}],createdAt:now,updatedAt:now,handedOffAt:now,acceptedAt:null,returnedAt:null}]};
