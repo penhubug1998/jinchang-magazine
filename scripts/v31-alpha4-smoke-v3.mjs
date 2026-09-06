@@ -8,8 +8,8 @@ import path from 'node:path';
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha4 回归不支持当前版本：${pkg.version}`);
-assert(['3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha4 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha4 回归不支持当前版本：${pkg.version}`);
+assert(pkg.v31SchemaVersion==='3.1-alpha24'||['3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha4 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha4.json','utf8'));
 assert(schema.designAssetLibrary?.storedOutsideIssueJson===true,'Alpha4 我的样式必须存储在 issue.json 之外');
@@ -42,7 +42,7 @@ let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d
 const base=`http://127.0.0.1:${port}`;
 try{
   let health=null;for(let i=0;i<100;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(50)}
-  assert(health?.ok&&['3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`Alpha4 Studio health 异常：${logs}`);
+  assert(health?.ok&&(health.version==='3.1.0'||['3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version)),`Alpha4 Studio health 异常：${logs}`);
   let r=await fetch(`${base}/api/design-library`);let j=await r.json();assert(r.ok&&Array.isArray(j.styles)&&j.styles.length===0,'Alpha4 我的样式初始库异常');
   r=await fetch(`${base}/api/design-library`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'测试主题',scope:'theme',contextType:'theme',payload:{accent:'#315f4a',paper:'#fffaf0',text:'#3b2d26',muted:'#8a7566',fontBase:13.3,radius:12,spacing:10}})});j=await r.json();assert(r.status===201&&j.id&&j.scope==='theme','Alpha4 我的样式保存失败');const savedId=j.id;
   r=await fetch(`${base}/api/design-library`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'非法样式',scope:'page',payload:{background:'#ffffff',hacked:1}})});assert(r.status===400,'Alpha4 服务端必须拒绝未知样式字段');
