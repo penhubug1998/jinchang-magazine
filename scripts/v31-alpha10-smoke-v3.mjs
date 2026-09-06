@@ -9,8 +9,8 @@ const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const sha=x=>crypto.createHash('sha256').update(x).digest('hex');
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha10 回归不支持当前版本：${pkg.version}`);
-assert(['3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha10 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha10 回归不支持当前版本：${pkg.version}`);
+assert(pkg.v31SchemaVersion==='3.1-alpha24'||['3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha10 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schemaText=await readFile('baselines/v3-schema-3.1-alpha10.json','utf8'),schema=JSON.parse(schemaText),digest=sha(schemaText).slice(0,16);
 assert(schema.handoffBaseline?.usesExistingSnapshotEngine===true&&schema.handoffBaseline?.requiresSavedIssueBeforeHandoff===true,'Alpha10 必须复用 snapshot 并要求交接前保存');
@@ -38,7 +38,7 @@ const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1'
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(url){for(let i=0;i<120;i++){try{const r=await fetch(url);if(r.ok)return r}catch{}await sleep(50)}throw new Error(`Studio 未就绪：${logs.join('')}`)}
 try{
-  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&['3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`Alpha10 Studio health 异常：${JSON.stringify(health)}`);
+  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&(health.version==='3.1.0'||['3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version)),`Alpha10 Studio health 异常：${JSON.stringify(health)}`);
   const issueRaw=await readFile('issues/001/issue.json','utf8'),beforeHash=sha(issueRaw),before=JSON.parse(issueRaw),beforeStatus=before.status;
   let r=await fetch(`http://127.0.0.1:${port}/api/issues/001/snapshot`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({label:'review-handoff-round-1'})}),snap=await r.json();assert(r.status===201&&snap.id&&snap.files?.some(x=>x.name==='issue.json'),'Alpha10 交接基线快照创建失败');
   const issueMeta=snap.files.find(x=>x.name==='issue.json');assert(issueMeta.sha256===beforeHash,'Alpha10 交接基线 SHA 未绑定当前 issue.json');
