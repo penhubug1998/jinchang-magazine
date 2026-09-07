@@ -159,7 +159,7 @@ try {
     // Browser regression tests UI/interaction. Disable media autoplay because no repository assets are copied into this overlay workspace.
     if (injectedIssue.features?.music) injectedIssue.features.music.defaultOn = false;
     const safeIssue = JSON.stringify(injectedIssue).replaceAll("<", "\\u003c");
-    const compatPrelude = compatMode ? `<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};</script>` : '';
+    const compatPrelude = compatMode ? `<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'webkitRequestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'webkitExitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};</script>` : '';
     return indexHtml
       .replace(/<link rel="stylesheet" href="\.\/reader\.css(?:\?[^"]*)?">/, `<style>${readerCss}</style>`)
       .replace(/<script type="module" src="\.\/reader\.js(?:\?[^"]*)?"><\/script>/, `${compatPrelude}<script>window.__ISSUE_DATA__=${safeIssue};window.__V3_INITIAL_PAGE__=${pageNumber};</script><script type="module">${readerModuleSource}</script>`);
@@ -240,10 +240,11 @@ try {
       assert(m.stage.bottom <= m.toolbar.y + 2, `${viewport.name}: stage overlaps bottom toolbar`);
       if (compatMode && viewport.name === "iphone-390x844") {
         await evaluate("document.getElementById('fullButton').click()");
-        await sleep(80);
+        await waitForEval("document.body.classList.contains('mobile-immersive')",1200,30);
         assert(await evaluate("document.body.classList.contains('mobile-immersive')"), `${viewport.name}: Safari-like no-Fullscreen fallback did not enter immersive mode`);
         await evaluate("document.getElementById('fullButton').click()");
-        await sleep(40);
+        await waitForEval("!document.body.classList.contains('mobile-immersive')",1200,30);
+        assert(await evaluate("!document.body.classList.contains('mobile-immersive')"), `${viewport.name}: Safari-like no-Fullscreen fallback did not exit immersive mode`);
       }
     } else {
       assert(m.pageIndexes.length === 2, `${viewport.name}: desktop must show two book slots`);

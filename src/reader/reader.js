@@ -955,6 +955,11 @@ async function toggleFullscreen() {
     } else await exitDocumentFullscreen();
     return;
   }
+  // CSS immersive is the no-Fullscreen mobile fallback and must remain a true toggle.
+  if (state.mobileImmersive) {
+    setMobileImmersive(false);
+    return;
+  }
   if (!fullscreenElement()) {
     const ok = await requestElementFullscreen(document.documentElement);
     if (!ok) setMobileImmersive(true);
