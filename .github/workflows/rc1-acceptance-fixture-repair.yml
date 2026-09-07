@@ -1,0 +1,83 @@
+name: RC1 acceptance fixture repair
+
+on:
+  push:
+    branches:
+      - fix/ci-tts-baseline-20260906
+    paths:
+      - .github/workflows/rc1-acceptance-fixture-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch RC1 Reader fixture
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/rc1-acceptance-browser-v3.mjs';
+          let src=fs.readFileSync(file,'utf8');
+          const destructOld='const [html, css, js, readerHtml, readerCss, readerJs, issueRaw, pkgRaw] = await Promise.all([';
+          const destructNew='const [html, css, js, readerHtml, readerCss, readerJs, richTextJs, layoutEngineJs, issueRaw, pkgRaw] = await Promise.all([';
+          if(!src.includes(destructOld))throw new Error('RC1 dependency destructuring drifted');
+          src=src.replace(destructOld,destructNew);
+          const readOld="  readFile(path.join(root, 'src/reader/reader.js'), 'utf8'),\n  readFile(path.join(root, 'issues/002/issue.json'), 'utf8'),";
+          const readNew="  readFile(path.join(root, 'src/reader/reader.js'), 'utf8'),\n  readFile(path.join(root, 'src/reader/rich-text.js'), 'utf8'),\n  readFile(path.join(root, 'src/reader/layout-engine.js'), 'utf8'),\n  readFile(path.join(root, 'issues/002/issue.json'), 'utf8'),";
+          if(!src.includes(readOld))throw new Error('RC1 Reader dependency reads drifted');
+          src=src.replace(readOld,readNew);
+          const safeNeedle="const safeIssue = JSON.stringify(issue).replaceAll('<', '\\\\u003c');\nconst readerDoc = readerHtml";
+          const moduleLines=[
+            "const safeIssue = JSON.stringify(issue).replaceAll('<', '\\\\u003c');",
+            "const moduleDataUrl = (source) => `data:text/javascript;base64,${Buffer.from(source, 'utf8').toString('base64')}`;",
+            "const richTextModuleUrl = moduleDataUrl(richTextJs);",
+            "const layoutEngineModuleSource = layoutEngineJs.replace(/from ['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/g, `from ${JSON.stringify(richTextModuleUrl)}`);",
+            "const layoutEngineModuleUrl = moduleDataUrl(layoutEngineModuleSource);",
+            "const readerModuleSource = readerJs.replace(/from ['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/g, `from ${JSON.stringify(richTextModuleUrl)}`).replace(/from ['\"]\\.\\/layout-engine\\.js(?:\\?[^'\"]*)?['\"]/g, `from ${JSON.stringify(layoutEngineModuleUrl)}`);",
+            "const readerDoc = readerHtml"
+          ].join('\n');
+          if(!src.includes(safeNeedle))throw new Error('RC1 safeIssue fixture drifted');
+          src=src.replace(safeNeedle,moduleLines);
+          const cssOld="  .replace('<link rel=\"stylesheet\" href=\"./reader.css\">', `<style>${readerCss}</style>`)";
+          const cssNew="  .replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/, `<style>${readerCss}</style>`)";
+          if(!src.includes(cssOld))throw new Error('RC1 Reader stylesheet tag drifted');
+          src=src.replace(cssOld,cssNew);
+          const scriptOld="    '<script type=\"module\" src=\"./reader.js\"></script>',";
+          const scriptNew="    /<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,";
+          if(!src.includes(scriptOld))throw new Error('RC1 Reader script tag drifted');
+          src=src.replace(scriptOld,scriptNew);
+          const moduleOld='${readerJs}</script>`,';
+          const moduleNew='${readerModuleSource}</script>`,';
+          if(!src.includes(moduleOld))throw new Error('RC1 Reader module injection drifted');
+          src=src.replace(moduleOld,moduleNew);
+          fs.writeFileSync(file,src);
+          NODE
+          git diff --check
+      - name: Verify RC1 acceptance browser
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          "$V3_REAL_CHROME" --version
+          command -v xvfb-run
+          node scripts/rc1-smoke-v3.mjs
+          node scripts/rc1-acceptance-browser-v3.mjs
+      - name: Commit verified fixture and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/rc1-acceptance-fixture-repair.yml
+          git add scripts/rc1-acceptance-browser-v3.mjs
+          git commit -m "test(rc1): load current Reader module graph in acceptance fixture"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
