@@ -21,6 +21,8 @@ jobs:
           test -x "$CHROMIUM"
           "$V3_REAL_CHROME" --version
           command -v xvfb-run
+      - name: P0 import integrity boundary
+        run: node scripts/import-boundary-smoke-v3.mjs
       - run: npm run verify:v31
       - name: Verify complete repository media
         run: npm run media:check -- --strict
