@@ -1,0 +1,67 @@
+name: RC3 Studio fixture repair
+
+on:
+  push:
+    branches:
+      - fix/ci-tts-baseline-20260906
+    paths:
+      - .github/workflows/rc3-studio-fixture-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch RC3 Studio fixture
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/rc3-browser-regression-v3.mjs';
+          let src=fs.readFileSync(file,'utf8');
+          const loadOld="const [html,css,js]=await Promise.all(['src/studio/index.html','src/studio/studio.css','src/studio/studio.js'].map(f=>readFile(path.join(root,f),'utf8')));";
+          const loadNew="const [html,css,js,presetJs]=await Promise.all(['src/studio/index.html','src/studio/studio.css','src/studio/studio.js','src/studio/design-presets.js'].map(f=>readFile(path.join(root,f),'utf8')));const presetUrl='data:text/javascript;base64,'+Buffer.from(presetJs,'utf8').toString('base64');const studioJs=js.replace(/from\\s*['\"]\\.\\/design-presets\\.js(?:\\?[^'\"]*)?['\"]/,`from '${presetUrl}'`);if(/from\\s*['\"]\\.\\/design-presets\\.js/.test(studioJs))throw new Error('RC3 Studio design-presets module rewrite failed');";
+          if(!src.includes(loadOld))throw new Error('RC3 Studio load contract drifted');
+          src=src.replace(loadOld,loadNew);
+          const mockOld='const mock=`<script>window.confirm=()=>true;window.prompt=()=>"manual";';
+          const mockNew='const mock=`<script>window.__V3_APP_BASE_OVERRIDE__="/";window.confirm=()=>true;window.prompt=()=>"manual";';
+          if(!src.includes(mockOld))throw new Error('RC3 mock prelude drifted');
+          src=src.replace(mockOld,mockNew);
+          const injectOld="const injected=html.replace('<link rel=\"stylesheet\" href=\"./studio.css\">',`<style>${css}</style>`).replace('<script type=\"module\" src=\"./studio.js\"></script>',`${mock}<script type=\"module\">${js}</script>`);";
+          const injectNew="const injected=html.replace(/<link rel=\"stylesheet\" href=\"\\.\\/studio\\.css(?:\\?[^\"]*)?\">/,`<style>${css}</style>`).replace(/<script type=\"module\" src=\"\\.\\/studio\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${mock}<script type=\"module\">${studioJs}</script>`);";
+          if(!src.includes(injectOld))throw new Error('RC3 Studio tag injection contract drifted');
+          src=src.replace(injectOld,injectNew);
+          const waitOld="for(let i=0;i<120;i++){if(await ev('window.__V3_STUDIO_READY__===true').catch(()=>false))break;await sleep(40)}const assert=(c,m)=>{if(!c)throw new Error(m)};";
+          const waitNew="let studioReady=false;for(let i=0;i<160;i++){studioReady=await ev('window.__V3_STUDIO_READY__===true && !!window.__V3_STUDIO__').catch(()=>false);if(studioReady)break;await sleep(40)}const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'RC3 Studio did not become ready');";
+          if(!src.includes(waitOld))throw new Error('RC3 Studio ready wait drifted');
+          src=src.replace(waitOld,waitNew);
+          fs.writeFileSync(file,src);
+          NODE
+          git diff --check
+      - name: Verify RC3 workspace browser regression
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          "$V3_REAL_CHROME" --version
+          command -v xvfb-run
+          node scripts/rc3-smoke-v3.mjs
+          node scripts/rc3-browser-regression-v3.mjs
+      - name: Commit verified fixture and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/rc3-studio-fixture-repair.yml
+          git add scripts/rc3-browser-regression-v3.mjs
+          git commit -m "test(rc3): load current Studio module in workspace fixture"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
