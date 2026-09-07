@@ -36,6 +36,8 @@ const mediaMetricNeedle = `summary:document.querySelectorAll('#mediaSummary>div'
 const mediaMetricReplacement = `summary:document.querySelectorAll('#mediaSummary>div').length,summaryText:document.getElementById('mediaSummary')?.textContent||'',inspector:!!document.querySelector('#mediaInspector h4')}})()`;
 const mediaAssertNeedle = `med.items===2&&med.summary===4&&med.inspector`;
 const mediaAssertReplacement = `med.items===2&&med.summary===5&&med.summaryText.includes('精选素材')&&med.inspector`;
+const designEditNeedle = `await evaluate(\`(()=>{const x=document.querySelector('[data-design-key="accent"]');x.value='#245b47';x.dispatchEvent(new Event('input',{bubbles:true}));})()\`);assert(await evaluate(\"window.__V3_STUDIO__.state.issue.design.tokens.accent==='#245b47'\"),`;
+const designEditReplacement = `assert(await evaluate(\"window.__V3_STUDIO__.state.designScope==='page'\"),\`${'${v.name}'}: Design entry should follow current page context\`);await evaluate(\"document.querySelector('[data-design-scope=theme]').click()\");assert(await evaluate(\"window.__V3_STUDIO__.state.designScope==='theme'\"),\`${'${v.name}'}: Theme design scope switch failed\`);await evaluate(\`(()=>{const x=document.querySelector('[data-design-key="accent"]');x.value='#245b47';x.dispatchEvent(new Event('input',{bubbles:true}));})()\`);assert(await evaluate(\"window.__V3_STUDIO__.state.issue.design.tokens.accent==='#245b47'\"),`;
 
 try {
   const source = await readFile(sourceFile, 'utf8');
@@ -53,7 +55,8 @@ try {
     [auditThirdNeedle, 'workspace audit third locator'],
     [auditFirstAssertNeedle, 'workspace audit first locate assertion'],
     [mediaMetricNeedle, 'media workbench summary metrics'],
-    [mediaAssertNeedle, 'media workbench summary assertion']
+    [mediaAssertNeedle, 'media workbench summary assertion'],
+    [designEditNeedle, 'context-aware design entry']
   ]) {
     if (!source.includes(needle)) throw new Error(`Studio browser bootstrap contract drifted: ${label} not found`);
   }
@@ -71,7 +74,8 @@ try {
     .replace(auditThirdNeedle, auditThirdReplacement)
     .replace(auditFirstAssertNeedle, auditFirstAssertReplacement)
     .replace(mediaMetricNeedle, mediaMetricReplacement)
-    .replace(mediaAssertNeedle, mediaAssertReplacement);
+    .replace(mediaAssertNeedle, mediaAssertReplacement)
+    .replace(designEditNeedle, designEditReplacement);
   await writeFile(tmpFile, patched);
   const exitCode = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [tmpFile], {
