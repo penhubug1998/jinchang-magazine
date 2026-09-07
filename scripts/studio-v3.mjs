@@ -500,8 +500,11 @@ async function mediaProbe(file) {
   try{const j=JSON.parse(r.output||'{}');const stream=(j.streams||[]).find(x=>x.width||x.height)||(j.streams||[])[0]||{};const duration=Number(j.format?.duration||stream.duration);return {width:Number(stream.width)||null,height:Number(stream.height)||null,duration:Number.isFinite(duration)?Number(duration.toFixed(2)):null};}catch{return {}}
 }
 function safeAssetRelative(input='') {
-  const rel=stripAssetsPrefix(String(input||'')).replaceAll('\\','/').replace(/^\/+/, '');
-  if(!rel||rel.includes('..')||path.isAbsolute(rel))throw new Error('媒体路径不合法');
+  const source=String(input||'').trim().replaceAll('\\','/');
+  if(!source||source.startsWith('/')||/^[a-zA-Z]:\//.test(source))throw new Error('媒体路径不合法');
+  const rel=stripAssetsPrefix(source);
+  const segments=rel.split('/');
+  if(!rel||segments.some(segment=>!segment||segment==='.'||segment==='..')||path.isAbsolute(rel))throw new Error('媒体路径不合法');
   return rel;
 }
 function assetReferences(issue) {
