@@ -25,13 +25,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Patch Workspace split and RC3 fixture
+      - name: Patch Workspace split/maximize and RC3 fixture
         run: |
           node <<'NODE'
           const fs=require('fs');
 
-          // Fix the real Workspace ratio semantics. Context Inspector owns its
-          // fixed column; editor/Reader divide only the remaining flexible area.
+          // Keep Context Inspector independent from the editor/Reader ratio.
           {
             const file='src/studio/studio.js';
             let src=fs.readFileSync(file,'utf8');
@@ -56,11 +55,15 @@ jobs:
             const closedNew='body.workspace-mode.context-inspector-closed #visualEditor{grid-template-columns:minmax(220px,var(--studio-editor-fr,50fr)) 8px minmax(480px,var(--studio-preview-fr,50fr))!important}';
             if(!src.includes(closedOld))throw new Error('Workspace closed-inspector grid contract drifted');
             src=src.replace(closedOld,closedNew);
+            const maxOld='body.workspace-mode .visual-editor-grid.layout-preview-max{grid-template-columns:0 0 minmax(0,1fr) 0!important}\n  body.workspace-mode .visual-editor-grid.layout-preview-max .context-inspector{display:none!important}\n  body.workspace-mode .visual-editor-grid.layout-preview-max .live-preview-card{grid-column:3!important}';
+            const maxNew='body.workspace-mode .visual-editor-grid.layout-preview-max{display:block!important;grid-template-columns:none!important}\n  body.workspace-mode .visual-editor-grid.layout-preview-max .block-canvas,body.workspace-mode .visual-editor-grid.layout-preview-max .editor-preview-splitter,body.workspace-mode .visual-editor-grid.layout-preview-max .context-inspector{display:none!important}\n  body.workspace-mode .visual-editor-grid.layout-preview-max .live-preview-card{display:flex!important;width:100%!important;height:100%!important;grid-column:auto!important}';
+            if(!src.includes(maxOld))throw new Error('Workspace preview-max contract drifted');
+            src=src.replace(maxOld,maxNew);
             fs.writeFileSync(file,src);
           }
 
-          // Bring the historical RC3 browser fixture onto the current Studio
-          // module graph and the dedicated canvas-only Workspace route.
+          // Bring historical RC3 browser fixture onto current Studio module graph
+          // and the dedicated canvas-only Workspace route.
           {
             const file='scripts/rc3-browser-regression-v3.mjs';
             let src=fs.readFileSync(file,'utf8');
@@ -88,7 +91,7 @@ jobs:
           }
           NODE
           git diff --check
-      - name: Verify Workspace ratio and RC3 browser regression
+      - name: Verify Workspace ratio/maximize and RC3 browser regression
         run: |
           chmod +x scripts/chrome-ci-wrapper.sh
           "$V3_REAL_CHROME" --version
@@ -103,5 +106,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/rc3-studio-fixture-repair.yml
           git add src/studio/studio.js src/studio/studio.css scripts/rc3-browser-regression-v3.mjs
-          git commit -m "fix(studio): keep Workspace split ratios true with inspector"
+          git commit -m "fix(studio): restore true Workspace split and Reader maximize"
           git push origin HEAD:fix/ci-tts-baseline-20260906
