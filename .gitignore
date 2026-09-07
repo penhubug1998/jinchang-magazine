@@ -24,5 +24,7 @@ release-rc1-trial/
 
 .v3-review-handoffs/
 .v3-source-ledger/
+.v3-ai-config.json
+.v3-ai-cache/
 outputs/
 outputs-v3/
