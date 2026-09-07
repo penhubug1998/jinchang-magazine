@@ -29,71 +29,73 @@ jobs:
         run: |
           node <<'NODE'
           const fs=require('fs');
-
           const readerFile='src/reader/reader.js';
           let reader=fs.readFileSync(readerFile,'utf8');
-          const oldToggle=`async function toggleFullscreen() {
-  if (!isMobile()) {
-    if (!fullscreenElement()) {
-      const ok = await requestElementFullscreen(document.documentElement);
-      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");
-    } else await exitDocumentFullscreen();
-    return;
-  }
-  if (!fullscreenElement()) {
-    const ok = await requestElementFullscreen(document.documentElement);
-    if (!ok) setMobileImmersive(true);
-  } else {
-    await exitDocumentFullscreen();
-    setMobileImmersive(false);
-  }
-}`;
-          const newToggle=`async function toggleFullscreen() {
-  if (!isMobile()) {
-    if (!fullscreenElement()) {
-      const ok = await requestElementFullscreen(document.documentElement);
-      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");
-    } else await exitDocumentFullscreen();
-    return;
-  }
-  // CSS immersive is the no-Fullscreen mobile fallback. It must remain a true
-  // toggle: otherwise iPhone/Safari-class browsers can enter but never exit it.
-  if (state.mobileImmersive) {
-    setMobileImmersive(false);
-    return;
-  }
-  if (!fullscreenElement()) {
-    const ok = await requestElementFullscreen(document.documentElement);
-    if (!ok) setMobileImmersive(true);
-  } else {
-    await exitDocumentFullscreen();
-    setMobileImmersive(false);
-  }
-}`;
+          const oldToggle=[
+            'async function toggleFullscreen() {',
+            '  if (!isMobile()) {',
+            '    if (!fullscreenElement()) {',
+            '      const ok = await requestElementFullscreen(document.documentElement);',
+            '      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");',
+            '    } else await exitDocumentFullscreen();',
+            '    return;',
+            '  }',
+            '  if (!fullscreenElement()) {',
+            '    const ok = await requestElementFullscreen(document.documentElement);',
+            '    if (!ok) setMobileImmersive(true);',
+            '  } else {',
+            '    await exitDocumentFullscreen();',
+            '    setMobileImmersive(false);',
+            '  }',
+            '}'
+          ].join('\n');
+          const newToggle=[
+            'async function toggleFullscreen() {',
+            '  if (!isMobile()) {',
+            '    if (!fullscreenElement()) {',
+            '      const ok = await requestElementFullscreen(document.documentElement);',
+            '      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");',
+            '    } else await exitDocumentFullscreen();',
+            '    return;',
+            '  }',
+            '  // CSS immersive is the no-Fullscreen mobile fallback and must remain a true toggle.',
+            '  if (state.mobileImmersive) {',
+            '    setMobileImmersive(false);',
+            '    return;',
+            '  }',
+            '  if (!fullscreenElement()) {',
+            '    const ok = await requestElementFullscreen(document.documentElement);',
+            '    if (!ok) setMobileImmersive(true);',
+            '  } else {',
+            '    await exitDocumentFullscreen();',
+            '    setMobileImmersive(false);',
+            '  }',
+            '}'
+          ].join('\n');
           if(!reader.includes(oldToggle))throw new Error('Reader toggleFullscreen contract drifted');
-          reader=reader.replace(oldToggle,newToggle);
-          fs.writeFileSync(readerFile,reader);
+          fs.writeFileSync(readerFile,reader.replace(oldToggle,newToggle));
 
           const testFile='scripts/browser-regression-v3.mjs';
           let test=fs.readFileSync(testFile,'utf8');
-          const oldPrelude=`const compatPrelude = compatMode ? \`<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};</script>\` : '';`;
-          const newPrelude=`const compatPrelude = compatMode ? \`<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'webkitRequestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'webkitExitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};try{Object.defineProperty(document,'webkitFullscreenEnabled',{value:false,configurable:true})}catch{};</script>\` : '';`;
-          if(!test.includes(oldPrelude))throw new Error('Beta2 compat prelude contract drifted');
-          test=test.replace(oldPrelude,newPrelude);
-
-          const oldAssert=`        await evaluate("document.getElementById('fullButton').click()");
-        await sleep(80);
-        assert(await evaluate("document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not enter immersive mode\`);
-        await evaluate("document.getElementById('fullButton').click()");
-        await sleep(40);`;
-          const newAssert=`        await evaluate("document.getElementById('fullButton').click()");
-        await waitForEval("document.body.classList.contains('mobile-immersive')",1200,30);
-        assert(await evaluate("document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not enter immersive mode\`);
-        await evaluate("document.getElementById('fullButton').click()");
-        await waitForEval("!document.body.classList.contains('mobile-immersive')",1200,30);
-        assert(await evaluate("!document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not exit immersive mode\`);`;
-          if(!test.includes(oldAssert))throw new Error('Beta2 immersive assertion contract drifted');
-          test=test.replace(oldAssert,newAssert);
+          const reqOld="try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen'";
+          const reqNew="try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'webkitRequestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen'";
+          if(!test.includes(reqOld))throw new Error('Beta2 requestFullscreen fixture drifted');
+          test=test.replace(reqOld,reqNew);
+          const exitOld="try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled'";
+          const exitNew="try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'webkitExitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled'";
+          if(!test.includes(exitOld))throw new Error('Beta2 exitFullscreen fixture drifted');
+          test=test.replace(exitOld,exitNew);
+          const marker='Safari-like no-Fullscreen fallback did not enter immersive mode';
+          const markerAt=test.indexOf(marker);
+          if(markerAt<0)throw new Error('Beta2 immersive entry assertion missing');
+          const waitAt=test.lastIndexOf('await sleep(80);',markerAt);
+          if(waitAt<0)throw new Error('Beta2 immersive entry wait missing');
+          test=test.slice(0,waitAt)+"await waitForEval(\"document.body.classList.contains('mobile-immersive')\",1200,30);"+test.slice(waitAt+'await sleep(80);'.length);
+          const exitClickAt=test.indexOf("await evaluate(\"document.getElementById('fullButton').click()\");",markerAt);
+          const exitWaitAt=exitClickAt<0?-1:test.indexOf('await sleep(40);',exitClickAt);
+          if(exitWaitAt<0)throw new Error('Beta2 immersive exit wait missing');
+          const exitCheck="await waitForEval(\"!document.body.classList.contains('mobile-immersive')\",1200,30);\n        assert(await evaluate(\"!document.body.classList.contains('mobile-immersive')\"), `${viewport.name}: Safari-like no-Fullscreen fallback did not exit immersive mode`);";
+          test=test.slice(0,exitWaitAt)+exitCheck+test.slice(exitWaitAt+'await sleep(40);'.length);
           fs.writeFileSync(testFile,test);
           NODE
           git diff --check
