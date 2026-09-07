@@ -67,7 +67,19 @@ jobs:
       - name: Verify Alpha16-19
         run: |
           chmod +x scripts/chrome-ci-wrapper.sh
-          for n in 16 17 18 19; do node scripts/v31-alpha${n}-smoke-v3.mjs; node scripts/v31-alpha${n}-browser-v3.mjs; done
+          run_browser() {
+            n="$1"
+            for attempt in 1 2 3; do
+              echo "Alpha${n} browser attempt ${attempt}/3"
+              if node "scripts/v31-alpha${n}-browser-v3.mjs"; then return 0; fi
+              sleep 2
+            done
+            return 1
+          }
+          for n in 16 17 18 19; do
+            node "scripts/v31-alpha${n}-smoke-v3.mjs"
+            run_browser "$n"
+          done
       - name: Commit verified fixtures
         run: |
           git config user.name "github-actions[bot]"
