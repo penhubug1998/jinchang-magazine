@@ -8,6 +8,7 @@ on:
       - .github/workflows/p1-06-senior-mobile-reader.yml
       - scripts/p1-06-senior-mobile-reader-patch.py
       - scripts/mobile-reader-accessibility-smoke-v3.mjs
+      - scripts/mobile-reader-accessibility-browser-v3.mjs
   workflow_dispatch:
 
 permissions:
@@ -33,8 +34,8 @@ jobs:
         run: node scripts/mobile-reader-accessibility-smoke-v3.mjs
       - name: Build real issue 001
         run: node scripts/build-v3.mjs --issue 001
-      - name: Run iPhone Reader browser regression
-        run: node scripts/browser-regression-v3.mjs --issue 001 --ua-profile iphone-safari
+      - name: Run senior mobile Reader browser regression
+        run: node scripts/mobile-reader-accessibility-browser-v3.mjs
       - name: Commit verified Reader changes
         run: |
           git config user.name "github-actions[bot]"
