@@ -30,6 +30,8 @@ const livePreviewIssues = new Map();
 const adminLoginUser = String(process.env.STUDIO_ADMIN_USER || 'admin').trim() || 'admin';
 const adminLoginPassword = String(process.env.STUDIO_ADMIN_PASSWORD || '');
 const adminLoginEnabled = adminLoginPassword.length > 0;
+const productionMode = process.env.NODE_ENV === 'production' || process.env.V3_FORMAL_MODE === '1' || process.env.STUDIO_PRODUCTION === '1';
+if(productionMode&&!acceptanceOnly&&!adminLoginEnabled)throw new Error('正式模式必须配置 STUDIO_ADMIN_PASSWORD；为避免未鉴权启动，服务已拒绝启动。');
 const ADMIN_SESSION_COOKIE = 'v3_studio_session';
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const adminSessions = new Map();
@@ -39,6 +41,7 @@ const aiSummaryCacheDir = path.join(root,'.v3-ai-cache');
 const aiSummaryInflight = new Map();
 const aiPublicRate = new Map();
 const backgroundJobs = new Map();
+const issueWriteLocks = new Map();
 const backgroundQueue = [];
 let backgroundJobRunning = false;
 const MAX_BACKGROUND_QUEUE = 8;
@@ -140,6 +143,8 @@ async function generateTtsFile(bin,target,text,{voice='',rate=1}={}){
   if(!result.ok)throw new Error(result.output||`TTS 进程退出 ${result.status}`);
 }
 
+async function atomicWriteText(file,text){const dir=path.dirname(file);await mkdir(dir,{recursive:true});const temp=path.join(dir,`.${path.basename(file)}.tmp-${process.pid}-${randomUUID()}`);try{await writeFile(temp,text,'utf8');await rename(temp,file);}catch(error){await rm(temp,{force:true}).catch(()=>{});throw error;}}
+async function withIssueWriteLock(issueId,task){const key=String(issueId);const previous=issueWriteLocks.get(key)||Promise.resolve();let release;const gate=new Promise(resolve=>{release=resolve});const tail=previous.catch(()=>{}).then(()=>gate);issueWriteLocks.set(key,tail);await previous.catch(()=>{});try{return await task();}finally{release();if(issueWriteLocks.get(key)===tail)issueWriteLocks.delete(key);}}
 function send(res,status,data,type='application/json; charset=utf-8',headers={}) {
   res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'SAMEORIGIN','Permissions-Policy':'camera=(), geolocation=(), microphone=()','Strict-Transport-Security':'max-age=31536000; includeSubDomains',...headers});
   res.end(type.startsWith('application/json') ? JSON.stringify(data) : data);
@@ -978,6 +983,7 @@ const server=http.createServer(async(req,res)=>{try{
   if(seg[0]==='api'&&['rc','rc1'].includes(seg[1])&&seg[2]==='acceptance'){
     if(req.method==='GET')return send(res,200,await readRc1Acceptance());
     if(req.method==='POST'){
+      if(productionMode&&!acceptanceOnly&&!adminSession(req))return send(res,401,{error:'正式模式下验收记录写入需要已认证管理会话',code:'AUTH_REQUIRED'});
       const data=await body(req,512*1024);const allowed=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','other']);
       if(!allowed.has(data.deviceType))return send(res,400,{error:'deviceType 不受支持',code:'VALIDATION_ERROR'});
       if(!data.checks||typeof data.checks!=='object')return send(res,400,{error:'缺少 checks',code:'VALIDATION_ERROR'});
@@ -1120,7 +1126,7 @@ const server=http.createServer(async(req,res)=>{try{
       return send(res,200,{ok:true,preview:`/live-preview/${id}/`,pages:preview.pages.length});
     }
     if (seg[3]==='skeleton'&&req.method==='GET') { const sourceId=normalizeIssueId(u.searchParams.get('source')||''); const sourceFile=path.join(root,'issues',sourceId,'issue.json'); if(!(await exists(sourceFile)))return send(res,404,{error:`结构来源 ${sourceId} 不存在`}); const source=await readJson(sourceFile); if(source.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊栏目骨架',code:'VALIDATION_ERROR'}); return send(res,200,{source:{id:source.id,label:source.label,pageCount:source.pages?.length||0},pages:structureSkeleton(source,issue)}); }
-    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const expectedFingerprint=String(payload?.sourceFingerprint||'');const currentFingerprint=issueSourceFingerprint(issue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,issue)});try{validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})} if(issue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:issue.publishedAt||null,source:'studio'};} const snap=await snapshotIssue(id,'studio-before-save'); await writeFile(issueFile,`${JSON.stringify(data,null,2)}\n`,'utf8'); await deleteDraftFile(id); await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap}); return send(res,200,{issue:data,snapshot:snap,source}); }
+    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const protectedEnvelope=Boolean(payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue));const expectedFingerprint=String(payload?.sourceFingerprint||'');if(protectedEnvelope&&!expectedFingerprint)return send(res,428,{error:'保存请求缺少编辑基线指纹，请重新打开本期后再保存。',code:'SOURCE_FINGERPRINT_REQUIRED'});return withIssueWriteLock(id,async()=>{const freshIssue=await readJson(issueFile);const currentFingerprint=issueSourceFingerprint(freshIssue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,freshIssue)});try{validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}if(freshIssue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:freshIssue.publishedAt||null,source:'studio'};}const snap=await snapshotIssue(id,'studio-before-save');await atomicWriteText(issueFile,`${JSON.stringify(data,null,2)}\n`);await deleteDraftFile(id);await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap});return send(res,200,{issue:data,snapshot:snap,source});}); }
     if (seg[3]==='review-workspace'&&req.method==='GET') return send(res,200,await readReviewWorkspace(id));
     if (seg[3]==='review-workspace'&&req.method==='PUT') {const data=await body(req);try{const clean=sanitizeReviewWorkspace(data,id);await writeReviewWorkspace(id,clean);return send(res,200,clean);}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'});}}
     if (seg[3]==='review-workspace'&&req.method==='DELETE') {await rm(reviewWorkspaceFile(id),{force:true});return send(res,200,{ok:true});}

@@ -91,8 +91,27 @@ try {
   const conflict = await response.json();
   assert(conflict.code === 'SOURCE_DRIFT', 'stale source must return SOURCE_DRIFT');
 
+  response = await fetch(`${base}/api/issues/001/source-status`);
+  const observedServer = await response.json();
+  assert(observedServer.fingerprint === saved.source.fingerprint, 'source refresh should expose newer source without changing stale baseline');
+  stale.subtitle = '旧窗口第二次覆盖尝试';
+  response = await fetch(`${base}/api/issues/001`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({issue:stale,sourceFingerprint:before.fingerprint}) });
+  assert(response.status === 409, 'stale editor must remain rejected after refreshing source status');
+  const afterRetry = JSON.parse(await readFile(path.join(sandbox,'issues','001','issue.json'),'utf8'));
+  assert(afterRetry.subtitle === '服务器已更新', 'repeated stale save must never overwrite the newer source');
+  const missingFingerprint = await fetch(`${base}/api/issues/001`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({issue:stale}) });
+  assert(missingFingerprint.status === 428, 'protected Studio envelope without baseline fingerprint must be rejected');
+
   const receipt = JSON.parse(await readFile(path.join(sandbox, '.v3-source-ledger', '001', 'latest.json'), 'utf8'));
   assert(receipt.fingerprint === saved.source.fingerprint && receipt.reason === 'studio-save', `latest source receipt mismatch: ${JSON.stringify({ receipt, saved: saved.source })}`);
+
+  const baseline = saved.source.fingerprint;
+  const left=structuredClone(changed),right=structuredClone(changed);left.subtitle='并发写入 A';right.subtitle='并发写入 B';
+  const pair=await Promise.all([left,right].map(next=>fetch(`${base}/api/issues/001`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({issue:next,sourceFingerprint:baseline})})));
+  const statuses=pair.map(x=>x.status).sort((a,b)=>a-b);
+  assert(statuses[0]===200&&statuses[1]===409,'parallel save should serialize to one success and one conflict: '+JSON.stringify(statuses));
+  const finalParallel=JSON.parse(await readFile(path.join(sandbox,'issues','001','issue.json'),'utf8'));
+  assert(['并发写入 A','并发写入 B'].includes(finalParallel.subtitle),'parallel final source must be one complete writer, never a torn write');
   console.log('V3 source guard smoke 通过：源状态、源稿导出、保存回执和旧窗口覆盖拦截均正常。');
 } finally {
   child.kill('SIGTERM');
