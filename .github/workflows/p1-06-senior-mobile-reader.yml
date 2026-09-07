@@ -1,0 +1,44 @@
+name: P1-06 senior mobile Reader
+
+on:
+  push:
+    branches:
+      - feat/p1-06-senior-mobile-reader
+    paths:
+      - .github/workflows/p1-06-senior-mobile-reader.yml
+      - scripts/p1-06-senior-mobile-reader-patch.py
+      - scripts/mobile-reader-accessibility-smoke-v3.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-06-senior-mobile-reader
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply P1-06 Reader implementation
+        run: |
+          python3 scripts/p1-06-senior-mobile-reader-patch.py
+          node --check src/reader/reader.js
+          git diff --check
+      - name: Verify senior and weak-network contract
+        run: node scripts/mobile-reader-accessibility-smoke-v3.mjs
+      - name: Build real issue 001
+        run: node scripts/build-v3.mjs --issue 001
+      - name: Run iPhone Reader browser regression
+        run: node scripts/browser-regression-v3.mjs --issue 001 --ua-profile iphone-safari
+      - name: Commit verified Reader changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/reader/index.html src/reader/reader.js src/reader/reader.css
+          git commit -m "feat(p1-06): add senior mobile and weak-network Reader"
+          git push origin HEAD:feat/p1-06-senior-mobile-reader
