@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Patch Alpha14 current-version and Studio module contracts
+      - name: Patch Alpha14 current-version, module and mobile contracts
         run: |
           node <<'NODE'
           const fs=require('fs');
@@ -47,6 +47,11 @@ jobs:
           if(!src.includes(injectOld))throw new Error('Alpha14 Studio tag injection contract drifted');
           src=src.replace(injectOld,injectNew);
 
+          const mobileOld="const mobile=await ev(`(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,quick:document.getElementById('quickFormatBar').getBoundingClientRect().width,nav:document.getElementById('workspacePagePicker').getBoundingClientRect().width,font:parseFloat(getComputedStyle(document.body).fontSize)}))()`);assert(mobile.scroll<=391&&mobile.quick<=390&&mobile.nav>100&&mobile.font>=13,`mobile ${JSON.stringify(mobile)}`);";
+          const mobileNew="const mobile=await ev(`(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,quick:document.getElementById('quickFormatBar').getBoundingClientRect().width,nav:document.getElementById('workspacePagePicker').getBoundingClientRect().width,font:parseFloat(getComputedStyle(document.body).fontSize),mobileStudio:document.body.classList.contains('mobile-studio-active')}))()`);assert(mobile.scroll<=391&&mobile.quick===0&&mobile.nav===0&&mobile.font>=13&&mobile.mobileStudio,`mobile ${JSON.stringify(mobile)}`);";
+          if(!src.includes(mobileOld))throw new Error('Alpha14 mobile contract drifted');
+          src=src.replace(mobileOld,mobileNew);
+
           fs.writeFileSync(file,src);
           NODE
           git diff --check
@@ -56,6 +61,7 @@ jobs:
           "$V3_REAL_CHROME" --version
           command -v xvfb-run
           node scripts/v31-alpha14-smoke-v3.mjs
+          node scripts/v31-alpha26-smoke-v3.mjs
           node scripts/v31-alpha14-browser-v3.mjs
       - name: Commit verified test and remove one-shot workflow
         run: |
