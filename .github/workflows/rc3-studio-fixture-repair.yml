@@ -47,6 +47,10 @@ jobs:
           const waitNew="let studioReady=false;for(let i=0;i<160;i++){studioReady=await ev('window.__V3_STUDIO_READY__===true && !!window.__V3_STUDIO__').catch(()=>false);if(studioReady)break;await sleep(40)}const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'RC3 Studio did not become ready');";
           if(!src.includes(waitOld))throw new Error('RC3 Studio ready wait drifted');
           src=src.replace(waitOld,waitNew);
+          const oldCollapsed="const collapsed=await ev(`(()=>{const s=document.querySelector('.sidebar').getBoundingClientRect(),p=document.getElementById('pagesCard').getBoundingClientRect(),b=document.querySelector('.block-canvas').getBoundingClientRect(),r=document.getElementById('previewCard').getBoundingClientRect(),sp=getComputedStyle(document.documentElement).getPropertyValue('--studio-editor-share');return {sidebar:s.width,pages:p.width,editor:b.width,preview:r.width,share:sp,body:document.body.className}})()`);assert(collapsed.sidebar<=80,'sidebar did not collapse');assert(collapsed.pages<=75,'pages panel did not collapse');";
+          const newCollapsed="const collapsed=await ev(`(()=>{const s=document.querySelector('.sidebar').getBoundingClientRect(),p=document.getElementById('pagesCard').getBoundingClientRect(),b=document.querySelector('.block-canvas').getBoundingClientRect(),r=document.getElementById('previewCard').getBoundingClientRect(),sp=getComputedStyle(document.documentElement).getPropertyValue('--studio-editor-share'),toggle=document.getElementById('pagesPanelToggle'),pageText=document.querySelector('.page-item>span:not(.n)');return {sidebar:s.width,pages:p.width,editor:b.width,preview:r.width,share:sp,body:document.body.className,toggleVisible:!!toggle&&getComputedStyle(toggle).display!=='none'&&toggle.getBoundingClientRect().width>0,pageTextHidden:!pageText||getComputedStyle(pageText).display==='none'}})()`);assert(collapsed.sidebar<=80,'sidebar did not collapse');assert(collapsed.pages>=74&&collapsed.pages<=78,`page rail width drifted ${JSON.stringify(collapsed)}`);assert(collapsed.toggleVisible,'page rail expand control missing');assert(collapsed.pageTextHidden,'page rail should hide page title text');";
+          if(!src.includes(oldCollapsed))throw new Error('RC3 Page Rail assertion contract drifted');
+          src=src.replace(oldCollapsed,newCollapsed);
           fs.writeFileSync(file,src);
           NODE
           git diff --check
@@ -63,5 +67,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/rc3-studio-fixture-repair.yml
           git add scripts/rc3-browser-regression-v3.mjs
-          git commit -m "test(rc3): load current Studio module in workspace fixture"
+          git commit -m "test(rc3): load current Studio module and verify Page Rail"
           git push origin HEAD:fix/ci-tts-baseline-20260906
