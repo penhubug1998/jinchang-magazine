@@ -1,4 +1,4 @@
-name: V31 Alpha14 health contract repair
+name: V31 Alpha14 fixture repair
 
 on:
   push:
@@ -25,16 +25,28 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Patch Alpha14 health version contract
+      - name: Patch Alpha14 current-version and Studio module contracts
         run: |
           node <<'NODE'
           const fs=require('fs');
           const file='scripts/v31-alpha14-browser-v3.mjs';
           let src=fs.readFileSync(file,'utf8');
-          const old=" const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(['3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`health ${JSON.stringify(health)}`);";
-          const next=" const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===expectedVersion,`health ${JSON.stringify(health)} expected ${expectedVersion}`);";
-          if(!src.includes(old))throw new Error('Alpha14 health version contract drifted');
-          src=src.replace(old,next);
+
+          const healthOld=" const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(['3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`health ${JSON.stringify(health)}`);";
+          const healthNew=" const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===expectedVersion,`health ${JSON.stringify(health)} expected ${expectedVersion}`);";
+          if(!src.includes(healthOld))throw new Error('Alpha14 health version contract drifted');
+          src=src.replace(healthOld,healthNew);
+
+          const moduleOld=" const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =').replace(/\\nexport const DESIGN_PRESET_IDS[^;]+;\\s*$/s,'\\n');const studioInline=studioJs.replace(\"import { DESIGN_PRESETS } from './design-presets.js';\",presetInline);const safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
+          const moduleNew=" const presetUrl='data:text/javascript;base64,'+Buffer.from(presetJs,'utf8').toString('base64');const studioInline=studioJs.replace(/from\\s*['\"]\\.\\/design-presets\\.js(?:\\?[^'\"]*)?['\"]/,`from '${presetUrl}'`);if(/from\\s*['\"]\\.\\/design-presets\\.js/.test(studioInline))throw new Error('Alpha14 Studio design-presets module rewrite failed');const safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
+          if(!src.includes(moduleOld))throw new Error('Alpha14 Studio module contract drifted');
+          src=src.replace(moduleOld,moduleNew);
+
+          const injectOld=" const injected=html.replace('<link rel=\"stylesheet\" href=\"./studio.css\">',`<style>${css}</style>`).replace('<script type=\"module\" src=\"./studio.js\"></script>',`${mock}<script type=\"module\">${studioInline}</script>`);";
+          const injectNew=" const injected=html.replace(/<link rel=\"stylesheet\" href=\"\\.\\/studio\\.css(?:\\?[^\"]*)?\">/,`<style>${css}</style>`).replace(/<script type=\"module\" src=\"\\.\\/studio\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${mock}<script type=\"module\">${studioInline}</script>`);";
+          if(!src.includes(injectOld))throw new Error('Alpha14 Studio tag injection contract drifted');
+          src=src.replace(injectOld,injectNew);
+
           fs.writeFileSync(file,src);
           NODE
           git diff --check
@@ -51,5 +63,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/v31-alpha14-health-repair.yml
           git add scripts/v31-alpha14-browser-v3.mjs
-          git commit -m "test(v31): bind Alpha14 browser health to package version"
+          git commit -m "test(v31): align Alpha14 browser fixture with current Studio"
           git push origin HEAD:fix/ci-tts-baseline-20260906
