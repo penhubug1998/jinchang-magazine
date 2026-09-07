@@ -36,13 +36,15 @@ if (spawnSync('sh', ['-lc', 'command -v xvfb-run'], { encoding: 'utf8' }).status
 await rm(outDir, { recursive: true, force: true });
 await mkdir(outDir, { recursive: true });
 
-const [html, css, js, readerHtml, readerCss, readerJs, issueRaw, pkgRaw] = await Promise.all([
+const [html, css, js, readerHtml, readerCss, readerJs, richTextJs, layoutEngineJs, issueRaw, pkgRaw] = await Promise.all([
   readFile(path.join(root, 'src/studio/rc1-acceptance.html'), 'utf8'),
   readFile(path.join(root, 'src/studio/rc1-acceptance.css'), 'utf8'),
   readFile(path.join(root, 'src/studio/rc1-acceptance.js'), 'utf8'),
   readFile(path.join(root, 'src/reader/index.html'), 'utf8'),
   readFile(path.join(root, 'src/reader/reader.css'), 'utf8'),
   readFile(path.join(root, 'src/reader/reader.js'), 'utf8'),
+  readFile(path.join(root, 'src/reader/rich-text.js'), 'utf8'),
+  readFile(path.join(root, 'src/reader/layout-engine.js'), 'utf8'),
   readFile(path.join(root, 'issues/002/issue.json'), 'utf8'),
   readFile(path.join(root, 'package.json'), 'utf8'),
 ]);
@@ -50,11 +52,16 @@ const [html, css, js, readerHtml, readerCss, readerJs, issueRaw, pkgRaw] = await
 const issue = JSON.parse(issueRaw);
 const version = JSON.parse(pkgRaw).version;
 const safeIssue = JSON.stringify(issue).replaceAll('<', '\\u003c');
+const moduleDataUrl = (source) => `data:text/javascript;base64,${Buffer.from(source, 'utf8').toString('base64')}`;
+const richTextModuleUrl = moduleDataUrl(richTextJs);
+const layoutEngineModuleSource = layoutEngineJs.replace(/from ['"]\.\/rich-text\.js(?:\?[^'"]*)?['"]/g, `from ${JSON.stringify(richTextModuleUrl)}`);
+const layoutEngineModuleUrl = moduleDataUrl(layoutEngineModuleSource);
+const readerModuleSource = readerJs.replace(/from ['"]\.\/rich-text\.js(?:\?[^'"]*)?['"]/g, `from ${JSON.stringify(richTextModuleUrl)}`).replace(/from ['"]\.\/layout-engine\.js(?:\?[^'"]*)?['"]/g, `from ${JSON.stringify(layoutEngineModuleUrl)}`);
 const readerDoc = readerHtml
-  .replace('<link rel="stylesheet" href="./reader.css">', `<style>${readerCss}</style>`)
+  .replace(/<link rel="stylesheet" href="\.\/reader\.css(?:\?[^"]*)?">/, `<style>${readerCss}</style>`)
   .replace(
-    '<script type="module" src="./reader.js"></script>',
-    `<script>window.__ISSUE_DATA__=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(window.__ISSUE_DATA__),{status:200,headers:{'Content-Type':'application/json'}})</script><script type="module">${readerJs}</script>`,
+    /<script type="module" src="\.\/reader\.js(?:\?[^"]*)?"><\/script>/,
+    `<script>window.__ISSUE_DATA__=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(window.__ISSUE_DATA__),{status:200,headers:{'Content-Type':'application/json'}})</script><script type="module">${readerModuleSource}</script>`,
   );
 
 const mock = `<script>
