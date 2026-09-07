@@ -30,6 +30,18 @@ jobs:
           node -e "import('./src/reader/vendor/tiptap-runtime.js').then(m=>{if(!m.TIPTAP_VENDOR_READY)process.exit(2);if(m.TIPTAP_VERSION!=='3.30.2')process.exit(3);if(!m.Editor||!m.StarterKit||!m.TextStyleKit||!m.Highlight||!m.TextAlign)process.exit(4);console.log('Tiptap vendor ready',m.TIPTAP_VERSION)})"
           test $(wc -c < src/reader/vendor/tiptap-runtime.js) -gt 100000
           git diff --check -- . ':(exclude)src/reader/vendor/tiptap-runtime.js'
+      - name: Upgrade legacy vendor smoke contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/v31-alpha221-smoke-v3.mjs')
+          s=p.read_text()
+          old="assert(vendorPlaceholder.includes('TIPTAP_VENDOR_READY = false'),'vendor placeholder contract missing');"
+          new="assert(vendorPlaceholder.includes('TIPTAP_VENDOR_READY = true'),'real self-hosted vendor contract missing');"
+          if old not in s:
+              raise SystemExit('legacy vendor placeholder assertion drifted')
+          p.write_text(s.replace(old,new,1))
+          PY
       - name: Verify current rich-text contracts
         run: |
           npm run test:v31-alpha22
@@ -48,6 +60,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/p1-05-tiptap-vendor.yml
-          git add package-lock.json src/reader/vendor/tiptap-runtime.js
+          git add package-lock.json src/reader/vendor/tiptap-runtime.js scripts/v31-alpha221-smoke-v3.mjs
           git commit -m "feat(p1-05): lock self-hosted Tiptap runtime"
           git push origin HEAD:fix/ci-tts-baseline-20260906
