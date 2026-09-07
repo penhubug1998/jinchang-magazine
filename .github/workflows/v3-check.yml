@@ -8,7 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50
     env:
-      CHROMIUM: /usr/bin/google-chrome
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -16,8 +17,9 @@ jobs:
           node-version: 22
       - name: Browser runtime preflight
         run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
           test -x "$CHROMIUM"
-          "$CHROMIUM" --version
+          "$V3_REAL_CHROME" --version
           command -v xvfb-run
       - run: npm run verify:v31
       - name: Verify complete repository media
@@ -39,7 +41,6 @@ jobs:
           name: v3-browser-regression
           path: .tmp-v3-browser-*/
           if-no-files-found: ignore
-
 
       - name: Upload V3.1 Alpha2 style regression
         if: always()
@@ -79,7 +80,6 @@ jobs:
           path: .tmp-v3-alpha14-browser/
           if-no-files-found: ignore
 
-
       - name: Upload Beta1 block matrix regression
         if: always()
         uses: actions/upload-artifact@v4
@@ -118,7 +118,6 @@ jobs:
             reports/v3-rc1-*.json
             reports/v3-full-media-check.json
           if-no-files-found: ignore
-
 
       - name: Upload RC2 gate closure reports
         if: always()
