@@ -32,6 +32,10 @@ const auditThirdNeedle = `await evaluate(\"document.getElementById('auditBtn').c
 const auditThirdReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(3) button')?.click()\");`;
 const auditFirstAssertNeedle = `window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
 const auditFirstAssertReplacement = `!document.getElementById('workspaceAuditDialog').open && window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
+const mediaMetricNeedle = `summary:document.querySelectorAll('#mediaSummary>div').length,inspector:!!document.querySelector('#mediaInspector h4')}})()`;
+const mediaMetricReplacement = `summary:document.querySelectorAll('#mediaSummary>div').length,summaryText:document.getElementById('mediaSummary')?.textContent||'',inspector:!!document.querySelector('#mediaInspector h4')}})()`;
+const mediaAssertNeedle = `med.items===2&&med.summary===4&&med.inspector`;
+const mediaAssertReplacement = `med.items===2&&med.summary===5&&med.summaryText.includes('精选素材')&&med.inspector`;
 
 try {
   const source = await readFile(sourceFile, 'utf8');
@@ -47,7 +51,9 @@ try {
     [auditFirstLocateNeedle, 'workspace audit first locator'],
     [auditSecondNeedle, 'workspace audit second locator'],
     [auditThirdNeedle, 'workspace audit third locator'],
-    [auditFirstAssertNeedle, 'workspace audit first locate assertion']
+    [auditFirstAssertNeedle, 'workspace audit first locate assertion'],
+    [mediaMetricNeedle, 'media workbench summary metrics'],
+    [mediaAssertNeedle, 'media workbench summary assertion']
   ]) {
     if (!source.includes(needle)) throw new Error(`Studio browser bootstrap contract drifted: ${label} not found`);
   }
@@ -63,7 +69,9 @@ try {
     .replace(auditFirstLocateNeedle, auditFirstLocateReplacement)
     .replace(auditSecondNeedle, auditSecondReplacement)
     .replace(auditThirdNeedle, auditThirdReplacement)
-    .replace(auditFirstAssertNeedle, auditFirstAssertReplacement);
+    .replace(auditFirstAssertNeedle, auditFirstAssertReplacement)
+    .replace(mediaMetricNeedle, mediaMetricReplacement)
+    .replace(mediaAssertNeedle, mediaAssertReplacement);
   await writeFile(tmpFile, patched);
   const exitCode = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [tmpFile], {
