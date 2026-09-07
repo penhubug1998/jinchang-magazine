@@ -162,6 +162,10 @@ function renderBlockContent(block,ctx={}) {
       return `<div class="case-pair"><div class="case-box"><h4>案例</h4><p${studioTextAttrs("case")}>${escapeHtml(block.case || "")}</p></div><div class="case-box warn"><h4>警示</h4><p${studioTextAttrs("warning")}>${escapeHtml(block.warning || "")}</p></div></div>`;
     case "toc":
       return `<div class="toc-block">${(block.items || []).map((item) => `<button class="toc-jump" type="button" data-jump-page="${Number(item.page) - 1}"><b>${escapeHtml(item.number || "")}</b><span><strong>${escapeHtml(item.title || "")}</strong><small>${escapeHtml(item.subtitle || "")}</small></span></button>`).join("")}</div>`;
+    case "table": {
+      const rows=(block.rows||[]).slice(0,40),heads=Math.max(0,Math.min(rows.length,Number(block.headerRows)||0));
+      return `<figure class="table-block"><div class="table-scroll"><table>${rows.map((row,ri)=>`<tr>${(row||[]).slice(0,12).map(cell=>ri<heads?`<th>${escapeHtml(cell||"")}</th>`:`<td>${escapeHtml(cell||"")}</td>`).join("")}</tr>`).join("")}</table></div>${block.caption?`<figcaption>${escapeHtml(block.caption)}</figcaption>`:""}</figure>`;
+    }
     case "articleLink": {
       const article=state.issue?.articles?.[block.articleId]||{};
       const label=block.title||article.linkTitle||article.title||"查看链接内容";

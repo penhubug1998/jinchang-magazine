@@ -54,7 +54,7 @@ const publicMagazineRoot = process.env.V3_PUBLIC_MAGAZINE_ROOT
   : '';
 const publicMagazineBaseUrl = String(process.env.V3_PUBLIC_MAGAZINE_BASE_URL || '').replace(/\/+$/, '');
 const sourceLedgerRoot = process.env.V3_SOURCE_LEDGER_ROOT ? path.resolve(process.env.V3_SOURCE_LEDGER_ROOT) : path.join(root,'.v3-source-ledger');
-const allowedBlockTypes = new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
+const allowedBlockTypes = new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','table','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
 const allowedContainerLayouts = new Set(['single','two-equal','two-40-60','two-60-40','three-equal','media-left','media-right']);
 const MAX_BLOCKS_PER_PAGE = 80;
 const stockAssetNames = new Map([
@@ -589,6 +589,7 @@ function cloneBlockStructure(block,target) {
     case 'articleLink': return {type:'articleLink',articleId:''};
     case 'video': return {type:'video',src:'',poster:'',caption:'请上传或选择视频'};
     case 'image': return {type:'image',src:'',alt:'请填写图片替代文字',caption:'',frameRatio:'auto',fit:'contain',positionX:50,positionY:50};
+    case 'table': return {type:'table',rows:(block.rows||[['','']]).slice(0,12).map(r=>(r||[]).slice(0,8).map(()=>'')),headerRows:Number(block.headerRows)||0,caption:''};
     case 'coverMeta': return {type:'coverMeta',text:`${target.publication||''} · ${target.label||''}`};
     case 'coverSections': return {type:'coverSections',items:(block.items||[]).slice(0,10).map(String)};
     case 'blessing': return {type:'blessing',text:'请填写本期祝福语。'};
@@ -910,6 +911,7 @@ async function publicationPrintFixture(id){
     else if(t==='chips')body=`<ul class="chips">${(b.items||[]).map(x=>`<li>${printEsc(x?.text??x)}</li>`).join('')}</ul>`;
     else if(t==='toc')body=`<ol class="toc">${(b.items||[]).map(x=>`<li><span>${printEsc(x.number||'')}</span><strong>${printEsc(x.title||'')}</strong><small>${printEsc(x.subtitle||'')}</small><b>${printEsc(x.page||'')}</b></li>`).join('')}</ol>`;
     else if(t==='articleLink'){const a=articles[b.articleId]||{};body=`<article><h3>${printEsc(a.title||b.title||'延伸阅读')}</h3>${a.subtitle?`<p class="muted">${printEsc(a.subtitle)}</p>`:''}${(a.paras||[]).map(x=>`<p>${printEsc(x)}</p>`).join('')}</article>`;}
+    else if(t==='table'){const rows=(b.rows||[]).slice(0,40),heads=Math.max(0,Math.min(rows.length,Number(b.headerRows)||0));body=`<figure class="print-table"><table>${rows.map((r,ri)=>`<tr>${(r||[]).slice(0,12).map(c=>ri<heads?`<th>${printEsc(c)}</th>`:`<td>${printEsc(c)}</td>`).join('')}</tr>`).join('')}</table>${b.caption?`<figcaption>${printEsc(b.caption)}</figcaption>`:''}</figure>`;}
     else if(t==='image')body=`<figure><div class="media-placeholder">图片</div>${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;
     else if(t==='video')body=`<figure><div class="media-placeholder">视频内容 · 请在 Web Reader 中播放</div>${b.caption?`<figcaption>${printEsc(b.caption)}</figcaption>`:''}</figure>`;
     else if(t==='container')body=`<div class="print-container">${(b.columns||[]).map(col=>`<div>${(col.blocks||[]).map((x,i)=>renderBlock(x,pi,bi*100+i)).join('')}</div>`).join('')}</div>`;

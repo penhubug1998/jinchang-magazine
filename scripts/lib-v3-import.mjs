@@ -179,18 +179,72 @@ function deriveTitle(blocks,filename='') {
   return path.basename(filename,path.extname(filename)).slice(0,MAX_TITLE)||'导入文章';
 }
 function importBlockLimitError(blockCount){const error=new Error(`导入内容包含 ${blockCount} 个内容块，超过单次导入 ${MAX_IMPORT_DOCUMENT_BLOCKS} 个上限；为避免内容丢失，本次导入已中止，请拆分稿件后重试`);error.code='IMPORT_BLOCK_LIMIT_EXCEEDED';error.statusCode=413;error.details={blockCount,limit:MAX_IMPORT_DOCUMENT_BLOCKS};return error;}
-function finalizeDocument(doc) { const blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink');if(blocks.length>MAX_IMPORT_DOCUMENT_BLOCKS)throw importBlockLimitError(blocks.length);doc.blocks=blocks;doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length; doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
-
-function parseDocxXml(xml,filename='',relationships={}) {
-  const registry=createLinkRegistry(); const paras=[]; const re=/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g; let m;
-  while((m=re.exec(xml))){const p=m[1];const texts=[...p.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const rawText=cleanText(texts);if(!rawText)continue;const style=(p.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const list=/<w:numPr\b/.test(p);const inline=parseInlineLinks(rawText,registry);const links=[...inline.links];for(const hm of p.matchAll(/<w:hyperlink\b[^>]*\br:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g)){const label=cleanText([...hm[2].matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(''));const item=registry.register(label,relationships[hm[1]]||'',label);if(item&&!links.some(x=>x.articleId===item.articleId))links.push(item);}paras.push({text:inline.text,style,list,level:headingLevel(style),links});}
-  let title=''; const blocks=[]; let listNo=0;
-  for(const p of paras){const style=p.style.toLowerCase();if(!title&&(/title|标题|heading1/.test(style)||blocks.length===0&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE);if(p.links?.length)blocks.push(...articleLinkBlocks(p.links));if(/title|标题|heading1/.test(style))continue;}
-    if(/heading|标题/.test(style)){blocks.push(paragraphBlock(p.text,'subhead'));blocks.push(...articleLinkBlocks(p.links||[]));continue;}
-    if(/quote|引用/.test(style)){blocks.push(quoteBlock(p.text));blocks.push(...articleLinkBlocks(p.links||[]));continue;}
-    if(p.list){listNo++;blocks.push(itemBlock(p.text,String(listNo)));blocks.push(...articleLinkBlocks(p.links||[]));continue;} listNo=0;blocks.push(paragraphBlock(p.text));blocks.push(...articleLinkBlocks(p.links||[]));}
-  if(!title)title=deriveTitle(blocks,filename);const publication=detectPublicationStructure(paras,title);const doc={title,blocks,articles:registry.articles,format:'docx',sourceName:filename};if(publication){doc.structure=publication.summary;doc.publication=publication;}return finalizeDocument(doc);
+function finalizeDocument(doc) {
+  const keep=b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink'||b?.type==='image'||b?.type==='table';
+  const blocks=(doc.blocks||[]).filter(keep);if(blocks.length>MAX_IMPORT_DOCUMENT_BLOCKS)throw importBlockLimitError(blocks.length);doc.blocks=blocks;doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length;
+  const chars=b=>{if(!b||typeof b!=='object')return 0;if(b.type==='table')return (b.rows||[]).flat().reduce((n,x)=>n+String(x||'').length,0)+String(b.caption||'').length;if(b.type==='image')return String(b.caption||'').length+String(b.alt||'').length;return String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length;};
+  doc.embeddedAssets=Array.isArray(doc.embeddedAssets)?doc.embeddedAssets:[];doc.sourceMap=Array.isArray(doc.sourceMap)?doc.sourceMap:[];doc.richObjects=Array.isArray(doc.richObjects)?doc.richObjects:[];
+  doc.stats={characters:doc.blocks.reduce((n,b)=>n+chars(b),0),blocks:doc.blocks.length,images:doc.blocks.filter(b=>b.type==='image').length,tables:doc.blocks.filter(b=>b.type==='table').length,embeddedAssets:doc.embeddedAssets.length}; return doc;
 }
+
+function docxParagraphRichText(fragment=''){
+  const content=[];
+  for(const rm of String(fragment).matchAll(/<w:r\b[^>]*>([\s\S]*?)<\/w:r>/g)){
+    const run=rm[1],parts=[];
+    for(const token of run.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:tab\b[^>]*\/?\s*>|<w:br\b[^>]*\/?\s*>/g)){
+      if(token[1]!=null)parts.push(decodeXml(token[1]));else if(/^<w:tab/i.test(token[0]))parts.push('\t');else parts.push('\n');
+    }
+    const text=parts.join('');if(!text)continue;const marks=[];const props=(run.match(/<w:rPr\b[^>]*>([\s\S]*?)<\/w:rPr>/)||[])[1]||'';
+    if(/<w:b(?:\s|\/|>)/i.test(props)&&!/<w:b\b[^>]*w:val="(?:0|false|off)"/i.test(props))marks.push({type:'bold'});
+    if(/<w:i(?:\s|\/|>)/i.test(props)&&!/<w:i\b[^>]*w:val="(?:0|false|off)"/i.test(props))marks.push({type:'italic'});
+    if(/<w:u(?:\s|\/|>)/i.test(props)&&!/<w:u\b[^>]*w:val="(?:none|0|false|off)"/i.test(props))marks.push({type:'underline'});
+    content.push({type:'text',text,...(marks.length?{marks}:{})});
+  }
+  return {type:'doc',content:[{type:'paragraph',content}]};
+}
+function docxCellText(fragment=''){return cleanText([...String(fragment).matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(' '));}
+function docxTableBlock(fragment='',caption='',sourceRef={}){
+  const rows=[];for(const tr of String(fragment).matchAll(/<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/g)){const row=[];for(const tc of tr[1].matchAll(/<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g))row.push(docxCellText(tc[1]).slice(0,2000));if(row.length)rows.push(row.slice(0,12));if(rows.length>=40)break;}
+  const first=String(fragment).match(/<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/)?.[1]||'';const headerRows=/<w:b(?:\s|\/|>)/i.test(first)?1:0;
+  return {type:'table',rows,headerRows,caption:String(caption||'').slice(0,300),sourceRef};
+}
+function docxImageAlt(fragment=''){const attrs=(String(fragment).match(/<wp:docPr\b([^>]*)\/?\s*>/i)||[])[1]||'';for(const key of ['descr','title','name']){const m=attrs.match(new RegExp(`\\b${key}="([^"]*)"`,'i'));if(m?.[1])return decodeXml(m[1]).slice(0,300);}return 'Word 内嵌图片';}
+function richObjectTarget(pages=[],obj={}){
+  const section=cleanText(obj.section||''),article=stripNumberPrefix(obj.article||'');let index=-1;
+  if(section&&article)index=pages.findIndex(p=>cleanText(p.section||'')===section&&[p.title,p.navTitle].some(x=>cleanText(x||'').includes(article)));
+  if(index<0&&section){for(let i=pages.length-1;i>=0;i--)if(cleanText(pages[i]?.section||'')===section){index=i;break;}}
+  if(index<0)index=Math.max(0,pages.length-1);return index;
+}
+function mergeRichDocxObjects(doc,pages=[]){for(const obj of doc?.richObjects||[]){if(!obj?.block)continue;const i=richObjectTarget(pages,obj);if(!pages[i])continue;pages[i].blocks ||= [];pages[i].blocks.push(JSON.parse(JSON.stringify(obj.block)));}return pages;}
+
+function parseDocxXml(xml,filename='',relationships={},embeddedAssets={}) {
+  const registry=createLinkRegistry(),paras=[],blocks=[],sourceMap=[],richObjects=[];let title='',listNo=0,paragraphNo=0,tableNo=0,currentSection='',currentArticle='',pendingCaption='';
+  const body=(String(xml).match(/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/)||[])[1]||String(xml);const elements=[...body.matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>|<w:tbl\b[^>]*>[\s\S]*?<\/w:tbl>/g)].map(x=>x[0]);
+  const addBlock=(block,source,rich=false)=>{if(!block)return;blocks.push(block);sourceMap.push({blockIndex:blocks.length-1,...source});if(rich)richObjects.push({section:currentSection,article:currentArticle,order:source.element,block});};
+  for(let elementIndex=0;elementIndex<elements.length;elementIndex++){
+    const element=elements[elementIndex];
+    if(/^<w:tbl\b/i.test(element)){
+      tableNo++;const sourceRef={format:'docx',sourceName:filename,element:elementIndex+1,table:tableNo};const table=docxTableBlock(element,pendingCaption,sourceRef);pendingCaption='';if(table.rows.length)addBlock(table,sourceRef,true);continue;
+    }
+    paragraphNo++;const inner=(element.match(/^<w:p\b[^>]*>([\s\S]*?)<\/w:p>$/)||[])[1]||'';const texts=[...inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const rawText=cleanText(texts);const style=(inner.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const list=/<w:numPr\b/.test(inner),level=headingLevel(style),inline=parseInlineLinks(rawText,registry),links=[...inline.links];
+    for(const hm of inner.matchAll(/<w:hyperlink\b[^>]*\br:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g)){const label=cleanText([...hm[2].matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(''));const item=registry.register(label,relationships[hm[1]]||'',label);if(item&&!links.some(x=>x.articleId===item.articleId))links.push(item);}
+    const captionLike=/caption|题注/i.test(style)||/^图\s*[0-9一二三四五六七八九十]+[：:.、\s]/.test(rawText);
+    if(captionLike&&rawText){const last=blocks.at(-1);if(last&&['image','table'].includes(last.type)&&!last.caption)last.caption=rawText;else pendingCaption=rawText;continue;}
+    const sectionHeading=parseSectionHeading(rawText)||genericSectionHeading(rawText,level);if(sectionHeading){currentSection=sectionHeading.name;currentArticle='';}else if(level===2&&rawText)currentArticle=rawText;
+    const sourceRef={format:'docx',sourceName:filename,element:elementIndex+1,paragraph:paragraphNo};
+    const imageRels=[...inner.matchAll(/<a:blip\b[^>]*\br:embed="([^"]+)"/g)].map(x=>x[1]);
+    if(rawText){const richText=docxParagraphRichText(inner);const p={text:inline.text,style,list,level,links,richText};paras.push(p);const sl=style.toLowerCase();let block=null;
+      if(!title&&(/title|标题|heading1/.test(sl)||blocks.length===0&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE);if(/title|标题|heading1/.test(sl)){if(p.links?.length)blocks.push(...articleLinkBlocks(p.links));block=null;}else block=paragraphBlock(p.text);}
+      else if(/heading|标题/.test(sl))block={...paragraphBlock(p.text,'subhead'),richText};
+      else if(/quote|引用/.test(sl))block={...quoteBlock(p.text),richText};
+      else if(p.list){listNo++;block=itemBlock(p.text,String(listNo));}else{listNo=0;block={...paragraphBlock(p.text),richText};}
+      if(block){block.sourceRef=sourceRef;addBlock(block,sourceRef,false);}if(p.links?.length)for(const linkBlock of articleLinkBlocks(p.links))addBlock({...linkBlock,sourceRef},sourceRef,false);
+    }
+    for(const relId of imageRels){const asset=embeddedAssets[relId];if(!asset)continue;const block={type:'image',src:asset.ref,alt:docxImageAlt(inner),caption:pendingCaption,frameRatio:'auto',fit:'contain',positionX:50,positionY:50,sourceRef};pendingCaption='';addBlock(block,sourceRef,true);}
+  }
+  if(!title)title=deriveTitle(blocks,filename);const publication=detectPublicationStructure(paras,title);const doc={title,blocks,articles:registry.articles,format:'docx',sourceName:filename,embeddedAssets:Object.values(embeddedAssets),sourceMap,richObjects};if(publication){doc.structure=publication.summary;doc.publication=publication;}return finalizeDocument(doc);
+}
+
 
 function commandExists(cmd){const r=spawnSync(process.platform==='win32'?'where':'which',[cmd],{encoding:'utf8'});return r.status===0;}
 async function parseDocBuffer(buffer,filename){const dir=await mkdtemp(path.join(os.tmpdir(),'v3-import-'));const file=path.join(dir,path.basename(filename)||'input.doc');await writeFile(file,buffer);try{
@@ -207,12 +261,18 @@ export async function parseImportedBuffer(buffer,{filename='import.txt'}={}) {
   if(['.txt','.text'].includes(ext)||!ext)return parsePlainText(buffer.toString('utf8'),{filename});
   if(ext==='.doc')return parseDocBuffer(buffer,filename);
   if(ext==='.docx'){
-    const dir=await mkdtemp(path.join(os.tmpdir(),'v3-docx-'));const file=path.join(dir,'input.docx');await writeFile(file,buffer);try{const r=spawnSync('unzip',['-p',file,'word/document.xml'],{encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0||!r.stdout)throw new Error('DOCX 结构无法读取，请确认文件未损坏');const rel=spawnSync('unzip',['-p',file,'word/_rels/document.xml.rels'],{encoding:'utf8',maxBuffer:4*1024*1024});const relationships={};if(rel.status===0&&rel.stdout){for(const rm of rel.stdout.matchAll(/<Relationship\b[^>]*\bId="([^"]+)"[^>]*\bTarget="([^"]+)"[^>]*>/g)){relationships[rm[1]]=decodeXml(rm[2]);}}return parseDocxXml(r.stdout,filename,relationships);}finally{await rm(dir,{recursive:true,force:true});}
+    const dir=await mkdtemp(path.join(os.tmpdir(),'v3-docx-'));const file=path.join(dir,'input.docx');await writeFile(file,buffer);try{
+      const r=spawnSync('unzip',['-p',file,'word/document.xml'],{encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0||!r.stdout)throw new Error('DOCX 结构无法读取，请确认文件未损坏');
+      const rel=spawnSync('unzip',['-p',file,'word/_rels/document.xml.rels'],{encoding:'utf8',maxBuffer:4*1024*1024});const relationships={},embeddedAssets={},assetByTarget=new Map();let mediaBytes=0,mediaCount=0;
+      if(rel.status===0&&rel.stdout){for(const rm of rel.stdout.matchAll(/<Relationship\b([^>]*)\/?\s*>/g)){const attrs=rm[1],id=(attrs.match(/\bId="([^"]+)"/)||[])[1]||'',target=decodeXml((attrs.match(/\bTarget="([^"]+)"/)||[])[1]||'');if(!id||!target)continue;relationships[id]=target;const ext=path.extname(target).toLowerCase();if(!['.png','.jpg','.jpeg','.gif','.webp'].includes(ext))continue;if(assetByTarget.has(target)){embeddedAssets[id]=assetByTarget.get(target);continue;}let entry=target.replace(/^\/+/, '');if(entry.startsWith('media/'))entry=`word/${entry}`;else if(!entry.startsWith('word/'))entry=path.posix.normalize(path.posix.join('word',entry));if(!entry.startsWith('word/media/'))continue;const media=spawnSync('unzip',['-p',file,entry],{encoding:null,maxBuffer:9*1024*1024});if(media.status!==0||!Buffer.isBuffer(media.stdout)||!media.stdout.length)throw new Error(`DOCX 内嵌图片无法读取：${path.posix.basename(entry)}`);mediaBytes+=media.stdout.length;mediaCount++;if(mediaCount>40||mediaBytes>8*1024*1024)throw new Error('DOCX 内嵌图片超过 40 张或 8MB 安全上限，请拆分稿件后导入');const mimeType=ext==='.png'?'image/png':ext==='.gif'?'image/gif':ext==='.webp'?'image/webp':'image/jpeg';const safeStem=path.basename(filename,path.extname(filename)).replace(/[^a-zA-Z0-9._-]+/g,'-').slice(0,48)||'docx';const asset={id:`docx-${mediaCount}-${id}`,ref:`embedded://${safeStem}-${mediaCount}-${id}`,filename:`${safeStem}-${mediaCount}${ext}`,mime:mimeType,bytes:media.stdout.length,base64:media.stdout.toString('base64')};assetByTarget.set(target,asset);embeddedAssets[id]=asset;}}
+      return parseDocxXml(r.stdout,filename,relationships,embeddedAssets);
+    }finally{await rm(dir,{recursive:true,force:true});}
   }
+
   throw new Error(`暂不支持 ${ext||'未知'} 文件；支持 .docx / .doc / .md / .txt`);
 }
 
-export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
+export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='table')return Math.min(900,180+(block.rows||[]).length*80);if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
 function expandBlocks(blocks=[]){const expanded=[];for(const b of blocks){if(b.type==='paragraph'&&String(b.text||'').length>620&&b.style!=='subhead'){sentenceChunks(b.text,520).forEach(t=>expanded.push({...b,text:t}));}else expanded.push(b);}return expanded;}
 function semanticGroupWeight(group=[]){return group.reduce((n,b)=>n+blockWeight(b),0);}
 function rebalanceContinuationGroups(groups=[],target=760){
@@ -245,6 +305,7 @@ export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}
     for(const article of sec.articles){const cleanTitle=stripNumberPrefix(article.title)||article.title;pages.push(...semanticUnitPages({title:cleanTitle,navTitle:`${sec.name}｜${cleanTitle}`,kicker,section:sec.name,pageType:sec.pageType,paras:article.paras},target));}
   }
   if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){closeTitle=cleanText(closeParas.shift().text).replace(/[。！？!?]$/,'');}pages.push({type:'closing',navTitle:'尾刊寄语',kicker:'尾刊寄语',title:closeTitle,section:'',blocks:semanticBlocks(closeParas,'article')});}
+  mergeRichDocxObjects(doc,pages);
   if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
   return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
 }
