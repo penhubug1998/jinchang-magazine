@@ -25,7 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Patch Alpha14 current-version, module and mobile contracts
+      - name: Patch Alpha14 current-version, Studio, mobile and Reader contracts
         run: |
           node <<'NODE'
           const fs=require('fs');
@@ -36,6 +36,11 @@ jobs:
           const healthNew=" const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===expectedVersion,`health ${JSON.stringify(health)} expected ${expectedVersion}`);";
           if(!src.includes(healthOld))throw new Error('Alpha14 health version contract drifted');
           src=src.replace(healthOld,healthNew);
+
+          const loadOld=" const [html,css,studioJs,presetJs,readerHtml,readerCss,readerJs]=await Promise.all([readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('src/studio/studio.js','utf8'),readFile('src/studio/design-presets.js','utf8'),readFile('src/reader/index.html','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8')]);";
+          const loadNew=" const [html,css,studioJs,presetJs,readerHtml,readerCss,readerJs,richTextJs,layoutEngineJs]=await Promise.all([readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('src/studio/studio.js','utf8'),readFile('src/studio/design-presets.js','utf8'),readFile('src/reader/index.html','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8'),readFile('src/reader/rich-text.js','utf8'),readFile('src/reader/layout-engine.js','utf8')]);";
+          if(!src.includes(loadOld))throw new Error('Alpha14 reader dependency load contract drifted');
+          src=src.replace(loadOld,loadNew);
 
           const moduleOld=" const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =').replace(/\\nexport const DESIGN_PRESET_IDS[^;]+;\\s*$/s,'\\n');const studioInline=studioJs.replace(\"import { DESIGN_PRESETS } from './design-presets.js';\",presetInline);const safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
           const moduleNew=" const presetUrl='data:text/javascript;base64,'+Buffer.from(presetJs,'utf8').toString('base64');const studioInline=studioJs.replace(/from\\s*['\"]\\.\\/design-presets\\.js(?:\\?[^'\"]*)?['\"]/,`from '${presetUrl}'`);if(/from\\s*['\"]\\.\\/design-presets\\.js/.test(studioInline))throw new Error('Alpha14 Studio design-presets module rewrite failed');const safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
@@ -52,9 +57,18 @@ jobs:
           if(!src.includes(mobileOld))throw new Error('Alpha14 mobile contract drifted');
           src=src.replace(mobileOld,mobileNew);
 
-          const readerInjectOld="const readerIssue=structuredClone(issue);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;window.__V3_INITIAL_PAGE__=2;window.__ISSUE_DATA__=${JSON.stringify(readerIssue).replaceAll('<','\\\\u003c')};<\\/script>`;const readerInjected=readerHtml.replace('<link rel=\"stylesheet\" href=\"./reader.css\">',`<style>${readerCss}</style>`).replace('<script type=\"module\" src=\"./reader.js\"></script>',`${readerBoot}<script>${readerJs}</script>`);";
-          const readerInjectNew="const readerIssue=structuredClone(issue);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;window.__V3_INITIAL_PAGE__=2;window.__ISSUE_DATA__=${JSON.stringify(readerIssue).replaceAll('<','\\\\u003c')};<\\/script>`;const readerInjected=readerHtml.replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/,`<style>${readerCss}</style>`).replace(/<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${readerBoot}<script>${readerJs}</script>`);";
-          if(src.includes(readerInjectOld))src=src.replace(readerInjectOld,readerInjectNew);
+          const readerStart='const readerIssue=structuredClone(issue);';
+          const readerSetup="const richUrl='data:text/javascript;base64,'+Buffer.from(richTextJs,'utf8').toString('base64');const layoutModule=layoutEngineJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`);const layoutUrl='data:text/javascript;base64,'+Buffer.from(layoutModule,'utf8').toString('base64');const readerModule=readerJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`).replace(/from\\s*['\"]\\.\\/layout-engine\\.js(?:\\?[^'\"]*)?['\"]/,`from '${layoutUrl}'`);const readerIssue=structuredClone(issue);";
+          if(!src.includes(readerStart))throw new Error('Alpha14 Reader setup contract drifted');
+          src=src.replace(readerStart,readerSetup);
+          const readerCssOld="readerHtml.replace('<link rel=\"stylesheet\" href=\"./reader.css\">',`<style>${readerCss}</style>`)";
+          const readerCssNew="readerHtml.replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/,`<style>${readerCss}</style>`)";
+          if(!src.includes(readerCssOld))throw new Error('Alpha14 Reader css injection contract drifted');
+          src=src.replace(readerCssOld,readerCssNew);
+          const readerScriptOld=".replace('<script type=\"module\" src=\"./reader.js\"></script>',`${readerBoot}<script>${readerJs}</script>`)";
+          const readerScriptNew=".replace(/<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${readerBoot}<script type=\"module\">${readerModule}</script>`)";
+          if(!src.includes(readerScriptOld))throw new Error('Alpha14 Reader script injection contract drifted');
+          src=src.replace(readerScriptOld,readerScriptNew);
 
           fs.writeFileSync(file,src);
           NODE
