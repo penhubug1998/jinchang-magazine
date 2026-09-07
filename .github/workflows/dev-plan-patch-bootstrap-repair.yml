@@ -32,9 +32,12 @@ jobs:
           NODE
           node --check scripts/dev-plan-current-patch.cjs
           git diff --check
+      - name: Bootstrap deterministic dependencies
+        run: |
+          if [ ! -f package-lock.json ]; then npm install --package-lock-only --ignore-scripts; fi
+          npm ci
       - name: Execute development-plan patch
         run: |
-          npm ci
           node scripts/dev-plan-current-patch.cjs
           node --check scripts/studio-v3.mjs
           node --check src/studio/studio.js
@@ -45,6 +48,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/dev-plan-patch-bootstrap-repair.yml
-          git add scripts/dev-plan-current-patch.cjs scripts/plan-p0-reliability-smoke-v3.mjs scripts/source-guard-smoke-v3.mjs scripts/studio-v3.mjs src/studio/studio.js .gitignore
+          git add package-lock.json scripts/dev-plan-current-patch.cjs scripts/plan-p0-reliability-smoke-v3.mjs scripts/source-guard-smoke-v3.mjs scripts/studio-v3.mjs src/studio/studio.js .gitignore
           git commit -m "feat(plan): harden source saves and formal auth boundary"
           git push origin HEAD:fix/ci-tts-baseline-20260906
