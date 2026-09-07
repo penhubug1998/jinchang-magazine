@@ -9,11 +9,13 @@ const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'jinchang-studio-browser-boo
 const tmpFile = path.join(tmpDir, 'studio-browser-regression-v3.mjs');
 
 const legacy = `const [html,css,js,presetJs]=await Promise.all([readFile(path.join(root,'src/studio/index.html'),'utf8'),readFile(path.join(root,'src/studio/studio.css'),'utf8'),readFile(path.join(root,'src/studio/studio.js'),'utf8'),readFile(path.join(root,'src/studio/design-presets.js'),'utf8')]);const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =').replace(/\\nexport const DESIGN_PRESET_IDS[^;]+;\\s*$/s,'\\n');const studioJs=js.replace(\"import { DESIGN_PRESETS } from './design-presets.js';\",presetInline);`;
-const current = `const [html,css,js,presetJs]=await Promise.all([readFile(path.join(root,'src/studio/index.html'),'utf8'),readFile(path.join(root,'src/studio/studio.css'),'utf8'),readFile(path.join(root,'src/studio/studio.js'),'utf8'),readFile(path.join(root,'src/studio/design-presets.js'),'utf8')]);const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =');const studioJs=js.replace(/import\\s*\\{\\s*DESIGN_PRESETS(?:\\s*,\\s*DESIGN_PRESET_GROUPS)?\\s*\\}\\s*from\\s*['\"]\\.\\/design-presets\\.js['\"]\\s*;?/,presetInline);if(/from\\s*['\"]\\.\\/design-presets\\.js['\"]/.test(studioJs))throw new Error('Studio browser fixture failed to inline design-presets.js');`;
+const current = `const [html,css,js,presetJs,inspectorJs]=await Promise.all([readFile(path.join(root,'src/studio/index.html'),'utf8'),readFile(path.join(root,'src/studio/studio.css'),'utf8'),readFile(path.join(root,'src/studio/studio.js'),'utf8'),readFile(path.join(root,'src/studio/design-presets.js'),'utf8'),readFile(path.join(root,'src/studio/workspace/inspector.js'),'utf8')]);const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =');const studioJs=js.replace(/import\\s*\\{\\s*DESIGN_PRESETS(?:\\s*,\\s*DESIGN_PRESET_GROUPS)?\\s*\\}\\s*from\\s*['\"]\\.\\/design-presets\\.js['\"]\\s*;?/,presetInline);if(/from\\s*['\"]\\.\\/design-presets\\.js['\"]/.test(studioJs))throw new Error('Studio browser fixture failed to inline design-presets.js');`;
 const cssNeedle = `html.replace('<link rel="stylesheet" href="./studio.css">',`;
 const cssReplacement = `html.replace(/<link rel="stylesheet" href="\\.\\/studio\\.css(?:\\?[^\"]*)?">/,`;
 const scriptNeedle = `.replace('<script type="module" src="./studio.js"></script>',`;
 const scriptReplacement = `.replace(/<script type="module" src="\\.\\/studio\\.js(?:\\?[^\"]*)?"><\\/script>/,`;
+const inspectorFixtureNeedle = '`${mock}<script type="module">${studioJs}</script>`';
+const inspectorFixtureReplacement = '`${mock}<script type="module">${inspectorJs}</script><script type="module">${studioJs}</script>`';
 const runtimeHookNeedle = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);`;
 const runtimeHookReplacement = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);const runtimeErrors=[];cdp.on('Runtime.exceptionThrown',p=>runtimeErrors.push(p.exceptionDetails?.exception?.description||p.exceptionDetails?.text||'runtime exception'));`;
 const readyNeedle = `const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'Studio did not become ready');`;
@@ -25,9 +27,11 @@ const auditStartReplacement = `await evaluate(\"document.getElementById('auditBt
 const auditFirstLocateNeedle = `document.querySelector('#auditFindings .finding:nth-child(1) button')?.click()`;
 const auditFirstLocateReplacement = `document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(1) button')?.click()`;
 const auditSecondNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(2) button')?.click()\");`;
-const auditSecondReplacement = `await evaluate(\"document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(2) button')?.click()\");`;
+const auditSecondReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(2) button')?.click()\");`;
 const auditThirdNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(3) button')?.click()\");`;
-const auditThirdReplacement = `await evaluate(\"document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(3) button')?.click()\");`;
+const auditThirdReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(3) button')?.click()\");`;
+const auditFirstAssertNeedle = `window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
+const auditFirstAssertReplacement = `!document.getElementById('workspaceAuditDialog').open && window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
 
 try {
   const source = await readFile(sourceFile, 'utf8');
@@ -35,13 +39,15 @@ try {
     [legacy, 'legacy preset inline sequence'],
     [cssNeedle, 'Studio stylesheet fixture replacement'],
     [scriptNeedle, 'Studio script fixture replacement'],
+    [inspectorFixtureNeedle, 'workspace inspector fixture'],
     [runtimeHookNeedle, 'Runtime hook'],
     [readyNeedle, 'Studio ready assertion'],
     [saveMockNeedle, 'wrapped Studio save mock'],
     [auditStartNeedle, 'workspace audit start flow'],
     [auditFirstLocateNeedle, 'workspace audit first locator'],
     [auditSecondNeedle, 'workspace audit second locator'],
-    [auditThirdNeedle, 'workspace audit third locator']
+    [auditThirdNeedle, 'workspace audit third locator'],
+    [auditFirstAssertNeedle, 'workspace audit first locate assertion']
   ]) {
     if (!source.includes(needle)) throw new Error(`Studio browser bootstrap contract drifted: ${label} not found`);
   }
@@ -49,13 +55,15 @@ try {
     .replace(legacy, current)
     .replace(cssNeedle, cssReplacement)
     .replace(scriptNeedle, scriptReplacement)
+    .replace(inspectorFixtureNeedle, inspectorFixtureReplacement)
     .replace(runtimeHookNeedle, runtimeHookReplacement)
     .replace(readyNeedle, readyReplacement)
     .replace(saveMockNeedle, saveMockReplacement)
     .replace(auditStartNeedle, auditStartReplacement)
     .replace(auditFirstLocateNeedle, auditFirstLocateReplacement)
     .replace(auditSecondNeedle, auditSecondReplacement)
-    .replace(auditThirdNeedle, auditThirdReplacement);
+    .replace(auditThirdNeedle, auditThirdReplacement)
+    .replace(auditFirstAssertNeedle, auditFirstAssertReplacement);
   await writeFile(tmpFile, patched);
   const exitCode = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [tmpFile], {
