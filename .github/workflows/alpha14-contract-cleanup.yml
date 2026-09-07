@@ -36,8 +36,12 @@ jobs:
           git diff --check
       - name: Run Alpha14 browser regression
         env:
-          CHROMIUM: /usr/bin/google-chrome
+          CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+          V3_REAL_CHROME: /usr/bin/google-chrome
         run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          test -x "$CHROMIUM"
+          "$V3_REAL_CHROME" --version
           command -v xvfb-run
           node scripts/alpha14-browser-regression-bootstrap-v3.mjs
       - name: Commit verified patch and remove one-shot workflow
