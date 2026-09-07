@@ -50,6 +50,9 @@ const state = {
   issue: null,
   pageIndex: 0,
   fontScale: 1,
+  seniorMode: false,
+  networkMode: "normal",
+  connectionType: "",
   turning: false,
   turnToken: 0,
   musicEnabled: false,
@@ -90,6 +93,46 @@ const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => (
 const storageKey = (suffix) => `jinchang-magazine:${state.issue?.id || "unknown"}:${suffix}`;
 const padPage = (index) => String(index + 1).padStart(2, "0");
 const isMobile = () => mobileQuery.matches;
+const networkConnection = () => navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+const seniorFontBoost = () => state.seniorMode ? (isMobile() ? 1.16 : 1.10) : 1;
+function currentNetworkMode() {
+  if (navigator.onLine === false) return "offline";
+  const connection=networkConnection(),effective=String(connection?.effectiveType||"").toLowerCase();
+  if (connection?.saveData===true || effective==="slow-2g" || effective==="2g") return "constrained";
+  return "normal";
+}
+function updateSeniorControls(){
+  const top=$("seniorButton"),dialog=$("seniorDialogButton"),active=Boolean(state.seniorMode);
+  if(top){top.classList.toggle("active",active);top.setAttribute("aria-pressed",active?"true":"false");top.title=active?"长辈模式已开启，点击恢复标准阅读":"开启长辈模式";const label=top.querySelector(".senior-label");if(label)label.textContent=active?"标准":"长辈";}
+  if(dialog){dialog.classList.toggle("active",active);dialog.setAttribute("aria-pressed",active?"true":"false");dialog.textContent=active?"恢复标准模式":"开启长辈模式";}
+}
+function setSeniorMode(on,{silent=false,renderNow=true}={}){
+  state.seniorMode=Boolean(on);document.body.classList.toggle("senior-mode",state.seniorMode);updateSeniorControls();
+  if(state.issue&&renderNow)render({preserveScroll:true});else requestAnimationFrame(()=>{syncMobileGeometry();updateResponsiveTypography();updateOverflowHints();});
+  if(state.issue)saveProgress();if(!silent)toast(state.seniorMode?"已开启长辈模式":"已恢复标准阅读");
+}
+function syncNetworkStatus({announce=false}={}){
+  const previous=state.networkMode,mode=currentNetworkMode(),connection=networkConnection();state.networkMode=mode;state.connectionType=String(connection?.effectiveType||"");
+  document.body.classList.toggle("network-offline",mode==="offline");document.body.classList.toggle("network-constrained",mode==="constrained");
+  const box=$("networkStatus"),text=$("networkStatusText");if(box&&text){
+    if(mode==="normal")box.hidden=true;else{box.hidden=false;box.dataset.mode=mode;text.textContent=mode==="offline"?"当前离线：已加载的文字仍可阅读，图片和音频将在联网后恢复。":`当前网络较慢${state.connectionType?`（${state.connectionType}）`:""}：已暂停自动音乐和视频预加载。`;}
+  }
+  if(announce&&previous!==mode){if(mode==="normal")toast("网络已恢复");else if(mode==="offline")toast("网络已断开，文字阅读可继续");else toast("已切换为弱网省流模式");}
+  return mode;
+}
+const networkDelay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function fetchIssueWithRetry(){
+  let lastError=null;syncNetworkStatus();const delays=state.networkMode==="constrained"?[0,900,2200]:[0,350,1000];
+  for(let attempt=0;attempt<delays.length;attempt++){
+    if(navigator.onLine===false)throw new Error("当前处于离线状态，请联网后点击重试");if(delays[attempt])await networkDelay(delays[attempt]);
+    let timer=0,controller=null;try{
+      if(typeof AbortController!=="undefined"){controller=new AbortController();timer=setTimeout(()=>controller.abort(),10000);}
+      const response=await fetch("./issue.json",{cache:"no-store",...(controller?{signal:controller.signal}:{})});if(timer)clearTimeout(timer);
+      if(!response.ok)throw new Error(`期刊数据加载失败：HTTP ${response.status}`);return await response.json();
+    }catch(error){if(timer)clearTimeout(timer);lastError=error;syncNetworkStatus();}
+  }
+  throw new Error(lastError?.name==="AbortError"?"网络响应较慢，期刊数据多次加载超时，请点击重试":(lastError?.message||"期刊数据加载失败，请点击重试"));
+}
 function storageGet(key) {
   if (studioEmbed) return null;
   try { return localStorage.getItem(key); } catch { return null; }
@@ -179,7 +222,7 @@ function renderBlockContent(block,ctx={}) {
       const px = Math.max(0, Math.min(100, Number(block.positionX ?? 50)));
       const py = Math.max(0, Math.min(100, Number(block.positionY ?? 50)));
       const ratioStyle = ratio === "auto" ? "" : `aspect-ratio:${ratio.replace(":", " / ")};`;
-      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="lazy" style="object-fit:${fit};object-position:${px}% ${py}%"></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
+      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="lazy" decoding="async" data-original-src="${escapeHtml(block.src || "")}" style="object-fit:${fit};object-position:${px}% ${py}%"><button class="media-retry" type="button" data-media-retry hidden>重试图片</button></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
     }
     case "coverMeta":
       return `<div class="cover-meta"${studioTextAttrs("text")}>${escapeHtml(block.text || "")}</div>`;
@@ -355,11 +398,11 @@ function updateResponsiveTypography() {
   if (isMobile()) {
     const widthFactor = Math.max(.92, Math.min(1.10, rect.width / 390));
     const base = Math.max(14.0, Math.min(15.4, 14.5 * widthFactor));
-    document.documentElement.style.setProperty("--page-font-base", `${(base * state.fontScale).toFixed(2)}px`);
+    document.documentElement.style.setProperty("--page-font-base", `${(base * state.fontScale * seniorFontBoost()).toFixed(2)}px`);
   } else {
     const pageWidth = rect.width / 2;
     const scale = Math.max(.78, Math.min(1.24, Math.min(pageWidth / 460, rect.height / 650)));
-    document.documentElement.style.setProperty("--page-font-base", `${(13.3 * scale * state.fontScale).toFixed(2)}px`);
+    document.documentElement.style.setProperty("--page-font-base", `${(13.3 * scale * state.fontScale * seniorFontBoost()).toFixed(2)}px`);
   }
 }
 
@@ -389,9 +432,19 @@ function bindPageActions() {
   }));
   document.querySelectorAll("[data-article-id]").forEach((button) => button.addEventListener("click", (event) => { if (studioEmbed) { event.preventDefault(); return; } openArticle(button.dataset.articleId); }));
   document.querySelectorAll("[data-video-full]").forEach((button) => button.addEventListener("click", () => openVideoFullscreen(button)));
+  document.querySelectorAll(".image-frame img").forEach((img)=>{
+    const frame=img.closest(".image-frame"),retry=frame?.querySelector("[data-media-retry]");if(!frame)return;
+    const failed=()=>{frame.classList.add("media-load-error");if(retry)retry.hidden=false;};
+    const loaded=()=>{frame.classList.remove("media-load-error");if(retry)retry.hidden=true;};
+    img.addEventListener("error",failed);img.addEventListener("load",loaded);if(img.complete&&!img.naturalWidth)failed();
+  });
+  document.querySelectorAll("[data-media-retry]").forEach((button)=>button.addEventListener("click",()=>{
+    const frame=button.closest(".image-frame"),img=frame?.querySelector("img"),src=img?.dataset.originalSrc||img?.getAttribute("src");if(!img||!src)return;if(navigator.onLine===false)return toast("当前仍处于离线状态");button.disabled=true;img.removeAttribute("src");requestAnimationFrame(()=>{img.setAttribute("src",src);button.disabled=false;});
+  }));
   document.querySelectorAll("video").forEach((video) => {
     if (video.dataset.v3PlayerBound === "1") return;
     video.dataset.v3PlayerBound = "1";
+    if(state.networkMode!=="normal")video.preload="none";
     video.addEventListener("webkitendfullscreen", () => {
       if (state.videoSession?.video === video) finishVideoSession();
     });
@@ -585,6 +638,7 @@ function animateMove(direction) {
 function move(direction) { animateMove(direction); }
 
 function turnAnimationMode() {
+  if (state.seniorMode && isMobile()) return "none";
   const mode = String(state.issue?.features?.turnAnimation || "smooth");
   return ["smooth", "slide", "fade", "three-d", "none"].includes(mode) ? mode : "smooth";
 }
@@ -698,6 +752,7 @@ function saveProgress() {
   if (!state.issue) return;
   storageSet(storageKey("page"), String(state.pageIndex));
   storageSet(storageKey("font"), String(state.fontScale));
+  storageSet(storageKey("senior"), state.seniorMode ? "1" : "0");
   storageSet(storageKey("continuous"), state.continuous ? "1" : "0");
   storageSet(storageKey("rate"), String(state.speechRate));
   storageSet(storageKey("music-enabled"), state.musicEnabled ? "1" : "0");
@@ -723,6 +778,8 @@ function speechTextOfBlock(block = {}) {
       return (block.items || []).flatMap((item) => [item?.title, item?.text, item?.body]).filter(Boolean).join("。 ");
     case "coverSections":
       return (block.items || []).filter(Boolean).join("，");
+    case "table":
+      return [block.caption,...(block.rows||[]).flat()].filter(Boolean).join("，");
     case "image": case "video":
       return block.caption || "";
     case "articleLink": {
@@ -902,8 +959,9 @@ function updateMusicButton() {
   $("musicButton").title = state.musicEnabled ? "背景音乐：开，点击关闭" : "背景音乐：关，点击开启";
 }
 
-async function startMusic() {
+async function startMusic({manual=false}={}) {
   if (!state.musicEnabled || state.narrationMode !== "idle") return;
+  if (!manual && state.networkMode!=="normal") return;
   try {
     await $("bgm").play();
     state.musicPlaying = true;
@@ -922,7 +980,7 @@ function configureMedia() {
   state.musicEnabled = studioEmbed ? false : (savedMusic == null ? music?.defaultOn === true : savedMusic === "1");
   updateMusicButton();
   $("fullButton").hidden = state.issue.features?.fullscreen === false;
-  if (state.musicEnabled) startMusic();
+  if (state.musicEnabled && state.networkMode==="normal") startMusic();
 }
 
 async function toggleMusic() {
@@ -933,7 +991,7 @@ async function toggleMusic() {
     state.musicPlaying = false;
     toast("背景音乐已关闭");
   } else {
-    await startMusic();
+    await startMusic({manual:true});
     toast("背景音乐已开启");
   }
   updateMusicButton();
@@ -1212,9 +1270,7 @@ function handlePointerUp(event) {
 async function loadIssue() {
   let issue = window.__ISSUE_DATA__ || null;
   if (!issue) {
-    const response = await fetch("./issue.json", { cache: "no-store" });
-    if (!response.ok) throw new Error(`期刊数据加载失败：HTTP ${response.status}`);
-    issue = await response.json();
+    issue = await fetchIssueWithRetry();
   }
   if (!Array.isArray(issue.pages) || issue.pages.length === 0) throw new Error("期刊没有可显示页面");
   state.issue = issue;
@@ -1234,10 +1290,14 @@ async function loadIssue() {
   const savedPage = Number(storageGet(storageKey("page")));
   const savedFont = Number(storageGet(storageKey("font")));
   const savedRate = Number(storageGet(storageKey("rate")));
+  const savedSenior = storageGet(storageKey("senior"));let requestedSenior=null;
+  try{const value=new URL(location.href).searchParams.get("senior");if(value==="1"||value==="0")requestedSenior=value==="1";}catch{}
   state.pageIndex = Number.isFinite(injectedPage) && injectedPage > 0 ? clampPage(injectedPage - 1) : (Number.isFinite(urlPage) && urlPage > 0 ? clampPage(urlPage - 1) : (Number.isFinite(savedPage) ? clampPage(savedPage) : 0));
   state.fontScale = Number.isFinite(savedFont) && savedFont > 0 ? savedFont : 1;
   state.continuous = storageGet(storageKey("continuous")) === "1" || issue.features?.narration?.continuousDefault === true;
   state.speechRate = Number.isFinite(savedRate) && savedRate > 0 ? savedRate : (issue.features?.narration?.rate || 1);
+  setSeniorMode(requestedSenior==null?savedSenior==="1":requestedSenior,{silent:true,renderNow:false});
+  syncNetworkStatus();
   $("continuousRead").checked = state.continuous;
   $("speechRate").value = String(state.speechRate);
   configureMedia();
@@ -1260,6 +1320,9 @@ function bind() {
   $("homeButton").addEventListener("click", () => { stopNarration(); state.pageIndex = 0; render(); });
   $("issueSwitchButton").addEventListener("click", openIssueDialog);
   $("fontButton").addEventListener("click", () => $("fontDialog").showModal());
+  $("seniorButton").addEventListener("click",()=>setSeniorMode(!state.seniorMode));
+  $("seniorDialogButton").addEventListener("click",()=>setSeniorMode(!state.seniorMode));
+  $("networkRetry").addEventListener("click",()=>{syncNetworkStatus();if(navigator.onLine===false)return toast("当前仍未联网");if(!state.issue)return location.reload();document.querySelectorAll(".media-load-error [data-media-retry]").forEach(button=>button.click());toast("正在重试未加载资源");});
   $("readButton").addEventListener("click", (event) => event.shiftKey ? $("readDialog").showModal() : toggleReadShortcut());
   $("musicButton").addEventListener("click", toggleMusic);
   $("fullButton").addEventListener("click", toggleFullscreen);
@@ -1295,6 +1358,8 @@ function bind() {
     if (!isMobile() && state.mobileImmersive) setMobileImmersive(false);
     render();
   });
+  const handleNetworkChange=()=>{const previous=state.networkMode;syncNetworkStatus({announce:true});if(previous!=="normal"&&state.networkMode==="normal")document.querySelectorAll(".media-load-error [data-media-retry]").forEach(button=>button.click());};
+  addEventListener("online",handleNetworkChange);addEventListener("offline",handleNetworkChange);networkConnection()?.addEventListener?.("change",handleNetworkChange);
   $("stage").addEventListener("pointerdown", handlePointerDown);
   $("stage").addEventListener("pointermove", handlePointerMove, { passive: false });
   $("stage").addEventListener("pointerup", handlePointerUp);
@@ -1332,7 +1397,7 @@ function bind() {
   addEventListener("orientationchange", () => setTimeout(handleViewportChange, 160));
   window.visualViewport?.addEventListener("resize", handleViewportChange, { passive: true });
   ["pointerdown", "touchstart", "keydown"].forEach((type) => document.addEventListener(type, () => {
-    if (state.musicEnabled && $("bgm").paused && state.narrationMode === "idle") startMusic();
+    if (state.networkMode==="normal" && state.musicEnabled && $("bgm").paused && state.narrationMode === "idle") startMusic();
   }, { once: true, capture: true }));
   addEventListener("pagehide", () => { $("bgm").pause(); stopNarration({ keepStatus: true, resumeMusic: false }); });
   document.addEventListener("visibilitychange", () => { if (document.hidden) stopNarration({ keepStatus: true }); });
@@ -1451,8 +1516,10 @@ if (studioEmbed) {
   }, true);
 }
 
+syncNetworkStatus();
 bind();
 loadIssue().catch((error) => {
-  $("stage").innerHTML = `<div class="spread"><article class="page"><div class="page-scroll"><h2>无法加载期刊</h2><p>${escapeHtml(error.message)}</p></div></article></div>`;
+  $("stage").innerHTML = `<div class="spread"><article class="page"><div class="page-scroll load-failure"><h2>无法加载期刊</h2><p>${escapeHtml(error.message)}</p><button id="loadRetryButton" type="button">重新加载</button></div></article></div>`;
+  $("loadRetryButton")?.addEventListener("click",()=>{if(navigator.onLine===false)return toast("当前仍未联网");location.reload();});
   console.error(error);
 });

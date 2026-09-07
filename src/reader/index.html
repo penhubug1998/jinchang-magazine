@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#7a1717">
   <title>离退休干部电子期刊</title>
-  <link rel="stylesheet" href="./reader.css?v=3.1.0-ai-link-20260902-06">
+  <link rel="stylesheet" href="./reader.css?v=3.1.0-p1-06-20260907-01">
 </head>
 <body>
   <div class="app" id="app">
+    <div id="networkStatus" class="network-status" role="status" aria-live="polite" hidden><span id="networkStatusText"></span><button id="networkRetry" type="button">重试</button></div>
     <header class="topbar">
       <a class="brand" id="homeLink" href="../../" aria-label="返回期刊总目录">
         <span class="mark">刊</span>
@@ -20,6 +21,7 @@
       <div class="actions" aria-label="阅读工具">
         <button id="musicButton" class="music-toggle" type="button" title="背景音乐" aria-pressed="false"><svg aria-hidden="true"><use href="#i-music"></use></svg></button>
         <button id="readButton" class="read-toggle" type="button" title="朗读/暂停当前页；Shift+点击打开朗读设置" aria-pressed="false"><svg aria-hidden="true"><use href="#i-speak"></use></svg></button>
+        <button id="seniorButton" class="senior-toggle" type="button" title="长辈模式" aria-pressed="false"><span class="senior-label">长辈</span></button>
         <button id="tocButton" type="button" title="目录"><svg aria-hidden="true"><use href="#i-list"></use></svg></button>
         <button id="fullButton" type="button" title="全屏"><svg aria-hidden="true"><use href="#i-full"></use></svg></button>
       </div>
@@ -77,6 +79,10 @@
       <button data-font="1" type="button">标准</button>
       <button data-font="1.12" type="button">较大</button>
       <button data-font="1.24" type="button">特大</button>
+    </div>
+    <div class="senior-mode-card">
+      <div><strong>长辈模式</strong><span>放大正文与操作区、增加行距和对比度，并减少手机翻页动画。</span></div>
+      <button id="seniorDialogButton" type="button" aria-pressed="false">开启长辈模式</button>
     </div>
   </dialog>
 
@@ -141,6 +147,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <audio id="bgm" loop preload="none"></audio>
   <audio id="narration" preload="none"></audio>
-<script type="module" src="./reader.js?v=3.1.0-ai-link-20260902-06"></script>
+<script type="module" src="./reader.js?v=3.1.0-p1-06-20260907-01"></script>
 </body>
 </html>
