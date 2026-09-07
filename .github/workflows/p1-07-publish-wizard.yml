@@ -1,0 +1,49 @@
+name: P1-07 unified publish wizard
+
+on:
+  push:
+    branches:
+      - feat/p1-07-publish-wizard
+    paths:
+      - .github/workflows/p1-07-publish-wizard.yml
+      - scripts/p1-07-publish-wizard-patch.py
+      - scripts/p1-07-publish-wizard-patch-fix.py
+      - scripts/p1-07-publish-wizard-smoke-v3.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-07-publish-wizard
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply P1-07 implementation
+        run: |
+          python3 scripts/p1-07-publish-wizard-patch-fix.py
+          python3 scripts/p1-07-publish-wizard-patch.py
+          node --check src/studio/studio.js
+          node --check scripts/studio-v3.mjs
+          git diff --check
+      - name: Verify unified workflow contract
+        run: node scripts/p1-07-publish-wizard-smoke-v3.mjs
+      - name: Build real issue 001
+        run: node scripts/build-v3.mjs --issue 001
+      - name: Preserve Studio and publishing regressions
+        run: |
+          node scripts/v31-alpha25-smoke-v3.mjs
+          node scripts/v31-alpha26-smoke-v3.mjs
+      - name: Commit verified implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/studio/index.html src/studio/studio.css src/studio/studio.js scripts/studio-v3.mjs package.json scripts/p1-07-publish-wizard-smoke-v3.mjs
+          git commit -m "feat(p1-07): unify review signoff build and release"
+          git push origin HEAD:feat/p1-07-publish-wizard
