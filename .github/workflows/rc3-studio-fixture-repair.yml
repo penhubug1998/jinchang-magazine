@@ -75,6 +75,10 @@ jobs:
             const mockNew='const mock=`<script>window.__V3_FORCE_WORKSPACE__=true;window.__V3_APP_BASE_OVERRIDE__="/";window.confirm=()=>true;window.prompt=()=>"manual";';
             if(!src.includes(mockOld))throw new Error('RC3 mock prelude drifted');
             src=src.replace(mockOld,mockNew);
+            const saveOld="if(p==='/api/issues/003'&&opts.method==='PUT'){window.__RC3_COUNTS__.save++;ISSUE=JSON.parse(opts.body);return body({issue:structuredClone(ISSUE),snapshot:{id:'rc3'}})}";
+            const saveNew="if(p==='/api/issues/003'&&opts.method==='PUT'){window.__RC3_COUNTS__.save++;const payload=JSON.parse(opts.body);ISSUE=structuredClone(payload.issue||payload);return body({issue:structuredClone(ISSUE),source:{fingerprint:'rc3-source'},snapshot:{id:'rc3'}})}";
+            if(!src.includes(saveOld))throw new Error('RC3 save mock contract drifted');
+            src=src.replace(saveOld,saveNew);
             const injectOld="const injected=html.replace('<link rel=\"stylesheet\" href=\"./studio.css\">',`<style>${css}</style>`).replace('<script type=\"module\" src=\"./studio.js\"></script>',`${mock}<script type=\"module\">${js}</script>`);";
             const injectNew="const injected=html.replace(/<link rel=\"stylesheet\" href=\"\\.\\/studio\\.css(?:\\?[^\"]*)?\">/,`<style>${css}</style>`).replace(/<script type=\"module\" src=\"\\.\\/studio\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${mock}<script type=\"module\">${studioJs}</script>`);";
             if(!src.includes(injectOld))throw new Error('RC3 Studio tag injection contract drifted');
