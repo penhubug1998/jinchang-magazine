@@ -40,7 +40,7 @@
     "test:alpha13": "node scripts/alpha13-smoke-v3.mjs",
     "test:alpha13-browser": "node scripts/alpha13-browser-regression-bootstrap-v3.mjs",
     "test:alpha14": "node scripts/alpha14-smoke-v3.mjs",
-    "test:alpha14-browser": "node scripts/alpha14-browser-regression-v3.mjs",
+    "test:alpha14-browser": "node scripts/alpha14-browser-regression-bootstrap-v3.mjs",
     "test:beta1": "node scripts/beta1-smoke-v3.mjs",
     "test:beta1-recovery": "node scripts/beta1-recovery-smoke-v3.mjs",
     "test:beta1-browser": "node scripts/browser-regression-v3.mjs --issue preview-beta1-matrix --matrix",
