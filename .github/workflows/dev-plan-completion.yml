@@ -21,7 +21,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
+      - name: Create dependency lock when bootstrapping this repository
+        run: |
+          if [ ! -f package-lock.json ]; then
+            npm install --package-lock-only --ignore-scripts
+          fi
+          test -f package-lock.json
       - name: Install locked dependencies
         run: npm ci
       - name: Apply current development-plan patch
@@ -49,7 +54,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/studio/studio.js scripts/studio-v3.mjs scripts/source-guard-smoke-v3.mjs scripts/plan-p0-reliability-smoke-v3.mjs src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json .github/workflows/plan-p0-reliability.yml
+          git add package-lock.json src/studio/studio.js scripts/studio-v3.mjs scripts/source-guard-smoke-v3.mjs scripts/plan-p0-reliability-smoke-v3.mjs src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json .github/workflows/plan-p0-reliability.yml
           if git diff --cached --quiet; then
             echo "No implementation changes to commit"
             exit 0
