@@ -1,0 +1,55 @@
+name: V31 Alpha14 health contract repair
+
+on:
+  push:
+    branches:
+      - fix/ci-tts-baseline-20260906
+    paths:
+      - .github/workflows/v31-alpha14-health-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch Alpha14 health version contract
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/v31-alpha14-browser-v3.mjs';
+          let src=fs.readFileSync(file,'utf8');
+          const old=" const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(['3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`health ${JSON.stringify(health)}`);";
+          const next=" const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===expectedVersion,`health ${JSON.stringify(health)} expected ${expectedVersion}`);";
+          if(!src.includes(old))throw new Error('Alpha14 health version contract drifted');
+          src=src.replace(old,next);
+          fs.writeFileSync(file,src);
+          NODE
+          git diff --check
+      - name: Verify Alpha14 smoke and browser
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          "$V3_REAL_CHROME" --version
+          command -v xvfb-run
+          node scripts/v31-alpha14-smoke-v3.mjs
+          node scripts/v31-alpha14-browser-v3.mjs
+      - name: Commit verified test and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/v31-alpha14-health-repair.yml
+          git add scripts/v31-alpha14-browser-v3.mjs
+          git commit -m "test(v31): bind Alpha14 browser health to package version"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
