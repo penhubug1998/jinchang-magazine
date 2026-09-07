@@ -1,4 +1,4 @@
-import { createSourceConflictFetchGuard } from '../src/studio/workspace/inspector.js';
+import { createSourceConflictFetchGuard, installSourceConflictFetchGuard } from '../src/studio/workspace/inspector.js';
 
 const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 class MemoryStorage{
@@ -25,6 +25,10 @@ const fakeFetch=async(input,init={})=>{
   if(url.pathname==='/api/issues/003/draft'&&method==='DELETE'){draftExists=false;return new Response(JSON.stringify({ok:true}),{status:200,headers:{'Content-Type':'application/json'}})}
   return new Response(JSON.stringify({error:'not found'}),{status:404,headers:{'Content-Type':'application/json'}});
 };
+
+const restrictedScope={fetch:fakeFetch,get sessionStorage(){throw new Error('SecurityError: storage disabled')}};
+assert(installSourceConflictFetchGuard(restrictedScope)===true,'sessionStorage 受限时冲突保护仍应成功安装');
+assert(typeof restrictedScope.fetch==='function'&&typeof restrictedScope.__V3_SOURCE_CONFLICT_GUARD__==='function','sessionStorage 受限时不得中断 Studio 模块初始化');
 
 const storage=new MemoryStorage();
 const guarded=createSourceConflictFetchGuard(fakeFetch,{storage});
@@ -53,4 +57,4 @@ response=await save('server-v2','fresh-edit');
 assert(response.ok,'解除冲突后基于最新服务器版本的新编辑应允许保存');
 assert(observed.at(-1)==='server-v2','解除冲突后应使用最新编辑基线');
 
-console.log('P0-02 客户端冲突回归通过：SOURCE_DRIFT 后连续保存、状态刷新和旧草稿恢复均不能覆盖服务器新稿。');
+console.log('P0-02 客户端冲突回归通过：SOURCE_DRIFT 后连续保存、状态刷新和旧草稿恢复均不能覆盖服务器新稿；受限 storage 环境不会中断 Studio。');
