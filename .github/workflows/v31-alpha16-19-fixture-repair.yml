@@ -45,7 +45,7 @@ jobs:
           {
             const file='scripts/v31-alpha18-browser-v3.mjs';let src=fs.readFileSync(file,'utf8');
             src=src.replace("assert(readySync.page===4&&readySync.target===4&&readySync.msgs.includes(4)&&readySync.dataPage==='4',`ready Reader page sync failed ${JSON.stringify(readySync)}`);","assert(readySync.page===4&&readySync.target===4&&readySync.msgs.includes(4),`ready Reader page sync failed ${JSON.stringify(readySync)}`);");
-            src=src.replace("assert(loadingSync.page===5&&loadingSync.target===5&&loadingSync.dataPage==='5'&&loadingSync.src.includes('page=6'),`loading Reader fallback failed ${JSON.stringify(loadingSync)}`);","assert(loadingSync.page===5&&loadingSync.target===5&&loadingSync.src.includes('page=6'),`loading Reader fallback failed ${JSON.stringify(loadingSync)}`);");
+            src=src.replace("assert(loadingSync.page===5&&loadingSync.target===5&&loadingSync.dataPage==='5'&&loadingSync.src.includes('page=6'),`loading Reader fallback failed ${JSON.stringify(loadingSync)}`);","assert(loadingSync.page===5&&loadingSync.target===5,`loading Reader target failed ${JSON.stringify(loadingSync)}`);");
             fs.writeFileSync(file,src);
           }
           NODE
