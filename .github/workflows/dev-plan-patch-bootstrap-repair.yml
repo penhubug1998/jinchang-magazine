@@ -23,10 +23,11 @@ jobs:
           const fs=require('fs');
           const file='scripts/dev-plan-current-patch.cjs';
           let src=fs.readFileSync(file,'utf8');
-          const old="  assert(statuses[0]===200&&statuses[1]===409,`parallel save should serialize to one success and one conflict: ${JSON.stringify(statuses)}`);\\n";
-          const neo="  assert(statuses[0]===200&&statuses[1]===409,'parallel save should serialize to one success and one conflict: '+JSON.stringify(statuses));\\n";
-          if(!src.includes(old))throw new Error('parallel assertion contract drifted');
-          src=src.replace(old,neo);
+          const replacements=[
+            ["  assert(statuses[0]===200&&statuses[1]===409,`parallel save should serialize to one success and one conflict: ${JSON.stringify(statuses)}`);\\n","  assert(statuses[0]===200&&statuses[1]===409,'parallel save should serialize to one success and one conflict: '+JSON.stringify(statuses));\\n"],
+            ["assert(code!==0&&out.includes('STUDIO_ADMIN_PASSWORD'),`formal direct server must refuse unauthenticated boot: ${'${'}code} ${'${'}out}`);\\n","assert(code!==0&&out.includes('STUDIO_ADMIN_PASSWORD'),'formal direct server must refuse unauthenticated boot: '+code+' '+out);\\n"]
+          ];
+          for(const [oldText,newText] of replacements){if(!src.includes(oldText))throw new Error('bootstrap nested template contract drifted');src=src.replace(oldText,newText);}
           fs.writeFileSync(file,src);
           NODE
           node --check scripts/dev-plan-current-patch.cjs
