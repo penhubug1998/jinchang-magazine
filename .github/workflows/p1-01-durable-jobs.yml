@@ -1,0 +1,95 @@
+name: P1-01 durable background jobs
+on:
+  push:
+    branches: [fix/ci-tts-baseline-20260906]
+    paths: [.github/workflows/p1-01-durable-jobs.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  implement-and-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Implement durable queue and restart recovery
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/studio-v3.mjs';
+          let src=fs.readFileSync(file,'utf8');
+          const constants="const MAX_BACKGROUND_JOBS = 100;";
+          if(!src.includes(constants))throw new Error('background job constants drifted');
+          src=src.replace(constants,constants+"\nconst backgroundJobFile=process.env.V3_BACKGROUND_JOB_FILE?path.resolve(process.env.V3_BACKGROUND_JOB_FILE):path.join(root,'.v3-background-jobs','jobs.json');\nlet backgroundJobPersistChain=Promise.resolve();");
+          const start=src.indexOf('function jobView(job){');
+          const end=src.indexOf('\nfunction backgroundJobResponse(job)',start);
+          if(start<0||end<0)throw new Error('background job implementation boundaries drifted');
+          const replacement=String.raw`function jobView(job){return {id:job.id,kind:job.kind,issueId:job.issueId,status:job.status,progress:job.progress,createdAt:job.createdAt,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,statusUrl:`/api/jobs/${encodeURIComponent(job.id)}`,result:job.result||null,error:job.error||null,errorDetails:job.errorDetails||null,recovered:Boolean(job.recovered)};}
+function durableJobRecord(job){return {id:job.id,kind:job.kind,issueId:job.issueId,payload:job.payload||{},status:job.status,progress:job.progress,createdAt:job.createdAt,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,result:job.result||null,error:job.error||null,errorDetails:job.errorDetails||null,recovered:Boolean(job.recovered)};}
+function persistBackgroundJobs(){const rows=[...backgroundJobs.values()].map(durableJobRecord);backgroundJobPersistChain=backgroundJobPersistChain.catch(()=>{}).then(()=>atomicWriteText(backgroundJobFile,`${JSON.stringify({version:1,updatedAt:new Date().toISOString(),jobs:rows},null,2)}\n`));return backgroundJobPersistChain;}
+function taskForBackgroundJob(job){const id=job.issueId,payload=job.payload||{};switch(job.kind){
+case 'publication-preflight':return report=>runPublicationPreflight(id,report);
+case 'publication-preview':return async report=>{report({stage:'构建当前期刊',percent:10});const output=await ensurePublicationWeb(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-pdf':return async report=>{report({stage:'生成 PDF',percent:10});const output=await generatePublicationPdf(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-archive':return async report=>{report({stage:'生成归档包',percent:10});const output=await generatePublicationArchive(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-release':return async report=>{const output=await generateFormalRelease(id,report);const issueFile=path.join(root,'issues',id,'issue.json'),nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return {ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source};};
+case 'public-deploy':return async report=>{report({stage:'部署公开 Reader',percent:10});const deployment=await deployPublicIssue(id);report({stage:'在线校验',percent:90});return {ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'audit':return async report=>{report({stage:'执行审计',percent:10});const argv=['--issue',id,'--quiet'];if(payload.strict)argv.push('--strict');const r=await runScriptAsync('audit-v3.mjs',argv),reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let auditReport=null;try{auditReport=await readJson(reportFile)}catch{}return {ok:r.ok,output:r.output,strict:Boolean(payload.strict),generatedAt:auditReport?.generatedAt||null,audit:auditReport?.issues?.[0]||null,htmlUrl:`/reports/v3-release-audit-${id}.html`};};
+case 'build':return async report=>{report({stage:'构建当前期刊',percent:10});const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return {ok:r.ok,output:r.output,preview:`/preview/${id}/`};};
+case 'tts-generate':return report=>{const bin=resolveTtsGenerator();if(!bin)throw Object.assign(new Error('未找到可用 TTS 生成器'),{code:'TTS_GENERATOR_MISSING'});return generateTtsForIssue(id,payload,bin,report);};
+default:throw Object.assign(new Error(`未知后台任务类型：${job.kind}`),{code:'JOB_KIND_UNKNOWN'});
+}}
+function enqueueBackgroundJob({kind,issueId,payload={},task}){
+  if(backgroundQueue.length>=MAX_BACKGROUND_QUEUE)throw Object.assign(new Error('后台任务队列已满，请稍后重试'),{statusCode:429,code:'JOB_QUEUE_FULL'});
+  const job={id:`job-${Date.now().toString(36)}-${randomUUID().slice(0,8)}`,kind,issueId,payload,status:'queued',progress:{stage:'排队中',percent:0},createdAt:new Date().toISOString(),task:null};job.task=task||taskForBackgroundJob(job);
+  backgroundJobs.set(job.id,job);backgroundQueue.push(job);void persistBackgroundJobs();void pumpBackgroundJobs();return job;
+}
+async function restoreBackgroundJobs(){let stored=null;try{stored=await readJson(backgroundJobFile)}catch{}const rows=Array.isArray(stored?.jobs)?stored.jobs:[];for(const row of rows.slice(-MAX_BACKGROUND_JOBS)){const job={...row,payload:row.payload||{},task:null};if(['queued','running'].includes(job.status)){job.status='queued';job.startedAt=null;job.finishedAt=null;job.result=null;job.error=null;job.errorDetails=null;job.recovered=true;job.progress={stage:'服务重启后恢复排队',percent:0};try{job.task=taskForBackgroundJob(job);backgroundQueue.push(job);}catch(error){job.status='failed';job.finishedAt=new Date().toISOString();job.error=error.message;job.errorDetails={code:error.code||'JOB_RECOVERY_FAILED',advice:[]};}}backgroundJobs.set(job.id,job);}if(rows.length)await persistBackgroundJobs();if(backgroundQueue.length)void pumpBackgroundJobs();}
+async function pumpBackgroundJobs(){
+  if(backgroundJobRunning)return;
+  backgroundJobRunning=true;
+  try{
+    while(backgroundQueue.length){
+      const job=backgroundQueue.shift();job.task ||= taskForBackgroundJob(job);job.status='running';job.startedAt=new Date().toISOString();job.progress={stage:job.recovered?'恢复执行':'开始执行',percent:1};await persistBackgroundJobs();
+      try{job.result=await job.task(progress=>{job.progress={...job.progress,...progress};void persistBackgroundJobs();});job.status='succeeded';job.progress={stage:'已完成',percent:100};}
+      catch(error){job.status='failed';job.error=error?.message||String(error);job.errorDetails={code:error?.code||'',advice:Array.isArray(error?.advice)?error.advice:[]};job.progress={stage:'执行失败',percent:100};console.error(`[job:${job.id}] ${job.error}`);}
+      job.finishedAt=new Date().toISOString();job.task=null;
+      while(backgroundJobs.size>MAX_BACKGROUND_JOBS){const oldest=[...backgroundJobs.values()].find(x=>x.status!=='queued'&&x.status!=='running');if(!oldest)break;backgroundJobs.delete(oldest.id);}await persistBackgroundJobs();
+    }
+  }finally{backgroundJobRunning=false;}
+}`;
+          src=src.slice(0,start)+replacement+src.slice(end);
+          src=src.replace("enqueueBackgroundJob({kind:'audit',issueId:id,task:","enqueueBackgroundJob({kind:'audit',issueId:id,payload:{strict:Boolean(data.strict)},task:");
+          src=src.replace("enqueueBackgroundJob({kind:'tts-generate',issueId:id,task:","enqueueBackgroundJob({kind:'tts-generate',issueId:id,payload:data,task:");
+          const listen=src.lastIndexOf('server.listen(');
+          if(listen<0)throw new Error('server.listen not found');
+          src=src.slice(0,listen)+'await restoreBackgroundJobs();\n'+src.slice(listen);
+          fs.writeFileSync(file,src);
+          NODE
+          node --check scripts/studio-v3.mjs
+          git diff --check
+      - name: Add restart-recovery smoke
+        run: |
+          cat > scripts/p1-01-background-jobs-smoke-v3.mjs <<'EOF'
+          import {spawn} from 'node:child_process';import {mkdtemp,writeFile,readFile,rm} from 'node:fs/promises';import os from 'node:os';import path from 'node:path';import net from 'node:net';
+          const root=process.cwd(),assert=(c,m)=>{if(!c)throw new Error(m)},sleep=ms=>new Promise(r=>setTimeout(r,ms));
+          async function port(){return await new Promise((resolve,reject)=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p))});s.on('error',reject)})}
+          const tmp=await mkdtemp(path.join(os.tmpdir(),'v3-jobs-')),jobFile=path.join(tmp,'jobs.json'),p=await port(),jobId='job-recovery-smoke';
+          await writeFile(jobFile,JSON.stringify({version:1,jobs:[{id:jobId,kind:'build',issueId:'001',payload:{},status:'queued',progress:{stage:'排队中',percent:0},createdAt:new Date().toISOString()}]},null,2));
+          const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(p)],{cwd:root,env:{...process.env,NODE_ENV:'test',STUDIO_AUTH_MODE:'off',STUDIO_AUTH_ALLOW_OFF:'1',V3_BACKGROUND_JOB_FILE:jobFile},stdio:'ignore'});
+          try{let ready=false;for(let i=0;i<120;i++){try{const r=await fetch(`http://127.0.0.1:${p}/api/health`);if(r.ok){ready=true;break}}catch{}await sleep(100)}assert(ready,'server not ready');let job=null;for(let i=0;i<240;i++){const r=await fetch(`http://127.0.0.1:${p}/api/jobs/${jobId}`);if(r.ok){job=await r.json();if(['succeeded','failed'].includes(job.status))break}await sleep(100)}assert(job?.status==='succeeded',`recovered build did not succeed: ${JSON.stringify(job)}`);assert(job.recovered===true,'recovered marker missing');const stored=JSON.parse(await readFile(jobFile,'utf8'));const row=stored.jobs.find(x=>x.id===jobId);assert(row?.status==='succeeded'&&row?.recovered===true,'durable terminal state missing');console.log('P1-01 PASS: queued job recovered after server restart and terminal state persisted.');}
+          finally{child.kill('SIGTERM');await rm(tmp,{recursive:true,force:true})}
+          EOF
+          node scripts/p1-01-background-jobs-smoke-v3.mjs
+      - name: Commit P1-01
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/p1-01-durable-jobs.yml
+          git add scripts/studio-v3.mjs scripts/p1-01-background-jobs-smoke-v3.mjs
+          git commit -m "feat(p1-01): persist and recover background jobs"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
