@@ -2,6 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { stripAssetsPrefix } from './lib-v3-production.mjs';
 
+// Contract: repeated dots inside a filename are legal; only whole '.'/'..'
+// path segments, absolute paths and drive-qualified paths are traversal risks.
 const source=await readFile(new URL('./studio-v3.mjs',import.meta.url),'utf8');
 const match=source.match(/function safeAssetRelative\(input=''\) \{[\s\S]*?\n\}/);
 if(!match)throw new Error('未找到 safeAssetRelative 实现');
