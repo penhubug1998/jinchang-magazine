@@ -1,0 +1,24 @@
+name: P1 implementation inspection
+on:
+  push:
+    branches: [fix/ci-tts-baseline-20260906]
+    paths: [.github/workflows/p1-inspect.yml]
+  workflow_dispatch:
+jobs:
+  inspect:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: fix/ci-tts-baseline-20260906}
+      - name: Inspect remaining P1 surfaces
+        run: |
+          echo '=== BACKGROUND JOB CALLS ==='
+          grep -n "enqueueBackgroundJob\|backgroundJobResponse\|api/jobs" scripts/studio-v3.mjs || true
+          echo '=== IMPORT DOCX / MEDIA ==='
+          grep -n -E "docx|word/media|relationship|rels|image|drawing|blip|parseImportedBuffer" scripts/lib-v3-import.mjs | head -120 || true
+          echo '=== TEMPLATE SURFACES ==='
+          grep -Rni -E "template|模板|layout-library|design-library" scripts src/studio | head -160 || true
+          echo '=== PUBLICATION SURFACES ==='
+          grep -Rni -E "publication|发布向导|wizard|release|archive|Print PDF|Web Reader" src/studio scripts | head -180 || true
+          echo '=== READER ACCESSIBILITY / NETWORK ==='
+          grep -Rni -E "fontScale|font-size|navigator.connection|saveData|effectiveType|lazy|loading=|preload|offline|serviceWorker" src/reader | head -180 || true
