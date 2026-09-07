@@ -12,7 +12,7 @@ for(const token of ['loadPublicationWorkflow','renderPublicationWizard','runPubl
 assert(server.includes("seg[4]==='workflow'")&&server.includes('assertPublicationWorkflowReleaseReady'),'server workflow endpoint/guard missing');
 assert(pkg.scripts?.['test:p1-07']==='node scripts/p1-07-publish-wizard-smoke-v3.mjs','package script missing');
 
-const port=5400+Math.floor(Math.random()*300),child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port),'--acceptance-only'],{stdio:['ignore','pipe','pipe']});
+const port=5400+Math.floor(Math.random()*300),child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{stdio:['ignore','pipe','pipe']});
 let serverOutput='';child.stdout.on('data',d=>serverOutput+=String(d));child.stderr.on('data',d=>serverOutput+=String(d));
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function waitJson(url,timeout=12000,{failOnHttp=false}={}){const t=Date.now();let last;while(Date.now()-t<timeout){try{const r=await fetch(url);if(r.ok)return await r.json();if(failOnHttp){const text=await r.text();throw new Error(`${r.status} ${r.statusText}: ${text.slice(0,1000)}`)}}catch(e){last=e;if(failOnHttp&&!/fetch failed|ECONNREFUSED/i.test(String(e?.message||e)))throw e}await sleep(80)}throw last||new Error(`timeout ${url}; server=${serverOutput.slice(-2000)}`)}
