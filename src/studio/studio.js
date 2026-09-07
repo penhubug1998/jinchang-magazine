@@ -252,7 +252,7 @@ function setQuickFormatCollapsed(collapsed,{remember=true}={}) {
 function setWorkspaceSplit(percent,{remember=true,preset='custom'}={}) {
   const value=Math.max(20,Math.min(70,Math.round(Number(percent)||50)));
   state.workspaceSplit=value; state.workspaceLayout=preset;
-  document.documentElement.style.setProperty('--studio-editor-share',`${value}%`);
+  document.documentElement.style.setProperty('--studio-editor-share',`${value}%`);document.documentElement.style.setProperty('--studio-editor-fr',`${value}fr`);document.documentElement.style.setProperty('--studio-preview-fr',`${100-value}fr`);
   const grid=$('#visualEditor'); grid?.classList.remove('layout-preview-max');
   const label=$('#workspaceSplitLabel'); if(label)label.textContent=`${value}% / ${100-value}%`;
   document.querySelectorAll('#workspaceLayoutToolbar [data-layout]').forEach(b=>b.classList.toggle('active',b.dataset.layout===preset || (preset==='custom'&&b.dataset.layout==='balanced'&&value===50))); const view=$('#workspaceViewSelect');if(view&&['edit','balanced','preview'].includes(preset))view.value=preset;
