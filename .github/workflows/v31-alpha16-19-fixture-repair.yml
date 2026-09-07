@@ -40,7 +40,9 @@ jobs:
             const moduleOld="const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =').replace(/\\nexport const DESIGN_PRESET_IDS[^;]+;\\s*$/s,'\\n'),identityInline=identityJs.replaceAll('export function ','function '),busInline=busJs.replaceAll('export function ','function '),studioInline=studioJs.replace(\"import { DESIGN_PRESETS } from './design-presets.js';\",presetInline).replace(\"import { ensureIssueIdentity, ensureBlockIdentity, regenerateBlockIdentity, createStableId } from './core/identity.js';\",identityInline).replace(\"import { createCommandBus } from './core/command-bus.js';\",busInline),safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
             const moduleNew="const presetUrl='data:text/javascript;base64,'+Buffer.from(presetJs,'utf8').toString('base64'),identityUrl='data:text/javascript;base64,'+Buffer.from(identityJs,'utf8').toString('base64'),busUrl='data:text/javascript;base64,'+Buffer.from(busJs,'utf8').toString('base64'),studioInline=studioJs.replace(/from\\s*['\"]\\.\\/design-presets\\.js(?:\\?[^'\"]*)?['\"]/,`from '${presetUrl}'`).replace(/from\\s*['\"]\\.\\/core\\/identity\\.js(?:\\?[^'\"]*)?['\"]/,`from '${identityUrl}'`).replace(/from\\s*['\"]\\.\\/core\\/command-bus\\.js(?:\\?[^'\"]*)?['\"]/,`from '${busUrl}'`),safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');";
             if(!src.includes(moduleOld))throw new Error('alpha19 module contract drifted');
-            src=src.replace(moduleOld,moduleNew);fs.writeFileSync(file,src);
+            src=src.replace(moduleOld,moduleNew);
+            src=src.replace("window.dispatchEvent(new MessageEvent('message',{data:{source:'v3-reader',issueId:'001',type:'page-ack',pageIndex:13,requestId:req},source:f.contentWindow}));","window.dispatchEvent(new MessageEvent('message',{data:{source:'v3-reader',issueId:'001',type:'page-ack',pageIndex:13,renderedPageIndex:13,pageId:pending1.pageId,requestId:req},source:f.contentWindow}));");
+            fs.writeFileSync(file,src);
           }
           {
             const file='scripts/v31-alpha16-browser-v3.mjs';let src=fs.readFileSync(file,'utf8');
