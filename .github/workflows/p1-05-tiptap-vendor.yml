@@ -25,11 +25,19 @@ jobs:
           grep -q 'TIPTAP_VENDOR_READY' src/reader/vendor/tiptap-runtime.js
           test $(wc -c < src/reader/vendor/tiptap-runtime.js) -gt 100000
           git diff --check -- . ':(exclude)src/reader/vendor/tiptap-runtime.js'
-      - name: Verify rich-text contracts
+      - name: Verify current rich-text contracts
         run: |
-          node scripts/richtext-engine-smoke-v3.mjs
-          node scripts/richtext-hardening-smoke-v3.mjs
-          node scripts/richtext-tiptap-smoke-v3.mjs
+          npm run test:v31-alpha22
+          npm run test:v31-alpha22-1
+          npm run test:v31-alpha23
+          node - <<'NODE'
+          import {getRichTextRuntimeStatus,loadTiptapRuntime,legacyTextToRichText,richTextPlainText} from './src/reader/rich-text.js';
+          const runtime=await loadTiptapRuntime();
+          if(runtime.source!=='self-hosted')throw new Error('Tiptap must be self-hosted');
+          if(getRichTextRuntimeStatus().mode!=='tiptap')throw new Error('real Tiptap runtime did not activate');
+          if(richTextPlainText(legacyTextToRichText('确定性富文本'))!=='确定性富文本')throw new Error('rich-text model regression');
+          console.log('P1-05 real runtime PASS');
+          NODE
       - name: Commit locked vendor artifact
         run: |
           git config user.name "github-actions[bot]"
