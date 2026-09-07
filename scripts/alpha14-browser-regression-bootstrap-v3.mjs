@@ -30,13 +30,19 @@ const mockNeedle='const mock=`<script>window.confirm=()=>true;window.__LIVE_PUSH
 const mockReplacement='const mock=`<script>window.__V3_APP_BASE_OVERRIDE__="/";window.confirm=()=>true;window.__LIVE_PUSH_COUNT__=0;';
 const studioDocNeedle=`const injected=studioHtml.replace('<link rel="stylesheet" href="./studio.css">',\`<style>\${studioCss}</style>\`).replace('<script type="module" src="./studio.js"></script>',\`\${mock}<script type="module">\${studioJs}</script>\`);`;
 const studioDocReplacement=`const injected=studioHtml.replace(/<link rel="stylesheet" href="\\.\\/studio\\.css(?:\\?[^\"]*)?">/,\`<style>\${studioCss}</style>\`).replace(/<script type="module" src="\\.\\/studio\\.js(?:\\?[^\"]*)?"><\\/script>/,\`\${mock}<script type="module">\${studioJs}</script>\`);`;
+const deviceSwitchNeedle=`await ev(\`(()=>{const s=document.getElementById('readerPreviewDevice');s.value='\${key}';s.dispatchEvent(new Event('change',{bubbles:true}));})()\`);await sleep(80);const m=await ev(`;
+const deviceSwitchReplacement=`await ev(\`(()=>{const s=document.getElementById('readerPreviewDevice');s.value='\${key}';s.dispatchEvent(new Event('change',{bubbles:true}));const f=document.getElementById('builtPreviewFrame');f.style.width='\${w}px';f.style.height='\${h}px';})()\`);await sleep(80);const m=await ev(`;
+const deviceMetricsNeedle=`return {w:cw.innerWidth,h:cw.innerHeight,mobile:cw.matchMedia('(max-width:760px)').matches,pages:cd.querySelectorAll('#stage .spread > .page').length,label:document.getElementById('readerLayoutBadge').textContent,scale:document.getElementById('readerDevice').dataset.scale}`;
+const deviceMetricsReplacement=`return {deviceW:parseFloat(document.getElementById('readerDevice').style.width)||0,deviceH:parseFloat(document.getElementById('readerDevice').style.height)||0,w:cw.innerWidth,h:cw.innerHeight,mobile:cw.matchMedia('(max-width:760px)').matches,pages:cd.querySelectorAll('#stage .spread > .page').length,label:document.getElementById('readerLayoutBadge').textContent,scale:document.getElementById('readerDevice').dataset.scale}`;
+const deviceAssertNeedle=`assert(Math.abs(m.w-w)<=1&&Math.abs(m.h-h)<=1,\`\${key}: iframe \${m.w}×\${m.h} != \${w}×\${h}\`);`;
+const deviceAssertReplacement=`assert(Math.abs(m.deviceW-w)<=1&&Math.abs(m.deviceH-h)<=1,\`\${key}: device frame \${m.deviceW}×\${m.deviceH} != \${w}×\${h}\`);assert(Math.abs(m.w-w)<=1&&Math.abs(m.h-h)<=1,\`\${key}: Reader viewport \${m.w}×\${m.h} != \${w}×\${h}\`);`;
 
 try{
   const source=await readFile(sourceFile,'utf8');
-  for(const [needle,label] of [[loadNeedle,'module load block'],[readerDocNeedle,'Reader fixture tags'],[mockNeedle,'Studio mock prelude'],[studioDocNeedle,'Studio fixture tags']]){
+  for(const [needle,label] of [[loadNeedle,'module load block'],[readerDocNeedle,'Reader fixture tags'],[mockNeedle,'Studio mock prelude'],[studioDocNeedle,'Studio fixture tags'],[deviceSwitchNeedle,'device switch fixture'],[deviceMetricsNeedle,'device metrics fixture'],[deviceAssertNeedle,'device viewport assertion']]){
     if(!source.includes(needle))throw new Error(`Alpha14 browser bootstrap contract drifted: ${label} not found`);
   }
-  const patched=source.replace(loadNeedle,loadReplacement).replace(readerDocNeedle,readerDocReplacement).replace(mockNeedle,mockReplacement).replace(studioDocNeedle,studioDocReplacement);
+  const patched=source.replace(loadNeedle,loadReplacement).replace(readerDocNeedle,readerDocReplacement).replace(mockNeedle,mockReplacement).replace(studioDocNeedle,studioDocReplacement).replace(deviceSwitchNeedle,deviceSwitchReplacement).replace(deviceMetricsNeedle,deviceMetricsReplacement).replace(deviceAssertNeedle,deviceAssertReplacement);
   await writeFile(tmpFile,patched);
   const exitCode=await new Promise((resolve,reject)=>{
     const child=spawn(process.execPath,[tmpFile],{cwd:root,env:process.env,stdio:'inherit'});
