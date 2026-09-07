@@ -18,6 +18,8 @@ const runtimeHookNeedle = `await Promise.all([cdp.send('Page.enable'),cdp.send('
 const runtimeHookReplacement = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);const runtimeErrors=[];cdp.on('Runtime.exceptionThrown',p=>runtimeErrors.push(p.exceptionDetails?.exception?.description||p.exceptionDetails?.text||'runtime exception'));`;
 const readyNeedle = `const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'Studio did not become ready');`;
 const readyReplacement = `const studioDiagnostics=studioReady?null:await evaluate(\`(()=>({ready:window.__V3_STUDIO_READY__===true,body:document.body?.innerText?.slice(0,500)||'',scripts:[...document.scripts].map(s=>({type:s.type,src:s.src||'',text:(s.textContent||'').slice(0,120)})),runtimeErrors:${'${JSON.stringify(runtimeErrors)}'}}))()\`).catch(error=>({diagnosticError:String(error),runtimeErrors}));const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,\`Studio did not become ready: ${'${JSON.stringify(studioDiagnostics)}'}\`);`;
+const saveMockNeedle = `if(p==='/api/issues/003'&&opts.method==='PUT')return body({issue:JSON.parse(opts.body),snapshot:{id:'test'}});`;
+const saveMockReplacement = `if(p==='/api/issues/003'&&opts.method==='PUT'){const payload=JSON.parse(opts.body);return body({issue:structuredClone(payload.issue),source:{fingerprint:payload.sourceFingerprint||''},snapshot:{id:'test'}});}`;
 const auditStartNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<50;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#auditFindings .finding').length===3\"),`;
 const auditStartReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.getElementById('workspaceAuditRun').click()\");for(let i=0;i<80;i++){if(await evaluate(\"window.__V3_STUDIO__.state.audit && document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\"),`;
 const auditFirstLocateNeedle = `document.querySelector('#auditFindings .finding:nth-child(1) button')?.click()`;
@@ -35,6 +37,7 @@ try {
     [scriptNeedle, 'Studio script fixture replacement'],
     [runtimeHookNeedle, 'Runtime hook'],
     [readyNeedle, 'Studio ready assertion'],
+    [saveMockNeedle, 'wrapped Studio save mock'],
     [auditStartNeedle, 'workspace audit start flow'],
     [auditFirstLocateNeedle, 'workspace audit first locator'],
     [auditSecondNeedle, 'workspace audit second locator'],
@@ -48,6 +51,7 @@ try {
     .replace(scriptNeedle, scriptReplacement)
     .replace(runtimeHookNeedle, runtimeHookReplacement)
     .replace(readyNeedle, readyReplacement)
+    .replace(saveMockNeedle, saveMockReplacement)
     .replace(auditStartNeedle, auditStartReplacement)
     .replace(auditFirstLocateNeedle, auditFirstLocateReplacement)
     .replace(auditSecondNeedle, auditSecondReplacement)
