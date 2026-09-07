@@ -39,6 +39,7 @@ jobs:
             src=src.replace(readerStart," const richUrl='data:text/javascript;base64,'+Buffer.from(richTextJs,'utf8').toString('base64');const layoutModule=layoutEngineJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`);const layoutUrl='data:text/javascript;base64,'+Buffer.from(layoutModule,'utf8').toString('base64');const readerModule=readerJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`).replace(/from\\s*['\"]\\.\\/layout-engine\\.js(?:\\?[^'\"]*)?['\"]/,`from '${layoutUrl}'`);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;");
             src=src.replace(/readerHtml\.replace\('<link rel="stylesheet" href="\.\/reader\.css">',`<style>\$\{readerCss\}<\/style>`\)\.replace\('<script type="module" src="\.\/reader\.js"><\/script>',`\$\{readerBoot\}<script>\$\{readerJs\}<\/script>`\)/g,"readerHtml.replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/,`<style>${readerCss}</style>`).replace(/<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${readerBoot}<script type=\"module\">${readerModule}</script>`)");
           }
+          src=src.replace("button:document.getElementById('enterWorkspaceBtn')?.textContent","button:document.getElementById('managerWorkspaceEnter')?.textContent").replace("manager.button.includes('沉浸工作区')","manager.button.includes('进入工作区')");
           fs.writeFileSync(file,src);
           NODE
           git diff --check
