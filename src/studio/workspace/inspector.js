@@ -108,7 +108,9 @@ export function createSourceConflictFetchGuard(fetchImpl,{storage=null}={}) {
 export function installSourceConflictFetchGuard(scope=globalThis) {
   if(!scope?.fetch||scope.__V3_SOURCE_CONFLICT_GUARD__)return false;
   const original=scope.fetch.bind(scope);
-  const guarded=createSourceConflictFetchGuard(original,{storage:scope.sessionStorage||null});
+  let storage=null;
+  try { storage=scope.sessionStorage||null; } catch {}
+  const guarded=createSourceConflictFetchGuard(original,{storage});
   scope.fetch=guarded;
   scope.__V3_SOURCE_CONFLICT_GUARD__=guarded;
   return true;
