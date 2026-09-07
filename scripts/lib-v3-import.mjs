@@ -7,6 +7,7 @@ const MAX_IMPORT_BYTES = 12 * 1024 * 1024;
 const MAX_IMPORT_TEXT = 400000;
 const MAX_TITLE = 120;
 const MAX_BLOCKS = 80;
+const MAX_IMPORT_DOCUMENT_BLOCKS = 500;
 const CN_NUM = {一:1,二:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10};
 
 function decodeXml(s='') {
@@ -177,7 +178,8 @@ function deriveTitle(blocks,filename='') {
   const first=blocks.find(b=>b.text)?.text||''; if(first&&first.length<=80)return first.slice(0,MAX_TITLE);
   return path.basename(filename,path.extname(filename)).slice(0,MAX_TITLE)||'导入文章';
 }
-function finalizeDocument(doc) { doc.blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink').slice(0,500);doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length; doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
+function importBlockLimitError(blockCount){const error=new Error(`导入内容包含 ${blockCount} 个内容块，超过单次导入 ${MAX_IMPORT_DOCUMENT_BLOCKS} 个上限；为避免内容丢失，本次导入已中止，请拆分稿件后重试`);error.code='IMPORT_BLOCK_LIMIT_EXCEEDED';error.statusCode=413;error.details={blockCount,limit:MAX_IMPORT_DOCUMENT_BLOCKS};return error;}
+function finalizeDocument(doc) { const blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink');if(blocks.length>MAX_IMPORT_DOCUMENT_BLOCKS)throw importBlockLimitError(blocks.length);doc.blocks=blocks;doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length; doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
 
 function parseDocxXml(xml,filename='',relationships={}) {
   const registry=createLinkRegistry(); const paras=[]; const re=/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g; let m;
