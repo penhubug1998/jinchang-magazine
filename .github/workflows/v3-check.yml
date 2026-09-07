@@ -25,6 +25,8 @@ jobs:
         run: node scripts/import-boundary-smoke-v3.mjs
       - name: P0 source conflict retry safety
         run: node scripts/source-conflict-client-smoke-v3.mjs
+      - name: P0 formal auth fail-closed
+        run: node scripts/studio-formal-auth-smoke-v3.mjs
       - run: npm run verify:v31
       - name: Verify complete repository media
         run: npm run media:check -- --strict
