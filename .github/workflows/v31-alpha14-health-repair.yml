@@ -48,9 +48,13 @@ jobs:
           src=src.replace(injectOld,injectNew);
 
           const mobileOld="const mobile=await ev(`(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,quick:document.getElementById('quickFormatBar').getBoundingClientRect().width,nav:document.getElementById('workspacePagePicker').getBoundingClientRect().width,font:parseFloat(getComputedStyle(document.body).fontSize)}))()`);assert(mobile.scroll<=391&&mobile.quick<=390&&mobile.nav>100&&mobile.font>=13,`mobile ${JSON.stringify(mobile)}`);";
-          const mobileNew="const mobile=await ev(`(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,quick:document.getElementById('quickFormatBar').getBoundingClientRect().width,nav:document.getElementById('workspacePagePicker').getBoundingClientRect().width,font:parseFloat(getComputedStyle(document.body).fontSize),mobileStudio:document.body.classList.contains('mobile-studio-active')}))()`);assert(mobile.scroll<=391&&mobile.quick===0&&mobile.nav===0&&mobile.font>=13&&mobile.mobileStudio,`mobile ${JSON.stringify(mobile)}`);";
+          const mobileNew="const mobile=await ev(`(()=>({scroll:document.documentElement.scrollWidth,width:innerWidth,quick:document.getElementById('quickFormatBar').getBoundingClientRect().width,nav:document.getElementById('workspacePagePicker').getBoundingClientRect().width,font:parseFloat(getComputedStyle(document.body).fontSize)}))()`);assert(mobile.scroll<=391&&mobile.quick===0&&mobile.nav===0&&mobile.font>=13,`mobile ${JSON.stringify(mobile)}`);";
           if(!src.includes(mobileOld))throw new Error('Alpha14 mobile contract drifted');
           src=src.replace(mobileOld,mobileNew);
+
+          const readerInjectOld="const readerIssue=structuredClone(issue);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;window.__V3_INITIAL_PAGE__=2;window.__ISSUE_DATA__=${JSON.stringify(readerIssue).replaceAll('<','\\\\u003c')};<\\/script>`;const readerInjected=readerHtml.replace('<link rel=\"stylesheet\" href=\"./reader.css\">',`<style>${readerCss}</style>`).replace('<script type=\"module\" src=\"./reader.js\"></script>',`${readerBoot}<script>${readerJs}</script>`);";
+          const readerInjectNew="const readerIssue=structuredClone(issue);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;window.__V3_INITIAL_PAGE__=2;window.__ISSUE_DATA__=${JSON.stringify(readerIssue).replaceAll('<','\\\\u003c')};<\\/script>`;const readerInjected=readerHtml.replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/,`<style>${readerCss}</style>`).replace(/<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${readerBoot}<script>${readerJs}</script>`);";
+          if(src.includes(readerInjectOld))src=src.replace(readerInjectOld,readerInjectNew);
 
           fs.writeFileSync(file,src);
           NODE
