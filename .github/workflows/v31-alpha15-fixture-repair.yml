@@ -1,0 +1,57 @@
+name: V31 Alpha15 fixture repair
+
+on:
+  push:
+    branches: [fix/ci-tts-baseline-20260906]
+    paths: [.github/workflows/v31-alpha15-fixture-repair.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Patch Alpha15 current contracts
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/v31-alpha15-browser-v3.mjs';
+          let src=fs.readFileSync(file,'utf8');
+          src=src.replace(/ const health=await waitJson\(`http:\/\/127\.0\.0\.1:\$\{port\}\/api\/health`\);assert\(\[[^;]+?\.includes\(health\.version\),`health \$\{JSON\.stringify\(health\)\}`\);/," const expectedVersion=JSON.parse(await readFile('package.json','utf8')).version;const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===expectedVersion,`health ${JSON.stringify(health)} expected ${expectedVersion}`);");
+          const loadOld=" const [html,css,studioJs,presetJs,readerHtml,readerCss,readerJs]=await Promise.all([readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('src/studio/studio.js','utf8'),readFile('src/studio/design-presets.js','utf8'),readFile('src/reader/index.html','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8')]);";
+          const loadNew=" const [html,css,studioJs,presetJs,readerHtml,readerCss,readerJs,richTextJs,layoutEngineJs]=await Promise.all([readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('src/studio/studio.js','utf8'),readFile('src/studio/design-presets.js','utf8'),readFile('src/reader/index.html','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8'),readFile('src/reader/rich-text.js','utf8'),readFile('src/reader/layout-engine.js','utf8')]);";
+          if(!src.includes(loadOld))throw new Error('Alpha15 dependency load drift');src=src.replace(loadOld,loadNew);
+          const moduleRe=/ const presetInline=presetJs\.replace\([\s\S]*?const safe=JSON\.stringify\(issue\)\.replaceAll\('<','\\\\u003c'\);/;
+          if(!moduleRe.test(src))throw new Error('Alpha15 Studio module drift');
+          src=src.replace(moduleRe," const presetUrl='data:text/javascript;base64,'+Buffer.from(presetJs,'utf8').toString('base64');const studioInline=studioJs.replace(/from\\s*['\"]\\.\\/design-presets\\.js(?:\\?[^'\"]*)?['\"]/,`from '${presetUrl}'`);if(/from\\s*['\"]\\.\\/design-presets\\.js/.test(studioInline))throw new Error('Alpha15 Studio module rewrite failed');const safe=JSON.stringify(issue).replaceAll('<','\\\\u003c');");
+          src=src.replace(/html\.replace\('<link rel="stylesheet" href="\.\/studio\.css">',`<style>\$\{css\}<\/style>`\)\.replace\('<script type="module" src="\.\/studio\.js"><\/script>',/g,"html.replace(/<link rel=\"stylesheet\" href=\"\\.\\/studio\\.css(?:\\?[^\"]*)?\">/,`<style>${css}</style>`).replace(/<script type=\"module\" src=\"\\.\\/studio\\.js(?:\\?[^\"]*)?\"><\\/script>/,");
+          const readerStart=' const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;';
+          if(src.includes(readerStart)){
+            src=src.replace(readerStart," const richUrl='data:text/javascript;base64,'+Buffer.from(richTextJs,'utf8').toString('base64');const layoutModule=layoutEngineJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`);const layoutUrl='data:text/javascript;base64,'+Buffer.from(layoutModule,'utf8').toString('base64');const readerModule=readerJs.replace(/from\\s*['\"]\\.\\/rich-text\\.js(?:\\?[^'\"]*)?['\"]/,`from '${richUrl}'`).replace(/from\\s*['\"]\\.\\/layout-engine\\.js(?:\\?[^'\"]*)?['\"]/,`from '${layoutUrl}'`);const readerBoot=`<script>window.__V3_STUDIO_EMBED__=true;");
+            src=src.replace(/readerHtml\.replace\('<link rel="stylesheet" href="\.\/reader\.css">',`<style>\$\{readerCss\}<\/style>`\)\.replace\('<script type="module" src="\.\/reader\.js"><\/script>',`\$\{readerBoot\}<script>\$\{readerJs\}<\/script>`\)/g,"readerHtml.replace(/<link rel=\"stylesheet\" href=\"\\.\\/reader\\.css(?:\\?[^\"]*)?\">/,`<style>${readerCss}</style>`).replace(/<script type=\"module\" src=\"\\.\\/reader\\.js(?:\\?[^\"]*)?\"><\\/script>/,`${readerBoot}<script type=\"module\">${readerModule}</script>`)");
+          }
+          fs.writeFileSync(file,src);
+          NODE
+          git diff --check
+      - name: Verify Alpha15
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          node scripts/v31-alpha15-smoke-v3.mjs
+          node scripts/v31-alpha15-browser-v3.mjs
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/v31-alpha15-fixture-repair.yml
+          git add scripts/v31-alpha15-browser-v3.mjs
+          git commit -m "test(v31): align Alpha15 browser fixture with current Studio"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
