@@ -18,6 +18,14 @@ const runtimeHookNeedle = `await Promise.all([cdp.send('Page.enable'),cdp.send('
 const runtimeHookReplacement = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);const runtimeErrors=[];cdp.on('Runtime.exceptionThrown',p=>runtimeErrors.push(p.exceptionDetails?.exception?.description||p.exceptionDetails?.text||'runtime exception'));`;
 const readyNeedle = `const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'Studio did not become ready');`;
 const readyReplacement = `const studioDiagnostics=studioReady?null:await evaluate(\`(()=>({ready:window.__V3_STUDIO_READY__===true,body:document.body?.innerText?.slice(0,500)||'',scripts:[...document.scripts].map(s=>({type:s.type,src:s.src||'',text:(s.textContent||'').slice(0,120)})),runtimeErrors:${'${JSON.stringify(runtimeErrors)}'}}))()\`).catch(error=>({diagnosticError:String(error),runtimeErrors}));const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,\`Studio did not become ready: ${'${JSON.stringify(studioDiagnostics)}'}\`);`;
+const auditStartNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<50;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#auditFindings .finding').length===3\"),`;
+const auditStartReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.getElementById('workspaceAuditRun').click()\");for(let i=0;i<80;i++){if(await evaluate(\"window.__V3_STUDIO__.state.audit && document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\"),`;
+const auditFirstLocateNeedle = `document.querySelector('#auditFindings .finding:nth-child(1) button')?.click()`;
+const auditFirstLocateReplacement = `document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(1) button')?.click()`;
+const auditSecondNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(2) button')?.click()\");`;
+const auditSecondReplacement = `await evaluate(\"document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(2) button')?.click()\");`;
+const auditThirdNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(3) button')?.click()\");`;
+const auditThirdReplacement = `await evaluate(\"document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(3) button')?.click()\");`;
 
 try {
   const source = await readFile(sourceFile, 'utf8');
@@ -26,7 +34,11 @@ try {
     [cssNeedle, 'Studio stylesheet fixture replacement'],
     [scriptNeedle, 'Studio script fixture replacement'],
     [runtimeHookNeedle, 'Runtime hook'],
-    [readyNeedle, 'Studio ready assertion']
+    [readyNeedle, 'Studio ready assertion'],
+    [auditStartNeedle, 'workspace audit start flow'],
+    [auditFirstLocateNeedle, 'workspace audit first locator'],
+    [auditSecondNeedle, 'workspace audit second locator'],
+    [auditThirdNeedle, 'workspace audit third locator']
   ]) {
     if (!source.includes(needle)) throw new Error(`Studio browser bootstrap contract drifted: ${label} not found`);
   }
@@ -35,7 +47,11 @@ try {
     .replace(cssNeedle, cssReplacement)
     .replace(scriptNeedle, scriptReplacement)
     .replace(runtimeHookNeedle, runtimeHookReplacement)
-    .replace(readyNeedle, readyReplacement);
+    .replace(readyNeedle, readyReplacement)
+    .replace(auditStartNeedle, auditStartReplacement)
+    .replace(auditFirstLocateNeedle, auditFirstLocateReplacement)
+    .replace(auditSecondNeedle, auditSecondReplacement)
+    .replace(auditThirdNeedle, auditThirdReplacement);
   await writeFile(tmpFile, patched);
   const exitCode = await new Promise((resolve, reject) => {
     const child = spawn(process.execPath, [tmpFile], {
