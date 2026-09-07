@@ -9,6 +9,7 @@ on:
       - scripts/p1-06-senior-mobile-reader-patch.py
       - scripts/mobile-reader-accessibility-smoke-v3.mjs
       - scripts/mobile-reader-accessibility-browser-v3.mjs
+      - scripts/mobile-reader-browser-resilient-v3.mjs
   workflow_dispatch:
 
 permissions:
@@ -35,7 +36,7 @@ jobs:
       - name: Build real issue 001
         run: node scripts/build-v3.mjs --issue 001
       - name: Run senior mobile Reader browser regression
-        run: node scripts/mobile-reader-accessibility-browser-v3.mjs
+        run: node scripts/mobile-reader-browser-resilient-v3.mjs
       - name: Commit verified Reader changes
         run: |
           git config user.name "github-actions[bot]"
