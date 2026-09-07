@@ -21,3 +21,22 @@ export function blockInspectorSummary(block = {}) {
     padding: Number(design.padding || 0),
   };
 }
+
+// Workspace findings live inside a modal dialog, while their targets live in
+// the editor behind it. Close the modal in the capture phase so the existing
+// locateFinding() handler can move focus to page metadata or content blocks on
+// the same click without the browser's modal focus trap keeping focus inside
+// the checks dialog.
+export function bindWorkspaceAuditLocatorBridge(root = globalThis.document) {
+  if (!root?.addEventListener || root.__v3WorkspaceAuditLocatorBridge) return false;
+  root.__v3WorkspaceAuditLocatorBridge = true;
+  root.addEventListener('click', event => {
+    const button = event.target?.closest?.('[data-workspace-audit-locate]');
+    if (!button) return;
+    const dialog = root.getElementById?.('workspaceAuditDialog');
+    if (dialog?.open) dialog.close('locate');
+  }, true);
+  return true;
+}
+
+if (typeof document !== 'undefined') bindWorkspaceAuditLocatorBridge(document);
