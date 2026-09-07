@@ -1,0 +1,116 @@
+name: Beta2 fullscreen fallback repair
+
+on:
+  push:
+    branches:
+      - fix/ci-tts-baseline-20260906
+    paths:
+      - .github/workflows/beta2-fullscreen-fallback-repair.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-and-verify:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Patch Reader fallback and compatibility fixture
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+
+          const readerFile='src/reader/reader.js';
+          let reader=fs.readFileSync(readerFile,'utf8');
+          const oldToggle=`async function toggleFullscreen() {
+  if (!isMobile()) {
+    if (!fullscreenElement()) {
+      const ok = await requestElementFullscreen(document.documentElement);
+      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");
+    } else await exitDocumentFullscreen();
+    return;
+  }
+  if (!fullscreenElement()) {
+    const ok = await requestElementFullscreen(document.documentElement);
+    if (!ok) setMobileImmersive(true);
+  } else {
+    await exitDocumentFullscreen();
+    setMobileImmersive(false);
+  }
+}`;
+          const newToggle=`async function toggleFullscreen() {
+  if (!isMobile()) {
+    if (!fullscreenElement()) {
+      const ok = await requestElementFullscreen(document.documentElement);
+      if (!ok) toast("当前浏览器不支持页面全屏或拒绝了请求");
+    } else await exitDocumentFullscreen();
+    return;
+  }
+  // CSS immersive is the no-Fullscreen mobile fallback. It must remain a true
+  // toggle: otherwise iPhone/Safari-class browsers can enter but never exit it.
+  if (state.mobileImmersive) {
+    setMobileImmersive(false);
+    return;
+  }
+  if (!fullscreenElement()) {
+    const ok = await requestElementFullscreen(document.documentElement);
+    if (!ok) setMobileImmersive(true);
+  } else {
+    await exitDocumentFullscreen();
+    setMobileImmersive(false);
+  }
+}`;
+          if(!reader.includes(oldToggle))throw new Error('Reader toggleFullscreen contract drifted');
+          reader=reader.replace(oldToggle,newToggle);
+          fs.writeFileSync(readerFile,reader);
+
+          const testFile='scripts/browser-regression-v3.mjs';
+          let test=fs.readFileSync(testFile,'utf8');
+          const oldPrelude=`const compatPrelude = compatMode ? \`<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};</script>\` : '';`;
+          const newPrelude=`const compatPrelude = compatMode ? \`<script>try{Object.defineProperty(window,'visualViewport',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'requestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document.documentElement,'webkitRequestFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'exitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'webkitExitFullscreen',{value:undefined,configurable:true})}catch{};try{Object.defineProperty(document,'fullscreenEnabled',{value:false,configurable:true})}catch{};try{Object.defineProperty(document,'webkitFullscreenEnabled',{value:false,configurable:true})}catch{};</script>\` : '';`;
+          if(!test.includes(oldPrelude))throw new Error('Beta2 compat prelude contract drifted');
+          test=test.replace(oldPrelude,newPrelude);
+
+          const oldAssert=`        await evaluate("document.getElementById('fullButton').click()");
+        await sleep(80);
+        assert(await evaluate("document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not enter immersive mode\`);
+        await evaluate("document.getElementById('fullButton').click()");
+        await sleep(40);`;
+          const newAssert=`        await evaluate("document.getElementById('fullButton').click()");
+        await waitForEval("document.body.classList.contains('mobile-immersive')",1200,30);
+        assert(await evaluate("document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not enter immersive mode\`);
+        await evaluate("document.getElementById('fullButton').click()");
+        await waitForEval("!document.body.classList.contains('mobile-immersive')",1200,30);
+        assert(await evaluate("!document.body.classList.contains('mobile-immersive')"), \`${'${viewport.name}'}: Safari-like no-Fullscreen fallback did not exit immersive mode\`);`;
+          if(!test.includes(oldAssert))throw new Error('Beta2 immersive assertion contract drifted');
+          test=test.replace(oldAssert,newAssert);
+          fs.writeFileSync(testFile,test);
+          NODE
+          git diff --check
+      - name: Verify Beta2 fullscreen fallback
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          test -x "$CHROMIUM"
+          "$V3_REAL_CHROME" --version
+          command -v xvfb-run
+          npm run build:v3
+          node scripts/beta2-smoke-v3.mjs
+          node scripts/browser-regression-v3.mjs --issue 002 --compat
+      - name: Commit verified repair and remove one-shot workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/beta2-fullscreen-fallback-repair.yml
+          git add src/reader/reader.js scripts/browser-regression-v3.mjs
+          git commit -m "fix(reader): restore mobile fullscreen fallback toggle"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
