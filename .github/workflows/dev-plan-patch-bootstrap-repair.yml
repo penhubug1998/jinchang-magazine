@@ -1,0 +1,49 @@
+name: Dev plan patch bootstrap repair
+on:
+  push:
+    branches: [fix/ci-tts-baseline-20260906]
+    paths: [.github/workflows/dev-plan-patch-bootstrap-repair.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  repair-and-run:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Repair nested template literals
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const file='scripts/dev-plan-current-patch.cjs';
+          let src=fs.readFileSync(file,'utf8');
+          const old="  assert(statuses[0]===200&&statuses[1]===409,`parallel save should serialize to one success and one conflict: ${JSON.stringify(statuses)}`);\\n";
+          const neo="  assert(statuses[0]===200&&statuses[1]===409,'parallel save should serialize to one success and one conflict: '+JSON.stringify(statuses));\\n";
+          if(!src.includes(old))throw new Error('parallel assertion contract drifted');
+          src=src.replace(old,neo);
+          fs.writeFileSync(file,src);
+          NODE
+          node --check scripts/dev-plan-current-patch.cjs
+          git diff --check
+      - name: Execute development-plan patch
+        run: |
+          npm ci
+          node scripts/dev-plan-current-patch.cjs
+          node --check scripts/studio-v3.mjs
+          node --check src/studio/studio.js
+          node scripts/plan-p0-reliability-smoke-v3.mjs
+          node scripts/source-guard-smoke-v3.mjs
+      - name: Commit verified implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/dev-plan-patch-bootstrap-repair.yml
+          git add scripts/dev-plan-current-patch.cjs scripts/plan-p0-reliability-smoke-v3.mjs scripts/source-guard-smoke-v3.mjs scripts/studio-v3.mjs src/studio/studio.js .gitignore
+          git commit -m "feat(plan): harden source saves and formal auth boundary"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
