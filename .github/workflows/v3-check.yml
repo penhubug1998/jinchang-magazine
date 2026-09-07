@@ -23,6 +23,8 @@ jobs:
           command -v xvfb-run
       - name: P0 import integrity boundary
         run: node scripts/import-boundary-smoke-v3.mjs
+      - name: P0 source conflict retry safety
+        run: node scripts/source-conflict-client-smoke-v3.mjs
       - run: npm run verify:v31
       - name: Verify complete repository media
         run: npm run media:check -- --strict
