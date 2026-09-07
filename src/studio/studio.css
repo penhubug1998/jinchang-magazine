@@ -776,3 +776,15 @@ body.workspace-mode .workspace-audit-panel{display:block}
 
 /* 页面背景素材：资源库和设计器共享同一条发布路径。 */
 .design-page-background{grid-column:1/-1;display:grid;gap:5px;padding:10px 11px;border:1px dashed #cdb99f;border-radius:11px;background:#fffaf2}.design-page-background>div{display:flex;justify-content:space-between;gap:9px;align-items:center}.design-page-background b{font-size:10px}.design-page-background span{font-size:9px;color:#8e7868;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.design-page-background p{margin:0;color:#8d796b;font-size:9px;line-height:1.5}.design-page-background button{justify-self:start;border:1px solid #dfcfc0;border-radius:8px;background:#fff;padding:5px 7px;color:#8f372f;font-size:9px}
+/* P1-02 studio flow */
+.studio-flow-nav{display:flex;align-items:center;gap:4px;padding:4px;border-radius:14px;background:rgba(255,255,255,.58)}
+.studio-flow-nav>button{min-height:40px;padding:0 12px;white-space:nowrap}
+.studio-flow-nav .studio-check-chip{display:inline-flex;align-items:center;gap:5px}
+.studio-flow-nav .studio-check-chip b{font-size:10px;font-weight:600;opacity:.72}
+.new-issue-dialog{width:min(680px,calc(100vw - 24px))}
+.new-start-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;border:0;padding:0;margin:14px 0}
+.new-start-modes legend{font-weight:700;margin-bottom:8px}
+.new-start-card{display:flex!important;gap:9px;align-items:flex-start;padding:14px!important;border:1px solid rgba(95,72,57,.18);border-radius:14px;background:rgba(255,255,255,.55);cursor:pointer}
+.new-start-card input{margin-top:3px}.new-start-card span{display:grid;gap:5px}.new-start-card b{font-size:14px}.new-start-card small{line-height:1.5;color:var(--muted,#786c63)}
+.new-import-hint{display:grid;gap:4px;padding:12px 14px;border-radius:12px;background:rgba(49,95,134,.08);margin:10px 0}.new-import-hint span{font-size:12px;color:var(--muted,#786c63)}
+@media(max-width:760px){.studio-flow-nav{overflow-x:auto;max-width:100%}.studio-flow-nav>button{min-width:max-content}.new-start-modes{grid-template-columns:1fr}}

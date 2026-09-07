@@ -262,7 +262,10 @@ function renderPage(page, index = -1) {
   if (!page) return `<article class="page blank" data-page-index="-1"></article>`;
   const type = page.type || "article";
   const legacyBody = (page.body || []).map((text) => `<p class="body">${escapeHtml(text)}</p>`).join("");
-  const body = legacyBody + (page.blocks || []).map((block,bi)=>renderBlock(block,{pageIndex:index,blockIndex:bi,blockId:block?.id})).join("");
+  const chromeValue=value=>escapeHtml(String(value||'').replaceAll('{page}',String(Math.max(1,index+1))).replaceAll('{total}',String(state.issue?.pages?.length||1)));
+  const chromeHeader=page.chrome?.header?`<div class="magazine-page-chrome magazine-page-header">${chromeValue(page.chrome.header)}</div>`:'';
+  const chromeFooter=page.chrome?.footer?`<div class="magazine-page-chrome magazine-page-footer">${chromeValue(page.chrome.footer)}</div>`:'';
+  const body = chromeHeader + legacyBody + (page.blocks || []).map((block,bi)=>renderBlock(block,{pageIndex:index,blockIndex:bi,blockId:block?.id})).join("") + chromeFooter;
   const publishing = normalizePagePublishing(page);
   const contentStyle = pagePublishingStyle(page);
   const current = index === state.pageIndex;

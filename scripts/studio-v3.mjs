@@ -16,6 +16,7 @@ import { PUBLICATION_OUTPUT_ROOT, buildPublicationStatus, readPublicationEvidenc
 import { buildArchiveHtml } from './lib-v3-catalog.mjs';
 import { verifyIntegrity } from './lib-v3-deploy.mjs';
 import { normalizeRichText, renderRichText } from '../src/reader/rich-text.js';
+import { WHOLE_MAGAZINE_TEMPLATES, applyWholeMagazineTemplate } from '../src/studio/whole-magazine-templates.js';
 import { buildPublishingPlan, flowFragmentFor, normalizePagePublishing, normalizeBlockPublishing } from '../src/reader/layout-engine.js';
 
 const args = parseArgs();
@@ -990,6 +991,9 @@ async function sourceExport(id,issue){
 }
 
 
+function readBrandField(issue,field){return String(field).split('.').reduce((value,key)=>value==null?undefined:value[key],issue);}
+function assertBrandLock(fresh,next){const lock=fresh?.brandLock;if(!lock?.enabled)return;if(next?.brandLock?.enabled!==true)throw Object.assign(new Error('当前整刊模板启用了品牌锁定；不能通过普通保存关闭锁定。'),{code:'BRAND_LOCKED'});for(const field of lock.lockedFields||[]){if(JSON.stringify(readBrandField(fresh,field))!==JSON.stringify(readBrandField(next,field)))throw Object.assign(new Error(`品牌锁定项不可修改：${field}`),{code:'BRAND_LOCKED',field});}}
+
 const server=http.createServer(async(req,res)=>{try{
   const u=new URL(req.url,`http://${req.headers.host||`${host}:${port}`}`); const seg=u.pathname.split('/').filter(Boolean);
   if(seg[0]==='api'&&['rc','rc1'].includes(seg[1])&&seg[2]==='acceptance'){
@@ -1108,19 +1112,26 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
   if (u.pathname==='/api/issues'&&req.method==='GET') return send(res,200,await issueSummaries());
+  if (u.pathname==='/api/whole-magazine-templates'&&req.method==='GET') return send(res,200,{templates:WHOLE_MAGAZINE_TEMPLATES});
   if (u.pathname==='/api/issues'&&req.method==='POST') {
     const data=await body(req);
     if(String(data.subtitle||'').length>120)return send(res,400,{error:'本期主题不能超过 120 个字符',code:'VALIDATION_ERROR'});
     if(String(data.label||'').length>40)return send(res,400,{error:'期名不能超过 40 个字符',code:'VALIDATION_ERROR'});
+    const allowedStartModes=new Set(['clone','import','template','blank']);
+    const startMode=allowedStartModes.has(String(data.startMode||''))?String(data.startMode):(data.cloneFrom?'clone':data.templateId?'template':'blank');
+    const templateId=String(data.templateId||'').trim();
+    if(startMode==='template'&&!WHOLE_MAGAZINE_TEMPLATES.some(x=>x.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
     let cloneSource=null;
-    if(data.cloneFrom){const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
+    if(startMode==='clone'){if(!data.cloneFrom)return send(res,400,{error:'复制上期需要选择来源期刊',code:'VALIDATION_ERROR'});const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;
+    } else if(startMode==='template') {
+      const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const templated=applyWholeMagazineTemplate(templateId,target); validateIssue(templated,created.id); await atomicWriteText(targetFile,`${JSON.stringify(templated,null,2)}\n`); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=templated.pages.length; created.wholeTemplate=templated.wholeTemplate;
     }
-    const createdIssue=await readJson(path.join(root,'issues',created.id,'issue.json'));const source=await writeSourceReceipt(created.id,createdIssue,{reason:'issue-created'});
-    return send(res,201,{issue:created,output:r.output,source});
+    const createdIssue=await readJson(path.join(root,'issues',created.id,'issue.json'));const source=await writeSourceReceipt(created.id,createdIssue,{reason:`issue-created:${startMode}`});
+    return send(res,201,{issue:created,output:r.output,source,startMode,next:startMode==='import'?'import':startMode==='template'?'layout':'content'});
   }
   if (seg[0]==='api'&&seg[1]==='issues'&&seg[2]) {
     const id=normalizeIssueId(seg[2]); const issueFile=path.join(root,'issues',id,'issue.json'); if(!(await exists(issueFile)))return send(res,404,{error:`找不到 issues/${id}`}); const issue=await readJson(issueFile);
@@ -1135,7 +1146,7 @@ const server=http.createServer(async(req,res)=>{try{
       return send(res,200,{ok:true,preview:`/live-preview/${id}/`,pages:preview.pages.length});
     }
     if (seg[3]==='skeleton'&&req.method==='GET') { const sourceId=normalizeIssueId(u.searchParams.get('source')||''); const sourceFile=path.join(root,'issues',sourceId,'issue.json'); if(!(await exists(sourceFile)))return send(res,404,{error:`结构来源 ${sourceId} 不存在`}); const source=await readJson(sourceFile); if(source.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊栏目骨架',code:'VALIDATION_ERROR'}); return send(res,200,{source:{id:source.id,label:source.label,pageCount:source.pages?.length||0},pages:structureSkeleton(source,issue)}); }
-    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const protectedEnvelope=Boolean(payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue));const expectedFingerprint=String(payload?.sourceFingerprint||'');if(protectedEnvelope&&!expectedFingerprint)return send(res,428,{error:'保存请求缺少编辑基线指纹，请重新打开本期后再保存。',code:'SOURCE_FINGERPRINT_REQUIRED'});return withIssueWriteLock(id,async()=>{const freshIssue=await readJson(issueFile);const currentFingerprint=issueSourceFingerprint(freshIssue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,freshIssue)});try{validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}if(freshIssue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:freshIssue.publishedAt||null,source:'studio'};}const snap=await snapshotIssue(id,'studio-before-save');await atomicWriteText(issueFile,`${JSON.stringify(data,null,2)}\n`);await deleteDraftFile(id);await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap});return send(res,200,{issue:data,snapshot:snap,source});}); }
+    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const protectedEnvelope=Boolean(payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue));const expectedFingerprint=String(payload?.sourceFingerprint||'');if(protectedEnvelope&&!expectedFingerprint)return send(res,428,{error:'保存请求缺少编辑基线指纹，请重新打开本期后再保存。',code:'SOURCE_FINGERPRINT_REQUIRED'});return withIssueWriteLock(id,async()=>{const freshIssue=await readJson(issueFile);const currentFingerprint=issueSourceFingerprint(freshIssue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,freshIssue)});try{assertBrandLock(freshIssue,data);validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:e.code||'VALIDATION_ERROR',field:e.field||null})}if(freshIssue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:freshIssue.publishedAt||null,source:'studio'};}const snap=await snapshotIssue(id,'studio-before-save');await atomicWriteText(issueFile,`${JSON.stringify(data,null,2)}\n`);await deleteDraftFile(id);await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap});return send(res,200,{issue:data,snapshot:snap,source});}); }
     if (seg[3]==='review-workspace'&&req.method==='GET') return send(res,200,await readReviewWorkspace(id));
     if (seg[3]==='review-workspace'&&req.method==='PUT') {const data=await body(req);try{const clean=sanitizeReviewWorkspace(data,id);await writeReviewWorkspace(id,clean);return send(res,200,clean);}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'});}}
     if (seg[3]==='review-workspace'&&req.method==='DELETE') {await rm(reviewWorkspaceFile(id),{force:true});return send(res,200,{ok:true});}

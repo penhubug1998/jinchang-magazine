@@ -1119,7 +1119,7 @@ function generateToc() {
 }
 $('#autoToc').onclick=()=>{ if(confirm('自动目录会根据“栏目归属”和页面标题重新生成目录条目，不会删除正文页面。是否继续？'))generateToc(); };
 
-function renderCloneOptions() { const sel=$('#newCloneFrom'); if(!sel)return; const current=sel.value; sel.innerHTML='<option value="">使用标准新刊模板</option>'+state.issues.filter(x=>x.engine==='v3').map(x=>`<option value="${escText(x.id)}">复制 ${escText(x.label||x.id)} 的栏目结构 · ${x.pageCount||'?'} 页</option>`).join(''); if([...sel.options].some(o=>o.value===current))sel.value=current; }
+function renderCloneOptions() { const sel=$('#newCloneFrom'); if(!sel)return; const current=sel.value; const rows=state.issues.filter(x=>x.engine==='v3').sort((a,b)=>String(b.id).localeCompare(String(a.id),undefined,{numeric:true})); sel.innerHTML='<option value="">请选择上一期</option>'+rows.map(x=>`<option value="${escText(x.id)}">${escText(x.label||x.id)} · ${x.pageCount||'?'} 页</option>`).join(''); if([...sel.options].some(o=>o.value===current))sel.value=current; else if(rows[0])sel.value=rows[0].id; }
 
 const IMPORT_SECTION_SEMANTICS = [
   {id:'news',label:'时政新闻',pageType:'news',layoutPreset:'lead-two'},
@@ -2024,8 +2024,13 @@ for(const id of ['mediaDialog','designDialog','publicationCenterDialog']){
   });
 }
 bindClickFeedback();
-$('#newIssue').onclick = () => { $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); $('#newCloneFrom').value=''; $('#newDialog').showModal(); };
-$('#newForm').addEventListener('submit',async e => { if (e.submitter?.value === 'cancel') return; e.preventDefault(); const subtitle = $('#newSubtitle').value.trim(); if (!subtitle) return; try { const x = await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),cloneFrom:$('#newCloneFrom').value||''})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id}`); await loadIssues(x.issue.id); } catch(err) { toast(err.message,2600); } });
+function selectedNewStartMode(){return document.querySelector('input[name="newStartMode"]:checked')?.value||'clone';}
+function syncNewStartModeUi(){const mode=selectedNewStartMode();$('#newCloneField')?.classList.toggle('hidden',mode!=='clone');$('#newTemplateField')?.classList.toggle('hidden',mode!=='template');$('#newImportField')?.classList.toggle('hidden',mode!=='import');}
+function openNewIssueDialog(){ $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); const radio=document.querySelector('input[name="newStartMode"][value="clone"]');if(radio)radio.checked=true;syncNewStartModeUi();$('#newDialog').showModal(); }
+$('#newIssue').onclick = openNewIssueDialog;
+$('#studioBuildBtn')?.addEventListener('click',openNewIssueDialog);
+document.querySelectorAll('input[name="newStartMode"]').forEach(r=>r.addEventListener('change',syncNewStartModeUi));
+$('#newForm').addEventListener('submit',async e => { if (e.submitter?.value === 'cancel') return; e.preventDefault(); const subtitle = $('#newSubtitle').value.trim(); if (!subtitle) return; const startMode=selectedNewStartMode(); const cloneFrom=startMode==='clone'?($('#newCloneFrom').value||''):''; const templateId=startMode==='template'?($('#newWholeTemplate').value||'comprehensive'):''; if(startMode==='clone'&&!cloneFrom)return toast('请选择要复制的上一期',2600); try { const x = await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),startMode,cloneFrom,templateId})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id} · ${startMode==='clone'?'复制上期':startMode==='import'?'导入稿件':'整刊模板'}`); await loadIssues(x.issue.id); if(startMode==='import')openImportDialog('file'); else if(startMode==='template')setStudioEntry('design'); else setStudioEntry('content'); } catch(err) { toast(err.message,3200); } });
 document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.action-menu[open]'))if(!menu.contains(e.target))menu.removeAttribute('open');});
 document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(!mod)return;const editable=e.target.closest?.('input,textarea,select,[contenteditable="true"]');if(e.key.toLowerCase()==='s'){e.preventDefault();openSaveDiff();return;}if(editable)return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return;}if(e.key.toLowerCase()==='y'){e.preventDefault();redoHistory();}});
 window.addEventListener('visibilitychange',()=>{if(document.hidden&&state.dirty)saveDraftNow();});window.addEventListener('pagehide',()=>closePeerChannel());
