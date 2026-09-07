@@ -1,0 +1,40 @@
+name: P1-05 deterministic Tiptap vendor
+on:
+  push:
+    branches: [fix/ci-tts-baseline-20260906]
+    paths: [.github/workflows/p1-05-tiptap-vendor.yml]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  vendor-and-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ci-tts-baseline-20260906
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with: {node-version: 22}
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Build self-hosted Tiptap runtime
+        run: |
+          npm run vendor:tiptap
+          node -e "import('./src/reader/vendor/tiptap-runtime.js').then(m=>{if(!m.TIPTAP_VENDOR_READY)process.exit(2);if(m.TIPTAP_VERSION!=='3.30.2')process.exit(3);if(!m.Editor||!m.StarterKit||!m.TextStyleKit||!m.Highlight||!m.TextAlign)process.exit(4);console.log('Tiptap vendor ready',m.TIPTAP_VERSION)})"
+          grep -q 'TIPTAP_VENDOR_READY' src/reader/vendor/tiptap-runtime.js
+          test $(wc -c < src/reader/vendor/tiptap-runtime.js) -gt 100000
+          git diff --check
+      - name: Verify rich-text contracts
+        run: |
+          node scripts/richtext-engine-smoke-v3.mjs
+          node scripts/richtext-hardening-smoke-v3.mjs
+          node scripts/richtext-tiptap-smoke-v3.mjs
+      - name: Commit locked vendor artifact
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/p1-05-tiptap-vendor.yml
+          git add package-lock.json src/reader/vendor/tiptap-runtime.js
+          git commit -m "feat(p1-05): lock self-hosted Tiptap runtime"
+          git push origin HEAD:fix/ci-tts-baseline-20260906
