@@ -1,3 +1,4 @@
+import { createIssueTemplate } from '../src/studio/issue-templates.js';
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { collectReferencedAssets, exists, labelForIssue, normalizeIssueId, parseArgs, root, writeJson } from './lib-v3-production.mjs';
@@ -30,7 +31,7 @@ const sections = String(args.sections || '时政要闻,理论学习,反诈防骗
   .split(/[,，]/).map((x) => x.trim()).filter(Boolean);
 const assetSource = `issues/${id}/assets`;
 
-const pages = [
+let pages = [
   {
     type: 'cover', navTitle: '封面', title: subtitle, kicker: publisher,
     blocks: [
@@ -67,6 +68,9 @@ const pages = [
   }
 ];
 
+const template = args.template ? createIssueTemplate(String(args.template), { subtitle, publication, publisher, label }) : null;
+if (template) pages = template.pages;
+
 const issue = {
   id, label, publication, publisher, subtitle,
   engine: 'v3', status: 'draft', assetSource, theme: 'classic-red',
@@ -81,11 +85,16 @@ const issue = {
   pages
 };
 
+if (template) { issue.design = template.design; issue.features = template.features; }
+
 await mkdir(issueDir, { recursive: true });
 for (const folder of ['music','tts','video','image']) {
   const dir = path.join(issueDir, 'assets', folder);
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, '.gitkeep'), '', 'utf8');
+}
+for (const asset of template?.assets || []) {
+  await writeFile(path.join(issueDir, 'assets', asset.path), asset.content, 'utf8');
 }
 await writeJson(path.join(issueDir, 'issue.json'), issue);
 await writeJson(path.join(issueDir, 'assets.json'), { issue: id, assetSource, expected: collectReferencedAssets(issue) });
@@ -93,7 +102,7 @@ await writeFile(path.join(issueDir, 'README.md'), `# ${label} · V3 编辑区\n\
 
 console.log(`V3 新一期已创建：issues/${id}`);
 console.log(`- ${label}`);
-console.log(`- 页面：${pages.length} 页（封面 + 卷首语 + 目录 + ${sections.length} 个栏目 + 尾刊）`);
+console.log(`- 页面：${pages.length} 页${template ? ` · 整刊模板 ${args.template}` : `（封面 + 卷首语 + 目录 + ${sections.length} 个栏目 + 尾刊）`}`);
 console.log(`- 下一步：编辑 issues/${id}/issue.json，然后运行 npm run audit:v3 -- --issue ${id}`);
 console.log(`- 可视化制作中心：npm run studio:v3`);
 console.log(`- 发布前：将 status 改为 ready，再运行 npm run release:check -- --issue ${id}`);

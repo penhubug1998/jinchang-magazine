@@ -776,3 +776,35 @@ body.workspace-mode .workspace-audit-panel{display:block}
 
 /* 页面背景素材：资源库和设计器共享同一条发布路径。 */
 .design-page-background{grid-column:1/-1;display:grid;gap:5px;padding:10px 11px;border:1px dashed #cdb99f;border-radius:11px;background:#fffaf2}.design-page-background>div{display:flex;justify-content:space-between;gap:9px;align-items:center}.design-page-background b{font-size:10px}.design-page-background span{font-size:9px;color:#8e7868;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.design-page-background p{margin:0;color:#8d796b;font-size:9px;line-height:1.5}.design-page-background button{justify-self:start;border:1px solid #dfcfc0;border-radius:8px;background:#fff;padding:5px 7px;color:#8f372f;font-size:9px}
+
+/* Default issue templates: native radio choices, keyboard focus and mobile stacking. */
+.issue-template-dialog {width:min(940px,calc(100vw - 32px));max-height:90dvh;overflow:auto;}
+.issue-template-fieldset {min-width:0;margin:20px 0;padding:0;border:0;}
+.issue-template-fieldset legend {font-size:16px;font-weight:700;}
+.issue-template-palette {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px;}
+.issue-template-palette label {margin:0;cursor:pointer;}
+.issue-template-standard {grid-column:1/-1;display:flex!important;align-items:center;gap:12px;padding:12px;border:1px solid #d8d1c7;border-radius:10px;}
+.issue-template-standard span {display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
+.issue-template-standard small {color:#756d64;}
+.issue-template-palette input[type=radio] {width:18px;height:18px;min-height:18px;margin:0;flex-shrink:0;accent-color:#704139;}
+.issue-template-choice {display:flex!important;position:relative;flex-direction:column;gap:0!important;border:2px solid #dfd9cf;border-radius:12px;overflow:hidden;background:#fff;}
+.issue-template-choice>input {position:absolute;right:12px;top:12px;z-index:1;}
+.issue-template-choice:has(input:checked),.issue-template-standard:has(input:checked) {border-color:#794337;box-shadow:0 0 0 2px #79433722;}
+.issue-template-choice:has(input:focus-visible),.issue-template-standard:has(input:focus-visible) {outline:3px solid #365c83;outline-offset:3px;}
+.issue-template-cover {position:relative;display:flex;flex-direction:column;justify-content:space-between;min-height:210px;padding:22px;background:var(--template-paper);color:var(--template-accent);overflow:hidden;}
+.issue-template-cover strong {font-size:32px;letter-spacing:6px;font-family:"Songti SC",serif;z-index:1;}
+.issue-template-cover-meta {font-size:9px;letter-spacing:2px;}
+.issue-template-cover-line {height:38px;width:68%;border-top:1px solid currentColor;border-bottom:4px solid currentColor;opacity:.5;}
+.issue-template-cover-caption {font-size:11px;z-index:1;}
+.issue-template-motif-arches::after {content:"";position:absolute;width:100px;height:145px;right:-15px;bottom:32px;border-radius:70px 70px 0 0;background:var(--template-accent);opacity:.1;transform:rotate(18deg);}
+.issue-template-motif-grid {background-image:linear-gradient(#365c8309 1px,transparent 1px),linear-gradient(90deg,#365c8309 1px,transparent 1px);background-size:22px 22px;}
+.issue-template-motif-hills::after {content:"";position:absolute;right:-25px;bottom:22px;width:160px;height:65px;border-radius:100% 0 0 0;background:var(--template-accent);opacity:.12;transform:rotate(-15deg);}
+.issue-template-copy {display:flex;flex-direction:column;gap:8px;padding:14px;line-height:1.6;}
+.issue-template-copy>b {font-size:14px;}
+.issue-template-copy>span {font-size:12px;color:#665e54;}
+.issue-template-copy>small {font-size:11px;color:#777067;}
+.issue-template-fieldset:disabled {opacity:.5;}
+.issue-template-fieldset:disabled label {cursor:default;}
+@media(max-width:600px){.issue-template-palette{grid-template-columns:1fr}.issue-template-choice{flex-direction:row}.issue-template-cover{width:120px;min-width:120px;min-height:178px;padding:15px}.issue-template-cover strong{font-size:22px;letter-spacing:2px}.issue-template-cover-meta{font-size:8px;letter-spacing:0}.issue-template-cover-caption{font-size:10px}.issue-template-copy{padding:15px 28px 15px 12px}.issue-template-copy>b{font-size:13px}}
+
+.issue-template-fieldset>.field-note{text-align:left;}

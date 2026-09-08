@@ -23,6 +23,7 @@
     "test:production": "node scripts/production-smoke-v3.mjs",
     "test:platform": "node scripts/platform-smoke-v3.mjs",
     "test:studio-browser": "node scripts/studio-browser-regression-v3.mjs",
+    "test:default-templates": "node scripts/default-templates-smoke-v3.mjs",
     "test:admin-auth": "node scripts/admin-auth-smoke-v3.mjs",
     "test:publication-share": "node scripts/publication-share-smoke-v3.mjs",
     "test:publication-release-loop": "node scripts/publication-release-loop-smoke-v3.mjs",

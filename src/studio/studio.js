@@ -1118,7 +1118,7 @@ function generateToc() {
 }
 $('#autoToc').onclick=()=>{ if(confirm('自动目录会根据“栏目归属”和页面标题重新生成目录条目，不会删除正文页面。是否继续？'))generateToc(); };
 
-function renderCloneOptions() { const sel=$('#newCloneFrom'); if(!sel)return; const current=sel.value; sel.innerHTML='<option value="">使用标准新刊模板</option>'+state.issues.filter(x=>x.engine==='v3').map(x=>`<option value="${escText(x.id)}">复制 ${escText(x.label||x.id)} 的栏目结构 · ${x.pageCount||'?'} 页</option>`).join(''); if([...sel.options].some(o=>o.value===current))sel.value=current; }
+function renderCloneOptions() { const sel=$('#newCloneFrom'); if(!sel)return; const current=sel.value; sel.innerHTML='<option value="">不复制，使用上方所选模板</option>'+state.issues.filter(x=>x.engine==='v3').map(x=>`<option value="${escText(x.id)}">复制 ${escText(x.label||x.id)} 的栏目结构 · ${x.pageCount||'?'} 页</option>`).join(''); if([...sel.options].some(o=>o.value===current))sel.value=current; }
 
 const IMPORT_SECTION_SEMANTICS = [
   {id:'news',label:'时政新闻',pageType:'news',layoutPreset:'lead-two'},
@@ -2021,8 +2021,36 @@ for(const id of ['mediaDialog','designDialog','publicationCenterDialog']){
   });
 }
 bindClickFeedback();
-$('#newIssue').onclick = () => { $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); $('#newCloneFrom').value=''; $('#newDialog').showModal(); };
-$('#newForm').addEventListener('submit',async e => { if (e.submitter?.value === 'cancel') return; e.preventDefault(); const subtitle = $('#newSubtitle').value.trim(); if (!subtitle) return; try { const x = await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),cloneFrom:$('#newCloneFrom').value||''})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id}`); await loadIssues(x.issue.id); } catch(err) { toast(err.message,2600); } });
+function renderIssueTemplateChoices(templates = []) {
+  const standard = '<label class="issue-template-standard"><input type="radio" name="issueTemplate" value="" checked><span><b>标准栏目骨架</b><small>沿用原有模板，自行编排</small></span></label>';
+  $('#issueTemplatePalette').innerHTML = standard + templates.map(t => `<label class="issue-template-choice" style="--template-accent:${/^#[0-9a-f]{6}$/i.test(t.accent)?t.accent:'#365c83'};--template-paper:${/^#[0-9a-f]{6}$/i.test(t.paper)?t.paper:'#ffffff'}"><input type="radio" name="issueTemplate" value="${escText(t.id)}"><span class="issue-template-cover issue-template-motif-${escText(t.motif)}" aria-hidden="true"><span class="issue-template-cover-meta">JOURNAL / ${t.pageCount} PAGES</span><strong>${escText(t.name.split(' · ')[0])}</strong><span class="issue-template-cover-line"></span><span class="issue-template-cover-caption">${escText(t.tagline)}</span></span><span class="issue-template-copy"><b>${escText(t.name)}</b><span>${escText(t.description)}</span><small>封面 · 目录 · ${t.sections.map(escText).join(' · ')} · 封底</small></span></label>`).join('');
+}
+async function loadIssueTemplateChoices() {
+  renderIssueTemplateChoices();
+  $('#issueTemplateStatus').textContent='正在加载整刊模板…';
+  try {
+    const result=await api('/api/issue-templates');
+    renderIssueTemplateChoices(Array.isArray(result.templates)?result.templates:[]);
+    $('#issueTemplateStatus').textContent='模板含可替换的示例文字与本地装饰插画；发布前请填写真实内容。';
+  } catch {
+    $('#issueTemplateStatus').textContent='整刊模板暂时无法加载，可继续使用标准栏目骨架，或关闭后重试。';
+  }
+}
+$('#newCloneFrom').addEventListener('change',()=>{
+  $('#issueTemplateFieldset').disabled=Boolean($('#newCloneFrom').value);
+});
+$('#newIssue').onclick = () => { $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); $('#newCloneFrom').value=''; $('#issueTemplateFieldset').disabled=false; $('#newDialog').showModal(); void loadIssueTemplateChoices(); };
+$('#newForm').addEventListener('submit',async e => {
+  if (e.submitter?.value === 'cancel') return;
+  e.preventDefault(); const subtitle=$('#newSubtitle').value.trim();
+  if(!subtitle||$('#confirmNew').disabled)return;
+  const cloneFrom=$('#newCloneFrom').value||'';
+  const templateId=cloneFrom?'':($('#issueTemplatePalette input:checked')?.value||'');
+  $('#confirmNew').disabled=true; $('#confirmNew').textContent='创建中…';
+  try { const x=await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),cloneFrom,templateId})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id}`); await loadIssues(x.issue.id); }
+  catch(err){toast(err.message,2600);}
+  finally{$('#confirmNew').disabled=false;$('#confirmNew').textContent='创建';}
+});
 document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.action-menu[open]'))if(!menu.contains(e.target))menu.removeAttribute('open');});
 document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(!mod)return;const editable=e.target.closest?.('input,textarea,select,[contenteditable="true"]');if(e.key.toLowerCase()==='s'){e.preventDefault();openSaveDiff();return;}if(editable)return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return;}if(e.key.toLowerCase()==='y'){e.preventDefault();redoHistory();}});
 window.addEventListener('visibilitychange',()=>{if(document.hidden&&state.dirty)saveDraftNow();});window.addEventListener('pagehide',()=>closePeerChannel());

@@ -1,3 +1,4 @@
+import { issueTemplateCatalog } from '../src/studio/issue-templates.js';
 import http from 'node:http';
 import { accessSync, createReadStream } from 'node:fs';
 import path from 'node:path';
@@ -1090,13 +1091,18 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
   if (u.pathname==='/api/issues'&&req.method==='GET') return send(res,200,await issueSummaries());
+  if (u.pathname==='/api/issue-templates'&&req.method==='GET') return send(res,200,{templates:issueTemplateCatalog()});
   if (u.pathname==='/api/issues'&&req.method==='POST') {
     const data=await body(req);
     if(String(data.subtitle||'').length>120)return send(res,400,{error:'本期主题不能超过 120 个字符',code:'VALIDATION_ERROR'});
     if(String(data.label||'').length>40)return send(res,400,{error:'期名不能超过 40 个字符',code:'VALIDATION_ERROR'});
+    const templateId=String(data.templateId||'');
+    if(templateId&&!issueTemplateCatalog().some(t=>t.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
+    if(templateId&&data.cloneFrom)return send(res,400,{error:'整刊模板与复制旧刊只能选择一种',code:'VALIDATION_ERROR'});
     let cloneSource=null;
     if(data.cloneFrom){const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
+    if(templateId)argv.push('--template',templateId);
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;

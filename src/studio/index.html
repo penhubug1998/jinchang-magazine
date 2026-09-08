@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#f4efe6">
   <title>V3.1 自由创作期刊制作中心</title>
-  <link rel="stylesheet" href="./studio.css?v=3.1.0-ai-link-20260902-02">
+  <link rel="stylesheet" href="./studio.css?v=3.1.0-issue-templates-20260908-final">
   <!-- V3.1 compatibility marker: runtime version is resolved from /api/health; Mobile Studio remains Reader-first. -->
 </head>
 <body>
@@ -220,7 +220,7 @@
       </section><section class="source-status-card" id="sourceStatusCard" aria-live="polite"><div><span class="eyebrow">SERVER SOURCE</span><strong id="sourceStatusTitle">正在读取服务器制作源…</strong><p id="sourceStatusText">保存前会自动建立服务器快照，避免本地旧副本覆盖正在制作的期刊。</p></div><a id="sourceExportBtn" class="source-export-link" href="#" download>下载本期源稿 JSON</a></section><div class="dialog-actions"><button value="cancel">完成</button></div></form></dialog>
 
 
-<dialog id="newDialog"><form method="dialog" id="newForm"><h3>创建新一期</h3><label>本期主题<input id="newSubtitle" required maxlength="120" placeholder="例如：金秋敬老 · 初心如磐"></label><label>期名（可选）<input id="newLabel" maxlength="40" placeholder="留空自动生成"></label><label>栏目结构<select id="newCloneFrom"><option value="">使用标准新刊模板</option></select><span class="field-note">可复制既有 V3 期刊的页面/内容块结构，但不会复制媒体文件和旧文章正文。</span></label><div class="dialog-actions"><button value="cancel">取消</button><button class="primary" value="default" id="confirmNew">创建</button></div></form></dialog>
+<dialog id="newDialog" class="issue-template-dialog"><form method="dialog" id="newForm"><h3>创建新一期</h3><label>本期主题<input id="newSubtitle" required maxlength="120" placeholder="例如：金秋敬老 · 初心如磐"></label><label>期名（可选）<input id="newLabel" maxlength="40" placeholder="留空自动生成"></label><fieldset id="issueTemplateFieldset" class="issue-template-fieldset"><legend>选择整刊模板</legend><p class="field-note">每套 8 页，包含封面、目录、五种内页和封底。文字、颜色和图片均可编辑。</p><div id="issueTemplatePalette" class="issue-template-palette"></div><p id="issueTemplateStatus" class="field-note" role="status"></p></fieldset><label>或复制已有期刊<select id="newCloneFrom"><option value="">不复制，使用上方所选模板</option></select><span class="field-note">可复制既有 V3 期刊的页面/内容块结构，但不会复制媒体文件和旧文章正文。</span></label><div class="dialog-actions"><button value="cancel">取消</button><button class="primary" value="default" id="confirmNew">创建</button></div></form></dialog>
 
 <dialog id="blockDialog" class="block-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">BLOCK PALETTE</span><h3>添加内容块</h3><p>选择最接近内容语义的块，有利于排版、无障碍和审计。</p></div><button value="cancel" aria-label="关闭">×</button></div><div id="blockPalette" class="block-palette"></div></form></dialog>
 
@@ -258,6 +258,6 @@
 <dialog id="draftRecoveryDialog" class="draft-recovery-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">AUTO RECOVERY</span><h3>发现自动保存草稿</h3><p id="draftRecoveryText">上次编辑未正式保存，可恢复到工作台继续编辑。</p></div><button value="cancel" aria-label="关闭">×</button></div><div class="draft-recovery-summary" id="draftRecoverySummary"></div><div class="dialog-actions"><button value="discard" id="discardRecoveredDraft">丢弃草稿</button><button class="primary" value="recover" id="recoverDraft">恢复草稿</button></div></form></dialog>
 <dialog id="readerAnimationDialog" class="reader-animation-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">PAGE TURN</span><h3>翻页动效</h3><p>应用到本期 Reader；系统“减少动态效果”设置会优先关闭动效。</p></div><button value="cancel" aria-label="关闭">×</button></div><label>选择效果<select id="workspaceReaderAnimation" title="设置工作台与 Reader 的翻页效果"><option value="smooth">平滑翻页（推荐）</option><option value="slide">滑动切页</option><option value="fade">淡入淡出</option><option value="three-d">3D 翻页</option><option value="none">关闭动效</option></select></label><p class="field-note">3D 翻页不会显示镜像背面，可放心用于正文阅读。</p><div class="dialog-actions"><button value="cancel">完成</button></div></form></dialog>
 
-<script type="module" src="./studio.js?v=3.1.0-ai-link-20260902-02"></script>
+<script type="module" src="./studio.js?v=3.1.0-issue-templates-20260908-final"></script>
 </body>
 </html>
