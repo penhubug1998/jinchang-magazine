@@ -17,9 +17,9 @@ jobs:
         with:
           ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Rebalance DOCX rich objects during pagination
+      - name: Adapt P1-08 media-right fixture to rich reflow
         env:
-          EXPECTED_HEAD: bb966a11831c3966edc39e32355147731dd232ca
+          EXPECTED_HEAD: 2b14f0fd20a464665801acfc3317cd0497225c86
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
@@ -27,44 +27,14 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/lib-v3-import.mjs')
+          p=Path('scripts/p1-08-production-e2e-v3.mjs')
           s=p.read_text()
-          old="export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='table')return Math.min(900,180+(block.rows||[]).length*80);if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}"
-          new="export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='table')return Math.min(900,180+(block.rows||[]).length*80);if(block.type==='image'||block.type==='video')return 450;if(block.type==='container'){const columns=(block.columns||[]).map(col=>(col?.blocks||[]).reduce((n,child)=>n+blockWeight(child),0));return 80+Math.max(0,...columns);}if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}"
-          if old not in s: raise SystemExit('expected blockWeight definition not found')
-          s=s.replace(old,new,1)
-          marker="export { rebalanceContinuationGroups };\nexport function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){"
-          insert=("export { rebalanceContinuationGroups };\n"
-                  "function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){\n"
-                  "  const limit=Math.max(780,Math.min(1100,Math.round(target*.95))),out=[];\n"
-                  "  for(const page of pages){\n"
-                  "    const blocks=Array.isArray(page?.blocks)?page.blocks:[],hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx'),weight=semanticGroupWeight(blocks);\n"
-                  "    if(!hasRich||weight<=limit||['cover','closing'].includes(page?.type)){out.push(page);continue;}\n"
-                  "    const groups=[];let current=[],currentWeight=0;\n"
-                  "    for(const block of blocks){const w=blockWeight(block);if(current.length&&(currentWeight+w>limit||current.length>=10)){groups.push(current);current=[];currentWeight=0;}current.push(block);currentWeight+=w;}\n"
-                  "    if(current.length)groups.push(current);\n"
-                  "    const baseTitle=cleanText(page.title||page.navTitle||'续页'),baseNav=cleanText(page.navTitle||page.title||baseTitle);\n"
-                  "    groups.forEach((group,index)=>out.push(index===0?{...page,blocks:group}:{...page,navTitle:`${baseNav}（续${index}）`,title:`${continuationLabel(baseTitle)}（续${index}）`,blocks:group}));\n"
-                  "  }\n"
-                  "  if(out.length>maxPages)throw new Error(`整期结构识别在合并 Word 图片/表格后将生成 ${out.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);\n"
-                  "  return out;\n"
-                  "}\n"
-                  "export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){")
-          if marker not in s: raise SystemExit('paginatePublicationDocument marker not found')
-          s=s.replace(marker,insert,1)
-          old_tail=("  mergeRichDocxObjects(doc,pages);\n"
-                    "  if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);\n"
-                    "  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};\n"
-                    "}")
-          new_tail=("  mergeRichDocxObjects(doc,pages);const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages);\n"
-                    "  if(balancedPages.length>maxPages)throw new Error(`整期结构识别将生成 ${balancedPages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);\n"
-                    "  return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};\n"
-                    "}")
-          if old_tail not in s: raise SystemExit('pagination rich-object tail not found')
-          s=s.replace(old_tail,new_tail,1)
-          p.write_text(s)
+          old="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const pageBlocks=pageWithImage.blocks||[],imageIndex=pageBlocks.findIndex(b=>b.type==='image'),textIndex=pageBlocks.findIndex((b,i)=>i!==imageIndex&&b.type==='paragraph');assert(imageIndex>=0&&textIndex>=0,'没有可用于 media-right 的图文对');const pairedImage=pageBlocks[imageIndex],pairedText=pageBlocks[textIndex],insertAt=Math.min(imageIndex,textIndex),rest=pageBlocks.filter((_,i)=>i!==imageIndex&&i!==textIndex);rest.splice(insertAt,0,{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]});pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=rest;mark('调整布局',{note:'media-right · 单组图文双栏 · mobile stack'});"
+          new="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const pageBlocks=pageWithImage.blocks||[],imageIndex=pageBlocks.findIndex(b=>b.type==='image');assert(imageIndex>=0,'没有可用于 media-right 的图片');const pairedImage=pageBlocks[imageIndex],pairedText={type:'paragraph',style:'body',text:'图片说明：本段用于验证富 Word 分页后的 media-right 图文双栏编辑。'},rest=pageBlocks.filter((_,i)=>i!==imageIndex);rest.splice(imageIndex,0,{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]});pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=rest;mark('调整布局',{note:'media-right · 图片说明+图片双栏 · mobile stack'});"
+          if old not in s: raise SystemExit('expected P1-08 media-right fixture not found')
+          p.write_text(s.replace(old,new,1))
           PY
           git diff --check
-          git add scripts/lib-v3-import.mjs
-          git commit -m "fix(p1-22): rebalance DOCX rich objects across pages"
+          git add scripts/p1-08-production-e2e-v3.mjs
+          git commit -m "test(p1-22): adapt media-right edit after rich reflow"
           git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
