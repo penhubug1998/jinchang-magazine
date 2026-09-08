@@ -3,6 +3,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { root, V3_VERSION, exists } from './lib-v3-production.mjs';
+import { evidenceSha256 } from './lib-final-evidence-integrity-v3.mjs';
 const strictLocal=process.argv.includes('--strict-local');const assert=(c,m)=>{if(!c)throw new Error(m)};
 const sourceSha=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}),sourceAt=spawnSync('git',['show','-s','--format=%cI','HEAD'],{cwd:root,encoding:'utf8'});const currentSourceCommit=String(sourceSha.stdout||'').trim(),currentSourceCommittedAt=String(sourceAt.stdout||'').trim();assert(sourceSha.status===0&&/^[0-9a-f]{40}$/i.test(currentSourceCommit),'current source commit unavailable');assert(sourceAt.status===0&&Number.isFinite(Date.parse(currentSourceCommittedAt)),'current source commit time unavailable');
 const baseline=JSON.parse(await readFile(path.join(root,'baselines/v3-rc1-media.json'),'utf8'));
@@ -16,6 +17,7 @@ await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.joi
 if(localStrict==='passed'){
   const baselineSha256=crypto.createHash('sha256').update(await readFile(path.join(root,'baselines/v3-rc1-media.json'))).digest('hex');
   const receipt={version:V3_VERSION,generatedAt:new Date().toISOString(),sourceCommit:currentSourceCommit,sourceCommittedAt:currentSourceCommittedAt,strict:true,files:baselineFiles,bytes:baselineBytes,baselineSha256,baselineCommit:source.commit,roots:localRoots.map(x=>x.rel),evidence:'full-media-check-v3 --strict + fixed baseline file-size/Git-blob-SHA1'};
+  receipt.evidenceSha256=evidenceSha256(receipt);
   await writeFile(path.join(root,'reports/v31-final-media-receipt.json'),JSON.stringify(receipt,null,2)+'\n');
 }
 console.log(`V3.1 RC2 媒体 Gate：GitHub 固定 baseline ${baselineFiles} 文件 / ${(baselineBytes/1024/1024).toFixed(1)} MB 完整；本地 strict=${localStrict}。`);
