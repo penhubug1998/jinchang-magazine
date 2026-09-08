@@ -2,6 +2,7 @@ import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { V3_VERSION, V31_SCHEMA_VERSION, exists, normalizeIssueId, parseArgs, root } from './lib-v3-production.mjs';
+import { evidenceSha256 } from './lib-final-evidence-integrity-v3.mjs';
 
 const args=parseArgs();
 const id=normalizeIssueId(args.issue||args.id||args._[0]||'001');
@@ -43,6 +44,7 @@ const report={
   rollbackVerified:true,redeployVerified:true,httpsVerified:true,
   evidence:{firstDeployReceipt:rollback.receipt,rollbackReport:rollbackFile,finalDeployReport:deployFile,onlineReport:onlineFile}
 };
+report.evidenceSha256=evidenceSha256(report);
 await mkdir(path.join(root,'reports'),{recursive:true});
 await writeFile(path.join(root,'reports/v31-final-production-receipt.json'),JSON.stringify(report,null,2)+'\n');
-console.log(`V3.1 Final 正式环境 receipt PASS：${online.base} · rollback → redeploy → online strict`);
+console.log(`V3.1 Final 正式环境 receipt PASS：${online.base} · rollback → redeploy → online strict · evidenceSha256=${report.evidenceSha256.slice(0,12)}…`);
