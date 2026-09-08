@@ -1,0 +1,32 @@
+name: P1-22 temporary mainline merge helper
+
+on:
+  push:
+    branches:
+      - work/p1-22-merge-helper
+
+permissions:
+  contents: write
+
+jobs:
+  merge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/p1-22-mainline-reconciliation
+          fetch-depth: 0
+      - name: Create deterministic merge result
+        env:
+          EXPECTED_MAIN: 5320bc610347ce2fb8eb2bce7722a9d356c33626
+        run: |
+          set -euo pipefail
+          git config user.name "p1-22 merge helper"
+          git config user.email "p1-22-merge-helper@users.noreply.github.com"
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
+          git checkout -B work/p1-22-merge-result origin/fix/p1-22-mainline-reconciliation
+          git merge --no-ff -X ours "$EXPECTED_MAIN" -m "merge(p1-22): reconcile mainline into Final baseline"
+          test -z "$(git status --porcelain)"
+          git push origin HEAD:refs/heads/work/p1-22-merge-result
