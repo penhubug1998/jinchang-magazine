@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { narrationPageText } from './lib-v3-production.mjs';
-import { parsePastedText } from './lib-v3-import.mjs';
+import { parsePastedText, blockWeight } from './lib-v3-import.mjs';
 import { issueTemplateCatalog, createIssueTemplate } from '../src/studio/issue-templates.js';
 import { WHOLE_MAGAZINE_TEMPLATES, applyWholeMagazineTemplate } from '../src/studio/whole-magazine-templates.js';
 
@@ -24,6 +24,13 @@ for(const id of ['001','002']){
 const input=n=>'# 导入边界测试\n\n'+Array.from({length:n},(_,i)=>`第 ${i+1} 段，完整保留内容。`).join('\n\n');
 assert.equal(parsePastedText(input(500),{format:'markdown'}).blocks.length,500,'500 blocks must be preserved');
 assert.throws(()=>parsePastedText(input(501),{format:'markdown'}),error=>['IMPORT_BLOCK_LIMIT','IMPORT_BLOCK_LIMIT_EXCEEDED'].includes(error.code)&&/拆分/.test(error.message),'501 blocks must fail closed instead of truncating');
+
+const containerWeight=blockWeight({type:'container',columns:[{blocks:[{type:'paragraph',text:'短正文'}]},{blocks:[{type:'image'}]}]});
+assert(containerWeight>=530,'container weight must include nested image/text instead of collapsing to a tiny flat weight');
+const importSource=await readFile('scripts/lib-v3-import.mjs','utf8');
+assert(importSource.includes('function rebalanceRichPublicationPages('),'DOCX rich-object pagination reflow is missing');
+assert(importSource.includes('const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages)'),'periodical pagination must rebalance after merging Word images/tables');
+assert(importSource.includes("hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx')"),'rich-object reflow must be scoped to DOCX image/table pages');
 
 const catalog=issueTemplateCatalog();
 assert.deepEqual(catalog.map(x=>x.id),['unit-red','study-blue','life-green']);
@@ -70,4 +77,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · strict audit accepts DOCX table blocks · P1-08 uses realistic print pagination and one media-right pair · P1-21 Final delivery files retained');
+console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · strict audit accepts tables · P1-08 uses one realistic media-right pair · P1-21 Final delivery retained');
