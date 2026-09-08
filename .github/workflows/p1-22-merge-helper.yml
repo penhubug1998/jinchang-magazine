@@ -17,9 +17,9 @@ jobs:
         with:
           ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Restore real images in Print PDF
+      - name: Verify embedded images in generated PDF
         env:
-          EXPECTED_HEAD: 735417a33c8b31f4e9f26948344ce0f84a8ad4fd
+          EXPECTED_HEAD: 193b10725c1ae39785dcec9545876c9b6bbc5e33
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
@@ -27,14 +27,14 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/studio-v3.mjs')
+          p=Path('scripts/p1-08-production-e2e-v3.mjs')
           s=p.read_text()
-          old="else if(t==='image')body=`<figure><div class=\"media-placeholder\">图片</div>${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;"
-          new="else if(t==='image'){const src=printImages.get(stripAssetsPrefix(b.src||''));if(!src)throw publicationFailure('PDF_IMAGE_UNAVAILABLE','页面图片未绑定本地资源',['请在素材库选择图片后重试。']);body=`<figure><img class=\"print-image\" src=\"${src}\" alt=\"${printEsc(b.alt||'')}\">${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;}"
-          if old not in s: raise SystemExit('expected Print PDF image placeholder renderer not found')
+          old="const pdf=await api(`/api/issues/${id}/publication/pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const pdfFile=path.join(sandbox,pdf.output.path),pdfBytes=await readFile(pdfFile);assert(pdfBytes.subarray(0,5).toString()==='%PDF-','invalid PDF header');report.artifacts.pdf={path:pdf.output.path,bytes:pdfBytes.length,sha256:sha(pdfBytes)};mark('PDF 导出',{note:`${Math.round(pdfBytes.length/1024)} KB`});"
+          new="const pdf=await api(`/api/issues/${id}/publication/pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const pdfFile=path.join(sandbox,pdf.output.path),pdfBytes=await readFile(pdfFile);assert(pdfBytes.subarray(0,5).toString()==='%PDF-','invalid PDF header');assert(pdfBytes.includes(Buffer.from('/Subtype /Image')),'Print PDF missing embedded image object');report.artifacts.pdf={path:pdf.output.path,bytes:pdfBytes.length,sha256:sha(pdfBytes),embeddedImage:true};mark('PDF 导出',{note:`${Math.round(pdfBytes.length/1024)} KB · embedded image`});"
+          if old not in s: raise SystemExit('expected P1-08 PDF assertion line not found')
           p.write_text(s.replace(old,new,1))
           PY
           git diff --check
-          git add scripts/studio-v3.mjs
-          git commit -m "fix(p1-22): render real images in Print PDF"
+          git add scripts/p1-08-production-e2e-v3.mjs
+          git commit -m "test(p1-22): verify embedded images in Print PDF"
           git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
