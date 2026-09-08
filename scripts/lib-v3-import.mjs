@@ -272,7 +272,7 @@ export async function parseImportedBuffer(buffer,{filename='import.txt'}={}) {
   throw new Error(`暂不支持 ${ext||'未知'} 文件；支持 .docx / .doc / .md / .txt`);
 }
 
-export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='table')return Math.min(900,180+(block.rows||[]).length*80);if(block.type==='image'||block.type==='video')return 450;if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
+export function blockWeight(block){if(!block)return 0;const text=String(block.text||'')+String(block.title||'')+String(block.case||'')+String(block.warning||'');if(block.type==='articleLink')return 180;if(block.type==='cardline')return text.length+120;if(block.type==='casePair')return text.length+180;if(block.type==='quote')return text.length+80;if(block.type==='table')return Math.min(900,180+(block.rows||[]).length*80);if(block.type==='image'||block.type==='video')return 450;if(block.type==='container'){const columns=(block.columns||[]).map(col=>(col?.blocks||[]).reduce((n,child)=>n+blockWeight(child),0));return 80+Math.max(0,...columns);}if(block.type==='paragraph'&&block.style==='subhead')return text.length+120;return text.length+30;}
 function expandBlocks(blocks=[]){const expanded=[];for(const b of blocks){if(b.type==='paragraph'&&String(b.text||'').length>620&&b.style!=='subhead'){sentenceChunks(b.text,520).forEach(t=>expanded.push({...b,text:t}));}else expanded.push(b);}return expanded;}
 function semanticGroupWeight(group=[]){return group.reduce((n,b)=>n+blockWeight(b),0);}
 function rebalanceContinuationGroups(groups=[],target=760){
@@ -298,6 +298,20 @@ function semanticUnitPages({title,navTitle,kicker,section,pageType,paras},target
   const blocks=semanticBlocks(paras,pageType);const groups=groupSemanticBlocks(blocks,target),cont=continuationLabel(title);return groups.map((pageBlocks,i)=>({type:pageType,navTitle:i?`${section?`${section}｜`:''}${cont}（续${i}）`:navTitle,title:i?`${cont}（续${i}）`:title,kicker,section,blocks:pageBlocks}));
 }
 export { rebalanceContinuationGroups };
+function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){
+  const limit=Math.max(780,Math.min(1100,Math.round(target*.95))),out=[];
+  for(const page of pages){
+    const blocks=Array.isArray(page?.blocks)?page.blocks:[],hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx'),weight=semanticGroupWeight(blocks);
+    if(!hasRich||weight<=limit||['cover','closing'].includes(page?.type)){out.push(page);continue;}
+    const groups=[];let current=[],currentWeight=0;
+    for(const block of blocks){const w=blockWeight(block);if(current.length&&(currentWeight+w>limit||current.length>=10)){groups.push(current);current=[];currentWeight=0;}current.push(block);currentWeight+=w;}
+    if(current.length)groups.push(current);
+    const baseTitle=cleanText(page.title||page.navTitle||'续页'),baseNav=cleanText(page.navTitle||page.title||baseTitle);
+    groups.forEach((group,index)=>out.push(index===0?{...page,blocks:group}:{...page,navTitle:`${baseNav}（续${index}）`,title:`${continuationLabel(baseTitle)}（续${index}）`,blocks:group}));
+  }
+  if(out.length>maxPages)throw new Error(`整期结构识别在合并 Word 图片/表格后将生成 ${out.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);
+  return out;
+}
 export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){
   const pub=doc.publication;if(!pub)throw new Error('未识别到整期期刊结构');const requested=Math.max(420,Math.min(1400,Number(targetChars)||760));const target=Math.max(900,Math.round(requested*1.28));const pages=[];
   if(pub.preface?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:'卷首语',kicker:'卷首语',section:'',pageType:'article',paras:pub.preface.paras},target));}
@@ -305,9 +319,9 @@ export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}
     for(const article of sec.articles){const cleanTitle=stripNumberPrefix(article.title)||article.title;pages.push(...semanticUnitPages({title:cleanTitle,navTitle:`${sec.name}｜${cleanTitle}`,kicker,section:sec.name,pageType:sec.pageType,paras:article.paras},target));}
   }
   if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){closeTitle=cleanText(closeParas.shift().text).replace(/[。！？!?]$/,'');}pages.push({type:'closing',navTitle:'尾刊寄语',kicker:'尾刊寄语',title:closeTitle,section:'',blocks:semanticBlocks(closeParas,'article')});}
-  mergeRichDocxObjects(doc,pages);
-  if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
-  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
+  mergeRichDocxObjects(doc,pages);const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages);
+  if(balancedPages.length>maxPages)throw new Error(`整期结构识别将生成 ${balancedPages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
+  return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
 }
 export function paginateImportedDocument(doc,{targetChars=760,maxPages=80,pageType='article',section='',kicker='',structureMode='auto'}={}) {
   if(structureMode!=='article'&&doc.publication&&(structureMode==='periodical'||structureMode==='auto'))return paginatePublicationDocument(doc,{targetChars,maxPages});
