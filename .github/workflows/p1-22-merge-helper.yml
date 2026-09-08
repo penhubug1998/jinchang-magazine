@@ -15,29 +15,26 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: work/p1-22-merge-result
+          ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Apply reviewed reconciliation fixes
+      - name: Fix P1-08 double-column overflow fixture
+        env:
+          EXPECTED_HEAD: 870440c926254fbf5076cbb6b0fea746116e084b
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
           git config user.email "p1-22-merge-helper@users.noreply.github.com"
-          git checkout -B work/p1-22-merge-fixed origin/work/p1-22-merge-result
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/studio-v3.mjs')
+          p=Path('scripts/p1-08-production-e2e-v3.mjs')
           s=p.read_text()
-          s=s.replace("import { issueTemplateCatalog } from '../src/studio/issue-templates.js';\n","")
-          old="    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true});"
-          new="    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});"
-          if old not in s: raise SystemExit('expected Chromium spawn line not found')
-          s=s.replace(old,new,1)
-          template_forward="    if(templateId)argv.push('--template',templateId);\n"
-          if template_forward not in s: raise SystemExit('expected Studio template forwarding line not found')
-          s=s.replace(template_forward,'',1)
-          p.write_text(s)
+          old="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const imageBlocks=(pageWithImage.blocks||[]).filter(b=>b.type==='image'),textBlocks=(pageWithImage.blocks||[]).filter(b=>b.type!=='image');pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:2,columnGap:24,balanceColumns:true};pageWithImage.blocks=[{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:textBlocks},{blocks:imageBlocks}]}];mark('调整布局',{note:'media-right · 双栏 · mobile stack'});"
+          new="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const imageBlocks=(pageWithImage.blocks||[]).filter(b=>b.type==='image'),textBlocks=(pageWithImage.blocks||[]).filter(b=>b.type!=='image');pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=[{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:textBlocks},{blocks:imageBlocks}]}];mark('调整布局',{note:'media-right · 容器双栏 · mobile stack'});"
+          if old not in s: raise SystemExit('expected P1-08 layout line not found')
+          p.write_text(s.replace(old,new,1))
           PY
           git diff --check
-          git add scripts/studio-v3.mjs
-          git commit -m "fix(p1-22): isolate PDF runtime and preserve Studio template contract"
-          git push origin HEAD:refs/heads/work/p1-22-merge-fixed
+          git add scripts/p1-08-production-e2e-v3.mjs
+          git commit -m "fix(p1-22): keep P1-08 PDF fixture within A4"
+          git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
