@@ -2,6 +2,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { V3_VERSION, V31_SCHEMA_VERSION, exists, root } from './lib-v3-production.mjs';
+import { evidenceIntegrityStatus } from './lib-final-evidence-integrity-v3.mjs';
 
 const strict=process.argv.includes('--strict');
 const read=async rel=>JSON.parse(await readFile(path.join(root,rel),'utf8'));
@@ -29,21 +30,23 @@ const p108Ok=Boolean(source.available&&p108?.version===V3_VERSION&&p108?.ok===tr
 gate('current-e2e','当前源码整刊生产 E2E',p108Ok,p108Ok?`${p108.checkpoints.length} checkpoints · ${p108.completedAt}`:'需要基于当前源码重新执行 npm run test:p1-08；历史 E2E 不替当前提交背书',p108);
 
 const mediaFile='reports/v31-final-media-receipt.json';let media=null;if(await exists(path.join(root,mediaFile)))media=await read(mediaFile);
-const mediaOk=Boolean(source.available&&media?.version===V3_VERSION&&media?.strict===true&&media?.files===51&&media?.bytes===122533642&&freshAfter(media?.generatedAt,source.committedAt));
-gate('media','完整历史媒体 byte-level strict',mediaOk,mediaOk?`51 文件 / 116.9 MB · ${media.generatedAt}`:'需在当前 3.1.0 完整媒体仓库重新执行 npm run test:v31-rc2-media-local；旧 RC2 receipt 不再接受',media);
+const mediaIntegrity=evidenceIntegrityStatus(media);
+const mediaOk=Boolean(source.available&&media?.version===V3_VERSION&&media?.sourceCommit===source.commit&&media?.strict===true&&media?.files===51&&media?.bytes===122533642&&freshAfter(media?.generatedAt,source.committedAt)&&mediaIntegrity.ok);
+gate('media','完整历史媒体 byte-level strict',mediaOk,mediaOk?`51 文件 / 116.9 MB · ${media.generatedAt} · SHA verified`:'需在当前 3.1.0 完整媒体仓库重新执行 npm run test:v31-rc2-media-local；receipt 必须绑定当前 commit 且 evidenceSha256 有效',media);
 
 const deviceFile='reports/v3-rc1-device-acceptance.json';let devices={records:[]};if(await exists(path.join(root,deviceFile)))devices=await read(deviceFile);
 const uaOk=(type,ua='')=>{const s=String(ua);const safari=/Safari/i.test(s)&&!/(Chrome|Chromium|CriOS|Edg|EdgiOS|FxiOS|OPiOS)/i.test(s);if(type==='edge-desktop')return /Edg\//i.test(s)&&!/EdgiOS/i.test(s);if(type==='mac-safari')return safari&&/Macintosh/i.test(s)&&!/Mobile\//i.test(s);if(type==='iphone-safari')return safari&&/iPhone/i.test(s);if(type==='android-wechat')return /Android/i.test(s)&&/MicroMessenger/i.test(s);return false};
 for(const [type,label] of [['edge-desktop','Microsoft Edge actual binary'],['mac-safari','macOS Safari 实机'],['iphone-safari','iPhone Safari 实机'],['android-wechat','Android 微信内置浏览器实机']]){
-  const row=(devices.records||[]).filter(x=>x.deviceType===type&&x.version===V3_VERSION&&x.passed===true).sort((a,b)=>String(b.recordedAt).localeCompare(String(a.recordedAt)))[0];
-  const checks=row?.checks&&Object.values(row.checks).length>0&&Object.values(row.checks).every(Boolean);const auto=row?.auto?.corePass===true;
-  const ok=Boolean(source.available&&row&&uaOk(type,row.userAgent)&&checks&&auto&&freshAfter(row.recordedAt,source.committedAt));
-  gate(type,label,ok,ok?`${row.deviceName||type} · ${row.recordedAt}`:`需要使用当前 ${V3_VERSION} 在源码提交 ${source.commit?.slice(0,12)||'unknown'}… 之后重新提交真实设备通过记录`,row||null);
+  const row=(devices.records||[]).filter(x=>x.deviceType===type).sort((a,b)=>String(b.recordedAt||'').localeCompare(String(a.recordedAt||'')))[0]||null;
+  const checks=row?.checks&&Object.values(row.checks).length>0&&Object.values(row.checks).every(Boolean);const auto=row?.auto?.corePass===true;const integrity=evidenceIntegrityStatus(row);
+  const ok=Boolean(source.available&&row&&row.version===V3_VERSION&&row.passed===true&&row.sourceCommit===source.commit&&uaOk(type,row.userAgent)&&checks&&auto&&freshAfter(row.recordedAt,source.committedAt)&&integrity.ok);
+  gate(type,label,ok,ok?`${row.deviceName||type} · ${row.recordedAt} · SHA verified`:`需要使用当前 ${V3_VERSION} 在源码提交 ${source.commit?.slice(0,12)||'unknown'}… 之后重新提交真实设备通过记录；记录必须绑定当前 commit 且 evidenceSha256 有效`,row||null);
 }
 
 const prodFile='reports/v31-final-production-receipt.json';let prod=null;if(await exists(path.join(root,prodFile)))prod=await read(prodFile);
-const prodOk=Boolean(source.available&&prod?.version===V3_VERSION&&prod?.status==='passed'&&prod?.rollbackVerified&&prod?.redeployVerified&&prod?.httpsVerified&&String(prod?.base||'').startsWith('https://')&&freshAfter(prod?.generatedAt,source.committedAt));
-gate('production-https','正式 HTTPS 部署 / 回滚 / 再部署',prodOk,prodOk?`${prod.base} · ${prod.generatedAt}`:'需基于当前 3.1.0 源码重新完成 deploy → online → rollback → redeploy → online 并生成 receipt',prod);
+const prodIntegrity=evidenceIntegrityStatus(prod);
+const prodOk=Boolean(source.available&&prod?.version===V3_VERSION&&prod?.sourceCommit===source.commit&&prod?.status==='passed'&&prod?.rollbackVerified&&prod?.redeployVerified&&prod?.httpsVerified&&String(prod?.base||'').startsWith('https://')&&freshAfter(prod?.generatedAt,source.committedAt)&&prodIntegrity.ok);
+gate('production-https','正式 HTTPS 部署 / 回滚 / 再部署',prodOk,prodOk?`${prod.base} · ${prod.generatedAt} · SHA verified`:'需基于当前 3.1.0 源码重新完成 deploy → online → rollback → redeploy → online 并生成绑定当前 commit 且 evidenceSha256 有效的 receipt',prod);
 
 const pending=gates.filter(x=>x.status!=='READY');
 const report={stage:'P1-09',version:V3_VERSION,schema:V31_SCHEMA_VERSION,generatedAt:new Date().toISOString(),source,status:pending.length?'HOLD':'READY_FOR_CURRENT_3_1_0_RELEASE',ready:gates.length-pending.length,total:gates.length,gates,promotion:{ready:pending.length===0,next:pending.length?'完成当前源码对应的真实环境 Gate':'当前源码具备重新发布/封包资格'}};
