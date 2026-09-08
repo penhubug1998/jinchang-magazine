@@ -160,9 +160,9 @@
     "test:v31-rc2-gate": "node scripts/v31-rc2-gate-v3.mjs",
     "verify:v31-rc2": "npm run test:v31-rc2 && npm run test:v31-beta1-production && npm run test:v31-rc2-quality && npm run test:v31-rc2-media && npm run test:v31-rc2-browser && npm run test:v31-rc2-deployment && npm run test:v31-rc2-performance && npm run test:v31-rc2-compat && npm run check:v3 && npm run build:v3 && npm run test:v31-rc2-gate",
     "final:v31:status": "node scripts/p1-10-final-acceptance-gate-v3.mjs",
-    "final:v31:gate": "node scripts/p1-10-final-acceptance-gate-v3.mjs --strict",
+    "final:v31:gate": "node scripts/p1-12-finalization-gate-v3.mjs --strict",
     "final:v31:production-receipt": "node scripts/v31-final-production-receipt-v3.mjs",
-    "final:v31": "node scripts/v31-finalize-v3.mjs",
+    "final:v31": "node scripts/p1-12-finalize-v3.mjs",
     "test:v31-final-promotion": "node scripts/v31-final-promotion-smoke-v3.mjs",
     "final:v31:acceptance": "node scripts/studio-v3.mjs --host 0.0.0.0 --port 4186 --acceptance-only",
     "test:p1-07": "node scripts/p1-07-publish-wizard-smoke-v3.mjs",
@@ -181,7 +181,9 @@
     "final:v31:session:show": "node scripts/p1-11-final-session-v3.mjs show",
     "final:v31:session:seal": "node scripts/p1-11-final-session-v3.mjs seal",
     "final:v31:evidence:bundle": "node scripts/p1-11-final-evidence-bundle-v3.mjs",
-    "final:v31:evidence:bundle:strict": "node scripts/p1-11-final-evidence-bundle-v3.mjs --strict"
+    "final:v31:evidence:bundle:strict": "node scripts/p1-11-final-evidence-bundle-v3.mjs --strict",
+    "test:p1-12": "node scripts/p1-12-finalization-smoke-v3.mjs",
+    "final:v31:finalization:status": "node scripts/p1-12-finalization-gate-v3.mjs"
   },
   "engines": {
     "node": ">=20"
