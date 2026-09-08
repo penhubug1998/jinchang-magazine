@@ -55,8 +55,10 @@ assert(studioSource.includes("XDG_CONFIG_HOME:path.join(userDataDir,'config')"),
 assert(studioSource.includes("XDG_CACHE_HOME:path.join(userDataDir,'cache')"),'PDF Chromium XDG cache isolation missing');
 
 const p108Source=await readFile('scripts/p1-08-production-e2e-v3.mjs','utf8');
+assert(p108Source.includes('targetChars=420&structureMode=auto'),'P1-08 print fixture pagination density must leave A4 safety margin');
 assert(p108Source.includes("columns:1,columnGap:24,balanceColumns:false"),'P1-08 PDF fixture must keep the outer page single-column');
-assert(p108Source.includes("layout:'media-right',mobile:'stack'"),'P1-08 must still exercise the inner media-right two-column container');
+assert(p108Source.includes("const pairedImage=pageBlocks[imageIndex],pairedText=pageBlocks[textIndex]"),'P1-08 media-right fixture must pair one image with one text block');
+assert(p108Source.includes("layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]"),'P1-08 must still exercise the inner media-right two-column container');
 assert(!p108Source.includes("columns:2,columnGap:24,balanceColumns:true"),'P1-08 must not combine page-level and container-level double columns');
 
 for(const path of [
@@ -65,4 +67,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · P1-08 uses one double-column layer · P1-21 Final delivery files retained');
+console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · P1-08 uses realistic print pagination and one media-right pair · P1-21 Final delivery files retained');
