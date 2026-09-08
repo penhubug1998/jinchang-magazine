@@ -1001,14 +1001,17 @@ async function publicationWorkflowStatus(id,{refreshAudit=false}={}){
   const web=status.outputs?.web||{},buildReady=Boolean(web.url||web.href||web.path),gateReady=Boolean(status.canPublish);
   const releaseOutput=status.outputs?.release||{},releaseDone=Boolean(issue.status==='published'&&(releaseOutput.path||releaseOutput.generatedAt));
   const configured=Boolean(status.publicShare?.configured),verified=Boolean(status.publicDeployment?.verified||status.outputs?.public?.verified);
+  // Internal review and handoff remain available as records, but they are no
+  // longer release blockers. The release flow only advances through the
+  // machine-verifiable publication check, generated outputs, and deployment.
   let nextAction='done';
-  if(!reviewReady)nextAction='review';else if(!signoffReady)nextAction='signoff';else if(!gateReady)nextAction='preflight';else if(!buildReady)nextAction='build';else if(!releaseDone)nextAction='release';else if(configured&&!verified)nextAction='deploy';
-  return {version:1,issue:id,generatedAt:new Date().toISOString(),sourceFingerprint:fingerprint,nextAction,review:{ready:reviewReady,unresolved:unresolved.length,important:important.length,updatedAt:review.updatedAt||null},signoff:{ready:signoffReady,accepted:Boolean(accepted),fresh,legacy:legacyAccepted,round:latest?.round||null,recipient:latest?.recipient||'',role:latest?.role||'',acceptedAt:latest?.acceptedAt||null,status:latest?.status||'missing'},gate:{ready:gateReady,lastPreflight:status.lastPreflight||null,reason:status.reason||''},build:{ready:buildReady,web},release:{ready:reviewReady&&signoffReady&&gateReady&&buildReady,completed:releaseDone,output:releaseOutput},deployment:{configured,verified,url:status.publicShare?.url||status.publicDeployment?.url||''}};
+  if(!gateReady)nextAction='preflight';else if(!buildReady)nextAction='build';else if(!releaseDone)nextAction='release';else if(configured&&!verified)nextAction='deploy';
+  return {version:1,issue:id,generatedAt:new Date().toISOString(),sourceFingerprint:fingerprint,nextAction,review:{ready:reviewReady,required:false,unresolved:unresolved.length,important:important.length,updatedAt:review.updatedAt||null},signoff:{ready:signoffReady,required:false,accepted:Boolean(accepted),fresh,legacy:legacyAccepted,round:latest?.round||null,recipient:latest?.recipient||'',role:latest?.role||'',acceptedAt:latest?.acceptedAt||null,status:latest?.status||'missing'},gate:{ready:gateReady,lastPreflight:status.lastPreflight||null,reason:status.reason||''},build:{ready:buildReady,web},release:{ready:gateReady&&buildReady,completed:releaseDone,output:releaseOutput},deployment:{configured,verified,url:status.publicShare?.url||status.publicDeployment?.url||''}};
 }
 async function assertPublicationWorkflowReleaseReady(id){
   const workflow=await publicationWorkflowStatus(id,{refreshAudit:false});
-  if(!workflow.review.ready)throw Object.assign(new Error(`内部校审仍有 ${workflow.review.unresolved} 项未清零，正式发布已阻断`),{statusCode:409,code:'REVIEW_NOT_CLOSED'});
-  if(!workflow.signoff.ready)throw Object.assign(new Error(workflow.signoff.accepted?'内部签收已过期：签收后期刊发生变化，请重新核对并签收':'缺少有效的最新内部签收，正式发布已阻断'),{statusCode:409,code:'REVIEW_SIGNOFF_REQUIRED'});
+  // REVIEW_SIGNOFF_REQUIRED is retained only as legacy vocabulary for old
+  // clients; internal handoff is advisory and must not block release.
   if(!workflow.build.ready)await ensurePublicationWeb(id);
   return workflow;
 }

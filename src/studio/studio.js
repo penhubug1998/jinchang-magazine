@@ -1961,19 +1961,20 @@ function publicationWizardStep(id,label,ready,detail,current=false){
 function renderPublicationWizard(){
   const box=$('#publicationWizardSteps'),stateEl=$('#publicationWizardState'),title=$('#publicationWizardNextTitle'),detail=$('#publicationWizardNextDetail'),button=$('#publicationWizardNextBtn');
   if(!box||!state.issue)return;
+  const guide=$('#publicationWizardSection .publication-section-head small');if(guide)guide.textContent='保存 → 发布检查 → 生成输出 → 正式发布 / 上线';
+  const guideDetail=$('#publicationWizardNextDetail');if(guideDetail)guideDetail.textContent='内部校审与交接签收保留为记录，不再阻断发布。';
   const wf=state.publicationWorkflow||{},dirty=Boolean(state.dirty),review=wf.review||{},signoff=wf.signoff||{},gate=wf.gate||{},build=wf.build||{},release=wf.release||{},deployment=wf.deployment||{};
   let next=dirty?'save':String(wf.nextAction||'status');
-  if(!dirty&&next==='save')next='review';
+  if(!dirty&&next==='save')next='preflight';
   const steps=[
     ['save','保存制作源',!dirty,dirty?'当前仍有未保存修改':'制作源已保存'],
-    ['review','校审清零',Boolean(review.ready),review.ready?'人工校审项已清零':`${Number(review.unresolved)||0} 项仍待处理`],
-    ['signoff','交接签收',Boolean(signoff.ready),signoff.ready?`${signoff.recipient||'内部签收'} · 已确认`:signoff.accepted?'签收已过期，期刊修改后需重新核对':'需要完成最新一轮内部签收'],
-    ['build','构建与门禁',Boolean(gate.ready&&build.ready),gate.ready?(build.ready?'严格门禁与 Web Reader 均已就绪':'门禁通过，尚未生成 Web Reader'):'严格发布检查尚未通过'],
+    ['preflight','发布检查',Boolean(gate.ready),gate.ready?'自动发布检查已通过':'尚未完成自动发布检查'],
+    ['build','生成输出',Boolean(build.ready),build.ready?'Web Reader 已生成':'尚未生成 Web Reader'],
     ['release','正式发布 / 上线',Boolean(release.completed&&(!deployment.configured||deployment.verified)),release.completed?(deployment.configured?(deployment.verified?'已发布并完成公开校验':'已发布，公开部署待完成'):'正式发布包已生成'):'尚未正式发布']
   ];
-  const currentId=next==='preflight'||next==='build'?'build':next==='deploy'||next==='done'?'release':next;
+  const currentId=next==='deploy'||next==='done'?'release':next;
   box.innerHTML=steps.map(([id,label,ready,text])=>publicationWizardStep(id,label,ready,text,id===currentId&&!ready)).join('');
-  const labels={save:['先保存当前修改','保存后会重新计算校审、签收和发布证据。'],review:['完成内部校审','仍有未复核问题；进入校审台逐项处理后再继续。'],signoff:['完成交接签收','生成或打开最新校审轮次，核对版本差异并由内部签收人确认。'],preflight:['运行严格发布检查','检查内容完整度、媒体、链接、无障碍和朗读等正式发布门禁。'],build:['生成 Web Reader','严格门禁已通过，先生成真实 Web Reader 构建，再进入正式发布。'],release:['正式发布并上线','校审、签收、构建和门禁均已完成，可以进入正式发布。'],deploy:['完成公开部署','正式发布包已生成；继续部署并校验公开阅读地址。'],done:['发布闭环已完成','公开版本已校验。需要恢复时可使用下方发布快照回滚。'],status:['刷新发布状态','重新读取服务器发布证据后判断下一步。']};
+  const labels={save:['先保存当前修改','保存后自动更新当前制作源。'],review:['运行发布检查','校审记录仅作内部参考，不再阻断发布。'],signoff:['运行发布检查','交接签收仅作内部记录，不再阻断发布。'],preflight:['运行发布检查','检查内容、媒体、链接、无障碍和朗读等正式发布条件。'],build:['生成 Web Reader','发布检查通过后生成真实 Web Reader 构建。'],release:['正式发布并上线','发布检查和输出构建完成，可以进入正式发布。'],deploy:['完成公开部署','正式发布包已生成；继续部署并校验公开阅读地址。'],done:['发布闭环已完成','公开版本已校验。需要恢复时可使用下方发布快照回滚。'],status:['刷新发布状态','重新读取服务器发布证据后判断下一步。']};
   const copy=labels[next]||labels.status;
   if(stateEl)stateEl.textContent=wf.generatedAt?`状态更新 ${fmtTime(wf.generatedAt)}`:'发布流程状态';
   if(title)title.textContent=copy[0];if(detail)detail.textContent=copy[1];
@@ -1985,8 +1986,7 @@ async function runPublicationWizardNext(){
   let wf;
   try{wf=await loadPublicationWorkflow({refresh:true});}catch(error){return toast(`读取发布流程失败：${error.message}`,3600);}
   const next=String(wf?.nextAction||'status');
-  if(next==='review'){$('#publicationCenterDialog')?.close();await openReviewWorkspace();return;}
-  if(next==='signoff'){$('#publicationCenterDialog')?.close();await openReviewHandoffs();return;}
+  if(next==='review'||next==='signoff')return runPublicationPreflightUi();
   if(next==='preflight'){await runPublicationPreflightUi();await loadPublicationWorkflow({refresh:true});return;}
   if(next==='build'){await runPublicationAction('preview','构建 Web Reader');await loadPublicationWorkflow({refresh:true});return;}
   if(next==='release'){await formalPublicationUi();await loadPublicationWorkflow({refresh:true}).catch(()=>{});return;}
@@ -2054,7 +2054,6 @@ function renderPublicationSnapshots(){const el=$('#publicationSnapshots');if(!el
 async function rollbackPublicationSnapshot(id){if(!id||!state.issue)return;if(!confirm('确认回滚到这个快照？当前未保存修改将丢失。'))return;try{await api(`/api/issues/${encodeURIComponent(state.issue.id)}/rollback`,{method:'POST',body:JSON.stringify({snapshot:id})});toast('回滚完成，正在重新载入');await openIssue(state.issue.id);await loadPublicationStatus({refresh:true});await loadPublicationSnapshots();}catch(e){toast(`回滚失败：${e.message}`,4200)}}
 async function formalPublicationUi(){
   if(!requireIssue()||state.publicationBusy)return;
-  try{const wf=await loadPublicationWorkflow({refresh:true});if(!wf?.review?.ready){toast('正式发布已阻断：请先完成内部校审清零',4200);return;}if(!wf?.signoff?.ready){toast(wf?.signoff?.accepted?'正式发布已阻断：签收后期刊发生变化，请重新核对并签收':'正式发布已阻断：请先完成最新一轮内部签收',4800);return;}}catch(error){toast(`无法确认签收证据：${error.message}`,4200);return;}
   if(!isReleaseableIssueStatus(state.issue.status))return toast('当前状态不允许发布，请先在“期刊信息”中修正状态',3600);
   if(state.dirty&&(!await saveIssue({silent:true})))return;
   try{
