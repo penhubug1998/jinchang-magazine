@@ -435,11 +435,19 @@ const rc1AcceptanceFile = path.join(root,'reports','v3-rc1-device-acceptance.jso
 async function readRc1Acceptance(){
   try{return await readJson(rc1AcceptanceFile)}catch{return {version:V3_VERSION,updatedAt:null,records:[]}}
 }
+async function currentAcceptanceSource(){
+  const [sha,at,branch]=await Promise.all([runProcess('git',['rev-parse','HEAD']),runProcess('git',['show','-s','--format=%cI','HEAD']),runProcess('git',['rev-parse','--abbrev-ref','HEAD'])]);
+  const commit=sha.ok?String(sha.output||'').trim():'';const committedAt=at.ok?String(at.output||'').trim():'';
+  if(!/^[0-9a-f]{40}$/i.test(commit)||!Number.isFinite(Date.parse(committedAt)))throw Object.assign(new Error('当前工作目录缺少可验证的 Git 源码身份，禁止写入 Final Acceptance 证据'),{statusCode:409,code:'FINAL_SOURCE_IDENTITY_UNAVAILABLE'});
+  return {commit,committedAt,branch:branch.ok?String(branch.output||'').trim():null};
+}
+function acceptanceEvidenceSha(record){const copy={...record};delete copy.evidenceSha256;return createHash('sha256').update(JSON.stringify(copy)).digest('hex');}
 async function writeRc1Acceptance(record){
-  const report=await readRc1Acceptance();
-  report.version=V3_VERSION;report.updatedAt=new Date().toISOString();report.records=Array.isArray(report.records)?report.records:[];
+  const report=await readRc1Acceptance();const source=await currentAcceptanceSource();
+  report.version=V3_VERSION;report.updatedAt=new Date().toISOString();report.sourceCommit=source.commit;report.records=Array.isArray(report.records)?report.records:[];
   const key=`${record.deviceType||'other'}:${record.deviceName||''}`;
-  const normalized={...record,version:V3_VERSION,key,recordedAt:new Date().toISOString(),userAgent:String(record.userAgent||'').slice(0,1000)};
+  const normalized={...record,version:V3_VERSION,key,recordedAt:new Date().toISOString(),userAgent:String(record.userAgent||'').slice(0,1000),sourceCommit:source.commit,sourceCommittedAt:source.committedAt,sourceBranch:source.branch};
+  normalized.evidenceSha256=acceptanceEvidenceSha(normalized);
   const i=report.records.findIndex(x=>x.key===key);if(i>=0)report.records[i]=normalized;else report.records.push(normalized);
   await mkdir(path.dirname(rc1AcceptanceFile),{recursive:true});await writeFile(rc1AcceptanceFile,`${JSON.stringify(report,null,2)}\n`,'utf8');return report;
 }
@@ -453,6 +461,7 @@ function realBrowserUaMatches(type,ua=''){
   if(type==='mac-safari')return safari&&/Macintosh/i.test(s)&&!/Mobile\//i.test(s);
   if(type==='iphone-safari')return safari&&/iPhone/i.test(s);
   if(type==='ipad-safari')return safari&&(/iPad/i.test(s)||(/Macintosh/i.test(s)&&/Mobile\//i.test(s)));
+  if(type==='android-wechat')return /Android/i.test(s)&&/MicroMessenger/i.test(s);
   return true;
 }
 function firstVideoPath(issue={}){for(const p of issue.pages||[])for(const b of p.blocks||[])if(b.type==='video'&&b.src&&!/^https?:/i.test(b.src))return b.src;return null}
@@ -1029,11 +1038,11 @@ const server=http.createServer(async(req,res)=>{try{
     if(req.method==='GET')return send(res,200,await readRc1Acceptance());
     if(req.method==='POST'){
       if(productionMode&&!acceptanceOnly&&!adminSession(req))return send(res,401,{error:'正式模式下验收记录写入需要已认证管理会话',code:'AUTH_REQUIRED'});
-      const data=await body(req,512*1024);const allowed=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','other']);
+      const data=await body(req,512*1024);const allowed=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','android-wechat','other']);
       if(!allowed.has(data.deviceType))return send(res,400,{error:'deviceType 不受支持',code:'VALIDATION_ERROR'});
       if(!data.checks||typeof data.checks!=='object')return send(res,400,{error:'缺少 checks',code:'VALIDATION_ERROR'});
       const actualUa=String(req.headers['user-agent']||data.userAgent||'').slice(0,1000);data.userAgent=actualUa;
-      if(['edge-desktop','mac-safari','iphone-safari','ipad-safari'].includes(data.deviceType)&&!realBrowserUaMatches(data.deviceType,actualUa))return send(res,400,{error:`当前浏览器 UA 与 ${data.deviceType} 不匹配，不能记为真实浏览器通过`,code:'UA_MISMATCH',userAgent:actualUa});
+      if(['edge-desktop','mac-safari','iphone-safari','ipad-safari','android-wechat'].includes(data.deviceType)&&!realBrowserUaMatches(data.deviceType,actualUa))return send(res,400,{error:`当前浏览器 UA 与 ${data.deviceType} 不匹配，不能记为真实浏览器通过`,code:'UA_MISMATCH',userAgent:actualUa});
       return send(res,200,await writeRc1Acceptance(data));
     }
   }
@@ -1042,7 +1051,11 @@ const server=http.createServer(async(req,res)=>{try{
     const issue=await readJson(file);const video=firstVideoPath(issue);const base=issueAssetRoot(issue,id);const videoFile=video?path.join(base,stripAssetsPrefix(video)):null;
     return send(res,200,{version:V3_VERSION,issue:id,pages:issue.pages?.length||0,assetSource:issue.assetSource||null,mediaAvailable:await exists(base),video:video||null,videoAvailable:Boolean(videoFile&&await exists(videoFile)),reader:`/live-preview/${id}/`});
   }
-  if(acceptanceOnly&&seg[0]==='api'&&u.pathname!=='/api/health')return send(res,403,{error:'RC acceptance-only 模式禁止编辑 API',code:'READ_ONLY'});
+  if(u.pathname==='/api/final/acceptance'&&req.method==='GET'){
+    const r=await runScriptAsync('p1-10-final-acceptance-gate-v3.mjs');let report=null;try{report=await readJson(path.join(root,'reports/p1-10-final-acceptance.json'))}catch{}
+    return send(res,report?200:500,{ok:Boolean(report),runOk:r.ok,output:r.output,report});
+  }
+  if(acceptanceOnly&&seg[0]==='api'&&u.pathname!=='/api/health')return send(res,403,{error:'Final Acceptance 模式禁止编辑 API',code:'READ_ONLY'});
   if(!acceptanceOnly&&u.pathname==='/api/auth/session'&&req.method==='GET'){
     const session=adminSession(req);
     return send(res,200,{enabled:adminLoginEnabled,authenticated:Boolean(session),user:session?.user||null});
@@ -1247,7 +1260,7 @@ const server=http.createServer(async(req,res)=>{try{
   if (seg[0]==='reports'&&seg[1]) { const base=path.resolve(root,'reports'); const file=path.resolve(base,seg.slice(1).join('/')); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
   if (seg[0]==='publication-output'&&seg[1]) { const id=normalizeIssueId(seg[1]); const base=path.resolve(PUBLICATION_OUTPUT_ROOT,id); const rest=decodeURIComponent(seg.slice(2).join('/'))||'web/index.html'; const file=path.resolve(base,rest); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
   if (seg[0]==='preview'&&seg[1]) { const id=normalizeIssueId(seg[1]); const rest=seg.slice(2).join('/')||'index.html'; const base=path.resolve(root,'dist-v3',id); const file=path.resolve(base,rest); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
-  if (u.pathname==='/'||u.pathname==='/index.html'||u.pathname==='/workspace'||u.pathname==='/workspace/') return serveFile(req,res,path.join(studioDir,acceptanceOnly?'rc1-acceptance.html':'index.html'));
+  if (u.pathname==='/'||u.pathname==='/index.html'||u.pathname==='/workspace'||u.pathname==='/workspace/') return serveFile(req,res,path.join(studioDir,acceptanceOnly?'final-acceptance.html':'index.html'));
   // Beta1: real nested Studio modules (e.g. /workspace/viewport.js) must win before the legacy /workspace/* compatibility fallback.
   const staticFile=path.resolve(studioDir,'.'+u.pathname);
   if(staticFile.startsWith(studioDir+path.sep)&&await exists(staticFile))return serveFile(req,res,staticFile);
@@ -1260,6 +1273,6 @@ async function runPublicationPreflight(id,report=()=>{}){
   const steps=[];const exec=async(label,script,args=[])=>{report({stage:label,percent:Math.min(95,10+steps.length*20)});const result=await runScriptAsync(script,args);steps.push({label,ok:result.ok,output:result.output});return result};
   const check=await exec('数据校验','check-v3.mjs',['--issue',id]);const build=check.ok?await exec('构建','build-v3.mjs',['--issue',id]):{ok:false};const smoke=build.ok?await exec('静态 Smoke','smoke-v3.mjs',['--issue',id]):{ok:false};steps.push({label:'设备回归（提示项）',ok:true,skipped:true,advisory:true,output:'设备兼容性回归属于提示项，不阻断正式发布'});const audit=await exec('发布审计（硬性门禁 + 提示项）','audit-v3.mjs',['--issue',id,'--quiet','--strict']);const hardOk=Boolean(check.ok&&build.ok&&smoke.ok&&audit.ok);const previous=await readPublicationEvidence(id);const evidence=await writePublicationEvidence(id,{devices:{mobile:previous.devices?.mobile||'pending',desktop:previous.devices?.desktop||'pending',checkedAt:previous.devices?.checkedAt||null,policy:'advisory'},lastPreflight:{ok:hardOk,strict:true,at:new Date().toISOString(),steps:steps.map(item=>({label:item.label,ok:item.ok,skipped:Boolean(item.skipped),advisory:Boolean(item.advisory)}))}});return {ok:hardOk,steps,evidence,status:await publicationStatus(id,{refreshAudit:false})};
 }
-if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','login.css','login.js','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
+if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','login.css','login.js','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js','final-acceptance.html','final-acceptance.css','final-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
 await restoreBackgroundJobs();
-server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Promotion 实机验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});
+server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Acceptance 真实环境验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});

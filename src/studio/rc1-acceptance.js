@@ -13,11 +13,11 @@ const manualItems=[
  ['orientation','iPhone/iPad 横竖屏切换后页面与工具栏没有错位','mobile'],
  ['resume','刷新/重新打开后阅读与界面状态没有异常','all']
 ];
-function requiredManualItems(){const t=$('#deviceType')?.value||detectType();const mobile=['iphone-safari','ipad-safari'].includes(t);return manualItems.filter(x=>x[2]==='all'||mobile)}
+function requiredManualItems(){const t=$('#deviceType')?.value||detectType();const mobile=['iphone-safari','ipad-safari','android-wechat'].includes(t);return manualItems.filter(x=>x[2]==='all'||mobile)}
 function renderManual(){manual.innerHTML=requiredManualItems().map(([id,text])=>`<label><input type="checkbox" data-check="${id}"><span>${text}</span></label>`).join('')}
 function isSafariUa(ua=navigator.userAgent){return /Safari/i.test(ua)&&!/(Chrome|Chromium|CriOS|Edg|EdgiOS|FxiOS|OPiOS)/i.test(ua)}
-function detectType(){const ua=navigator.userAgent;if(/Edg\//i.test(ua)&&!/EdgiOS/i.test(ua))return'edge-desktop';if(isSafariUa(ua)&&/iPhone/i.test(ua))return'iphone-safari';if(isSafariUa(ua)&&(/iPad/i.test(ua)||(/Macintosh/i.test(ua)&&/Mobile\//i.test(ua))))return'ipad-safari';if(isSafariUa(ua)&&/Macintosh/i.test(ua)&&!/Mobile\//i.test(ua))return'mac-safari';return'other'}
-$('#deviceType').value=detectType();renderManual();$('#deviceType').addEventListener('change',renderManual);
+function detectType(){const ua=navigator.userAgent;if(/Android/i.test(ua)&&/MicroMessenger/i.test(ua))return'android-wechat';if(/Edg\//i.test(ua)&&!/EdgiOS/i.test(ua))return'edge-desktop';if(isSafariUa(ua)&&/iPhone/i.test(ua))return'iphone-safari';if(isSafariUa(ua)&&(/iPad/i.test(ua)||(/Macintosh/i.test(ua)&&/Mobile\//i.test(ua))))return'ipad-safari';if(isSafariUa(ua)&&/Macintosh/i.test(ua)&&!/Mobile\//i.test(ua))return'mac-safari';return'other'}
+const requestedType=new URLSearchParams(location.search).get('target');const allowedTargets=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','android-wechat','other']);$('#deviceType').value=allowedTargets.has(requestedType)?requestedType:detectType();renderManual();$('#deviceType').addEventListener('change',renderManual);
 function row(label,value,state='pass',key=''){return`<div class="check"${key?` data-check-row="${key}"`:''}><span>${label}</span><span class="badge ${state}">${value}</span></div>`}
 function applyReaderSize(button){const w=Number(button.dataset.width),h=Number(button.dataset.height);reader.style.width=`${w}px`;reader.style.height=`${h}px`;const max=Math.max(0.18,Math.min(1,(shell.clientWidth-20)/w,(shell.clientHeight-20)/h));reader.style.transform=`scale(${max})`;shell.style.setProperty('--scale',max)}
 function setReaderImmersive(on){document.body.classList.toggle('reader-immersive',Boolean(on));if(!on)document.querySelector('[data-width="390"]')?.click()}
@@ -25,7 +25,7 @@ function updateFullscreenFallbackStatus(){const badge=document.querySelector('[d
 window.addEventListener('message',(event)=>{const data=event.data;if(event.source!==reader.contentWindow||data?.source!=='v3-reader'||data.type!=='mobile-immersive')return;if(data.active)fullscreenFallbackVerified=true;setReaderImmersive(Boolean(data.active));updateFullscreenFallbackStatus()});
 async function probes(){
  const rows=[];let corePass=true;const css=(q)=>CSS?.supports?.(q)??false;
- const safari=isSafariUa(),edge=/Edg\//i.test(navigator.userAgent)&&/Windows NT/i.test(navigator.userAgent);rows.push(row('浏览器',edge?'Microsoft Edge / Windows':safari?'Safari/WebKit 可识别':'非目标浏览器',edge||safari?'pass':'warn'));
+ const safari=isSafariUa(),edge=/Edg\//i.test(navigator.userAgent),wechat=/Android/i.test(navigator.userAgent)&&/MicroMessenger/i.test(navigator.userAgent);rows.push(row('浏览器',edge?'Microsoft Edge':wechat?'Android 微信内置浏览器':safari?'Safari/WebKit 可识别':'非目标浏览器',edge||safari||wechat?'pass':'warn'));
  rows.push(row('visualViewport',window.visualViewport?'支持':'使用 V3.0 fallback',window.visualViewport?'pass':'warn'));
  const fs=Boolean(document.documentElement.requestFullscreen||document.documentElement.webkitRequestFullscreen);rows.push(row('Fullscreen API',fullscreenFallbackVerified?'沉浸 fallback 已验证':fs?'标准/WebKit 可用':'页面全屏不可用，将验证沉浸 fallback',fullscreenFallbackVerified||fs?'pass':'warn','fullscreen'));
  rows.push(row('backdrop-filter',css('backdrop-filter:blur(4px)')||css('-webkit-backdrop-filter:blur(4px)')?'支持':'fallback 背景',css('backdrop-filter:blur(4px)')||css('-webkit-backdrop-filter:blur(4px)')?'pass':'warn'));

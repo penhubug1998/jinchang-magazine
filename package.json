@@ -159,8 +159,8 @@
     "test:v31-rc2-compat": "node scripts/v31-rc2-compat-v3.mjs",
     "test:v31-rc2-gate": "node scripts/v31-rc2-gate-v3.mjs",
     "verify:v31-rc2": "npm run test:v31-rc2 && npm run test:v31-beta1-production && npm run test:v31-rc2-quality && npm run test:v31-rc2-media && npm run test:v31-rc2-browser && npm run test:v31-rc2-deployment && npm run test:v31-rc2-performance && npm run test:v31-rc2-compat && npm run check:v3 && npm run build:v3 && npm run test:v31-rc2-gate",
-    "final:v31:status": "node scripts/v31-final-promotion-gate-v3.mjs",
-    "final:v31:gate": "node scripts/v31-final-promotion-gate-v3.mjs --strict",
+    "final:v31:status": "node scripts/p1-10-final-acceptance-gate-v3.mjs",
+    "final:v31:gate": "node scripts/p1-10-final-acceptance-gate-v3.mjs --strict",
     "final:v31:production-receipt": "node scripts/v31-final-production-receipt-v3.mjs",
     "final:v31": "node scripts/v31-finalize-v3.mjs",
     "test:v31-final-promotion": "node scripts/v31-final-promotion-smoke-v3.mjs",
@@ -169,7 +169,12 @@
     "test:p1-08": "node scripts/p1-08-production-e2e-v3.mjs",
     "test:p1-09": "node scripts/p1-09-final-evidence-smoke-v3.mjs",
     "final:v31:current-gate": "node scripts/p1-09-final-evidence-gate-v3.mjs",
-    "final:v31:current-gate:strict": "node scripts/p1-09-final-evidence-gate-v3.mjs --strict"
+    "final:v31:current-gate:strict": "node scripts/p1-09-final-evidence-gate-v3.mjs --strict",
+    "test:p1-10": "node scripts/p1-10-final-acceptance-smoke-v3.mjs",
+    "final:v31:acceptance:status": "node scripts/p1-10-final-acceptance-gate-v3.mjs",
+    "final:v31:evidence:verify": "node scripts/p1-10-final-acceptance-gate-v3.mjs --strict",
+    "final:v31:evidence:export": "node scripts/p1-10-final-acceptance-gate-v3.mjs --export",
+    "final:v31:package-guard": "node scripts/p1-10-final-package-guard-v3.mjs"
   },
   "engines": {
     "node": ">=20"
