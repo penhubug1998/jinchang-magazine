@@ -18,6 +18,9 @@ export function cacheClass(file='') {
   return 'other';
 }
 export function cacheControlFor(file=''){ return CACHE_POLICY[cacheClass(file)]; }
+export function portableNameCompare(a='',b=''){
+  return Buffer.compare(Buffer.from(String(a),'utf8'),Buffer.from(String(b),'utf8'));
+}
 export function treeSha256ForFiles(files=[]){
   return crypto.createHash('sha256').update((files||[]).map(x=>`${x.path}:${x.sha256}:${x.bytes}`).join('\n')).digest('hex');
 }
@@ -25,7 +28,7 @@ export function treeSha256ForFiles(files=[]){
 export async function integrityManifest(dir,{issue=null}={}){
   const files=[];
   async function walk(current){
-    for(const entry of (await readdir(current,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){
+    for(const entry of (await readdir(current,{withFileTypes:true})).sort((a,b)=>portableNameCompare(a.name,b.name))){
       const file=path.join(current,entry.name);
       if(entry.isDirectory()) await walk(file);
       else if(entry.isFile()){
