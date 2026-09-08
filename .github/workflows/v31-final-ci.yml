@@ -35,6 +35,9 @@ jobs:
       - name: Install exact dependencies
         run: npm ci
 
+      - name: CI governance contract
+        run: node scripts/p1-15-ci-consolidation-smoke-v3.mjs
+
       - name: Dependency security and deterministic vendor
         run: |
           git config core.fileMode false
