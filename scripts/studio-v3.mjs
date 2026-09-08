@@ -1,4 +1,3 @@
-import { issueTemplateCatalog } from '../src/studio/issue-templates.js';
 import http from 'node:http';
 import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
@@ -964,7 +963,7 @@ async function generatePublicationPdf(id){
   const cdpSend=(method,params={},timeoutMs=15000)=>new Promise((resolve,reject)=>{const requestId=++seq;pending.set(requestId,{resolve,reject});ws.send(JSON.stringify({id:requestId,method,params}));setTimeout(()=>{const p=pending.get(requestId);if(p){pending.delete(requestId);reject(publicationFailure('PDF_CDP_TIMEOUT',`CDP ${method} 超时`,['请检查服务器资源或稍后重试。']))}},timeoutMs)});
   try{
     let spawnError=null;
-    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true});
+    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});
     chrome.once('error',error=>{spawnError=error});
     let tabs=null;for(let i=0;i<100;i++){if(spawnError)break;try{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);if(response.ok){tabs=await response.json();if(tabs?.length)break}}catch{}await new Promise(resolve=>setTimeout(resolve,80));}
     if(spawnError)throw publicationFailure('PDF_CHROMIUM_START_FAILED',`Chromium 启动失败：${spawnError.message||spawnError}`,['请确认 CHROMIUM 指向可执行文件，并检查执行权限。','Web Reader、正式发布和 ZIP 归档不受影响。']);
@@ -1187,7 +1186,6 @@ const server=http.createServer(async(req,res)=>{try{
     let cloneSource=null;
     if(startMode==='clone'){if(!data.cloneFrom)return send(res,400,{error:'复制上期需要选择来源期刊',code:'VALIDATION_ERROR'});const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
-    if(templateId)argv.push('--template',templateId);
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;
