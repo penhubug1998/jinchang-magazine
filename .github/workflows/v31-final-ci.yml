@@ -70,7 +70,7 @@ jobs:
             const gate=r.gates.find(x=>x.id===id);
             if(gate?.status!=='READY') throw new Error(`${id} must be READY after current-source E2E`);
           }
-          for(const id of ['full-media','edge-desktop','mac-safari','iphone-safari','android-wechat','production-https']){
+          for(const id of ['media','edge-desktop','mac-safari','iphone-safari','android-wechat','production-https']){
             const gate=r.gates.find(x=>x.id===id);
             if(!gate||gate.status==='READY') throw new Error(`${id} must not be fabricated READY by CI`);
           }
