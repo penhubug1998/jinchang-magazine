@@ -130,7 +130,7 @@ async function auditOne(dirName) {
     else if(blocks.length>12)add(warnings,'warning','BLOCK_DENSITY_HIGH',`第 ${n} 页有 ${blocks.length} 个内容块，编辑和移动端阅读密度可能偏高`,{...loc('blocks'),fix:'建议拆分为两页或合并同类信息，单页优先控制在 4–10 个内容块。'});
     for(const [bi,b] of blocks.entries()){
       if(!b||typeof b!=='object'){add(blockers,'blocker','BLOCK_INVALID',`第 ${n} 页第 ${bi+1} 个内容块不是有效对象`,{...loc('blocks'),blockIndex:bi});continue}
-      const knownBlocks=new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
+      const knownBlocks=new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','table','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
       if(!knownBlocks.has(b.type))add(blockers,'blocker','BLOCK_TYPE_UNSUPPORTED',`第 ${n} 页第 ${bi+1} 个内容块类型 ${b.type||'(空)'} 不受支持`,{...loc('blocks'),blockIndex:bi,fix:'在可视化编辑器中替换为受支持的内容块，或在高级 JSON 中修正 type。'});
       const arrays=[];const collectArrays=(v,path='')=>{if(Array.isArray(v)){arrays.push({path,count:v.length});v.forEach((x,i)=>collectArrays(x,`${path}[${i}]`))}else if(v&&typeof v==='object')for(const [k,x] of Object.entries(v))collectArrays(x,path?`${path}.${k}`:k)};collectArrays(b);
       const tooMany=arrays.find(x=>x.count>40);if(tooMany)add(blockers,'blocker','BLOCK_ARRAY_LIMIT',`第 ${n} 页第 ${bi+1} 个内容块的 ${tooMany.path||'数组'} 有 ${tooMany.count} 项，超过 40 项上限`,{...loc('blocks'),blockIndex:bi,fix:'拆分内容块或减少条目数量。'});
