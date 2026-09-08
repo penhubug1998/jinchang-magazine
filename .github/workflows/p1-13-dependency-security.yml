@@ -42,17 +42,21 @@ jobs:
           }
           NODE
 
+      - name: Apply P1-13 source and test baseline patch
+        run: |
+          node scripts/p1-13-tiptap-security-patch.mjs
+          node --check scripts/p1-13-tiptap-security-patch.mjs
+          node --check scripts/p1-13-dependency-security-smoke-v3.mjs
+          node --check scripts/v31-alpha22-smoke-v3.mjs
+          node --check scripts/v31-alpha221-smoke-v3.mjs
+          node --check scripts/v31-alpha22-browser-v3.mjs
+          node --check scripts/v31-alpha221-browser-v3.mjs
+          node --check scripts/vendor-tiptap-v3.mjs
+          node --check src/reader/rich-text.js
+          git diff --check
+
       - name: Upgrade Tiptap security patch line and rebuild lockfile
         run: |
-          node <<'NODE'
-          const fs=require('fs');
-          const file='package.json';const pkg=JSON.parse(fs.readFileSync(file,'utf8'));
-          const version='3.31.3';
-          for(const name of ['@tiptap/core','@tiptap/starter-kit','@tiptap/extension-text-style','@tiptap/extension-highlight','@tiptap/extension-text-align']) pkg.dependencies[name]=version;
-          pkg.richTextEngine.version=version;
-          pkg.scripts['test:p1-13']='node scripts/p1-13-dependency-security-smoke-v3.mjs';
-          fs.writeFileSync(file,JSON.stringify(pkg,null,2)+'\n');
-          NODE
           npm install --ignore-scripts
           git diff --check
           git diff --stat -- package.json package-lock.json
@@ -103,7 +107,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json scripts/p1-13-dependency-security-smoke-v3.mjs
+          git add package.json package-lock.json src/reader/rich-text.js src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json scripts/vendor-tiptap-v3.mjs scripts/v31-alpha22-smoke-v3.mjs scripts/v31-alpha221-smoke-v3.mjs scripts/v31-alpha22-browser-v3.mjs scripts/v31-alpha221-browser-v3.mjs scripts/p1-13-tiptap-security-patch.mjs scripts/p1-13-dependency-security-smoke-v3.mjs
           if git diff --cached --quiet; then
             echo 'P1-13 security remediation already committed'
           else
