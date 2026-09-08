@@ -68,7 +68,8 @@
         "a60c158af936edda292d"
       ],
       "baselinedAt": "2026-08-25T14:55:05.256Z"
-    }
+    },
+    "turnAnimation": "smooth"
   },
   "articles": {},
   "pages": [
@@ -80,7 +81,8 @@
       "blocks": [
         {
           "type": "coverMeta",
-          "text": "中国人民银行金昌市分行离退休干部电子期刊 · 第三期"
+          "text": "中国人民银行金昌市分行离退休干部电子期刊 · 第三期",
+          "id": "block_w5f73e"
         },
         {
           "type": "coverSections",
@@ -90,10 +92,12 @@
             "反诈防骗",
             "警示教育",
             "时令养生"
-          ]
+          ],
+          "id": "block_pcdgmk"
         }
       ],
-      "section": ""
+      "section": "",
+      "id": "page_1t5z18a"
     },
     {
       "type": "toc",
@@ -104,7 +108,8 @@
         {
           "type": "paragraph",
           "style": "body",
-          "text": "点击目录条目可直接跳转。"
+          "text": "点击目录条目可直接跳转。",
+          "id": "block_1pl8glt"
         },
         {
           "type": "toc",
@@ -139,9 +144,11 @@
               "subtitle": "",
               "page": 30
             }
-          ]
+          ],
+          "id": "block_b8f6pm"
         }
-      ]
+      ],
+      "id": "page_1idnfr0"
     },
     {
       "type": "article",
@@ -153,29 +160,35 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "“离离暑云散，袅袅凉风起。”"
+          "text": "“离离暑云散，袅袅凉风起。”",
+          "id": "block_kgqcxf"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "2026年8月23日迎来处暑，9月7日将迎来白露。暑气渐消，秋意渐浓，金昌也将逐步进入天高气爽、昼夜温差加大的时节。在这夏秋转换、硕果初成的美好时光里，第三期老干部电子期刊再次与各位老同志见面。"
+          "text": "2026年8月23日迎来处暑，9月7日将迎来白露。暑气渐消，秋意渐浓，金昌也将逐步进入天高气爽、昼夜温差加大的时节。在这夏秋转换、硕果初成的美好时光里，第三期老干部电子期刊再次与各位老同志见面。",
+          "id": "block_vc6zes"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "今年是中国共产党成立105周年，也是“十五五”开局之年。当前，全党全国各族人民正坚定信心、真抓实干，扎实推动高质量发展，不断把中国式现代化事业推向前进。广大离退休干部虽然离开了工作岗位，但政治本色不能褪、理想信念不能松、纪律规矩不能忘，仍然是党和国家事业发展的宝贵财富和重要力量。"
+          "text": "今年是中国共产党成立105周年，也是“十五五”开局之年。当前，全党全国各族人民正坚定信心、真抓实干，扎实推动高质量发展，不断把中国式现代化事业推向前进。广大离退休干部虽然离开了工作岗位，但政治本色不能褪、理想信念不能松、纪律规矩不能忘，仍然是党和国家事业发展的宝贵财富和重要力量。",
+          "id": "block_11lm37d"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "本期电子期刊继续设置时政要闻、政治理论学习、安全防范、警示教育、时令养生五大版块。我们将一起关注近期党和国家重要部署，学习领悟习近平党建思想，认识AI换脸、AI拟声等新型诈骗手段，重温退休党员干部必须严守的纪律红线，并围绕处暑、白露时节为大家送上秋季健康提醒。"
+          "text": "本期电子期刊继续设置时政要闻、政治理论学习、安全防范、警示教育、时令养生五大版块。我们将一起关注近期党和国家重要部署，学习领悟习近平党建思想，认识AI换脸、AI拟声等新型诈骗手段，重温退休党员干部必须严守的纪律红线，并围绕处暑、白露时节为大家送上秋季健康提醒。",
+          "id": "block_19vnc7u"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "愿本期期刊陪伴各位老同志，在常学常新中坚定信仰，在慎独慎微中涵养清风，在识诈防骗中守护平安，在顺时调养中安享金秋。"
+          "text": "愿本期期刊陪伴各位老同志，在常学常新中坚定信仰，在慎独慎微中涵养清风，在识诈防骗中守护平安，在顺时调养中安享金秋。",
+          "id": "block_211bjj"
         }
-      ]
+      ],
+      "id": "page_zk0rpx"
     },
     {
       "type": "news",
@@ -187,34 +200,41 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "2026年8月18日下午，国家主席习近平在北京人民大会堂同来华进行国事访问的厄瓜多尔总统诺沃亚举行会谈。"
+          "text": "2026年8月18日下午，国家主席习近平在北京人民大会堂同来华进行国事访问的厄瓜多尔总统诺沃亚举行会谈。",
+          "id": "block_no4j0c"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "习近平指出，今年是中厄两国建立全面战略伙伴关系10周年。无论国际形势如何变化，中方始终从战略高度和长远角度看待中厄关系，愿同厄方一道努力，推动双边关系不断迈上新台阶，更好造福两国人民。"
+          "text": "习近平指出，今年是中厄两国建立全面战略伙伴关系10周年。无论国际形势如何变化，中方始终从战略高度和长远角度看待中厄关系，愿同厄方一道努力，推动双边关系不断迈上新台阶，更好造福两国人民。",
+          "id": "block_t9n9kb"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "习近平强调，中厄双方要巩固政治互信，加强发展战略对接，落实共建“一带一路”合作规划，实施好能源、矿产、基础设施建设、金融等合作项目，并积极探讨数字经济、绿色发展、新能源、人工智能等领域合作。"
+          "text": "习近平强调，中厄双方要巩固政治互信，加强发展战略对接，落实共建“一带一路”合作规划，实施好能源、矿产、基础设施建设、金融等合作项目，并积极探讨数字经济、绿色发展、新能源、人工智能等领域合作。",
+          "id": "block_7hn376"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "会谈后，两国元首共同见证签署绿色产业、经贸合作、数字经济、民生等领域多项合作文件。"
+          "text": "会谈后，两国元首共同见证签署绿色产业、经贸合作、数字经济、民生等领域多项合作文件。",
+          "id": "block_1ym5wi9"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "今年恰逢中厄全面战略伙伴关系建立10周年，此次会谈进一步体现了我国坚持扩大高水平开放、深化国际合作、推动构建人类命运共同体的坚定立场。"
+          "text": "今年恰逢中厄全面战略伙伴关系建立10周年，此次会谈进一步体现了我国坚持扩大高水平开放、深化国际合作、推动构建人类命运共同体的坚定立场。",
+          "id": "block_1t3cao8"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "资料来源：新华社"
+          "text": "资料来源：新华社",
+          "id": "block_12dz2uf"
         }
-      ]
+      ],
+      "id": "page_1l3i37z"
     },
     {
       "type": "news",
@@ -226,29 +246,35 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "8月21日，国务院总理李强主持召开国务院常务会议，听取新一代通信网建设情况汇报，部署进一步清理拖欠企业账款工作，研究持续改善空气质量有关工作，并审议有关条例草案。"
+          "text": "8月21日，国务院总理李强主持召开国务院常务会议，听取新一代通信网建设情况汇报，部署进一步清理拖欠企业账款工作，研究持续改善空气质量有关工作，并审议有关条例草案。",
+          "id": "block_15i92km"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "会议指出，要积极顺应新一轮科技革命和产业变革趋势，牢牢把握新一代通信网建设机遇，坚持应用牵引、适度超前，统筹推进基础网络、空间网络、国际网络、融合网络建设，进一步巩固提升我国信息通信业竞争优势。"
+          "text": "会议指出，要积极顺应新一轮科技革命和产业变革趋势，牢牢把握新一代通信网建设机遇，坚持应用牵引、适度超前，统筹推进基础网络、空间网络、国际网络、融合网络建设，进一步巩固提升我国信息通信业竞争优势。",
+          "id": "block_21cq5x"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "会议还对清理拖欠企业账款、持续改善空气质量、电力安全事故应急处置等工作作出部署。"
+          "text": "会议还对清理拖欠企业账款、持续改善空气质量、电力安全事故应急处置等工作作出部署。",
+          "id": "block_1ru5w7k"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "从数字基础设施到企业发展环境，从生态文明建设到安全生产，一系列部署体现了党中央、国务院统筹发展和安全、统筹当前和长远，持续推动高质量发展的鲜明导向。"
+          "text": "从数字基础设施到企业发展环境，从生态文明建设到安全生产，一系列部署体现了党中央、国务院统筹发展和安全、统筹当前和长远，持续推动高质量发展的鲜明导向。",
+          "id": "block_3xuqwf"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "资料来源：新华社"
+          "text": "资料来源：新华社",
+          "id": "block_1bsgrkq"
         }
-      ]
+      ],
+      "id": "page_p77k8c"
     },
     {
       "type": "news",
@@ -260,29 +286,35 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "商务部8月20日在例行新闻发布会上介绍，今年前7个月，我国进口保持良好增长势头，自150多个贸易伙伴的进口实现正增长。"
+          "text": "商务部8月20日在例行新闻发布会上介绍，今年前7个月，我国进口保持良好增长势头，自150多个贸易伙伴的进口实现正增长。",
+          "id": "block_dwu3o8"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "商务部表示，一方面，主动扩大进口政策成效持续显现；另一方面，“出口中国”等系列活动进一步发挥平台带动作用。截至目前，“出口中国”系列活动已在境内外举办超过40场，来自近百个国家的优质产品借助相关平台不断扩大在中国市场的影响力。"
+          "text": "商务部表示，一方面，主动扩大进口政策成效持续显现；另一方面，“出口中国”等系列活动进一步发挥平台带动作用。截至目前，“出口中国”系列活动已在境内外举办超过40场，来自近百个国家的优质产品借助相关平台不断扩大在中国市场的影响力。",
+          "id": "block_2hm1x3"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "下一步，我国将进一步强化相关促消费、扩进口活动联动，更好释放超大规模市场潜力，与世界共享中国发展机遇。"
+          "text": "下一步，我国将进一步强化相关促消费、扩进口活动联动，更好释放超大规模市场潜力，与世界共享中国发展机遇。",
+          "id": "block_17b29gu"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "与此同时，商务部等9部门近期印发意见，提出进一步激发下沉市场活力、活跃县域消费，为扩大内需、畅通国内大循环提供新的支撑。"
+          "text": "与此同时，商务部等9部门近期印发意见，提出进一步激发下沉市场活力、活跃县域消费，为扩大内需、畅通国内大循环提供新的支撑。",
+          "id": "block_1oppgbh"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "资料来源：商务部、中国政府网"
+          "text": "资料来源：商务部、中国政府网",
+          "id": "block_rn8g98"
         }
-      ]
+      ],
+      "id": "page_fv2mk9"
     },
     {
       "type": "theory",
@@ -294,44 +326,53 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "《习近平党建文选》第一卷、第二卷近期出版发行，为广大党员干部群众深入学习贯彻习近平党建思想提供了权威教材。"
+          "text": "《习近平党建文选》第一卷、第二卷近期出版发行，为广大党员干部群众深入学习贯彻习近平党建思想提供了权威教材。",
+          "id": "block_1c26wfx"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "8月20日刊发的“学习领悟《习近平党建文选》”系列文章指出，旗帜鲜明讲政治，是我们党作为马克思主义政党的根本要求。党的政治建设是党的根本性建设，决定党的建设方向和效果。"
+          "text": "8月20日刊发的“学习领悟《习近平党建文选》”系列文章指出，旗帜鲜明讲政治，是我们党作为马克思主义政党的根本要求。党的政治建设是党的根本性建设，决定党的建设方向和效果。",
+          "id": "block_1wbgj7y"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "广大离退休党员干部虽然离开工作岗位，但党员身份没有退休期，政治要求没有“休止符”。"
+          "text": "广大离退休党员干部虽然离开工作岗位，但党员身份没有退休期，政治要求没有“休止符”。",
+          "id": "block_jzcqvr"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "退休之后，怎样继续做到讲政治？"
+          "text": "退休之后，怎样继续做到讲政治？",
+          "id": "block_1n9zvnc"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "一要坚持理论学习不断线。"
+          "text": "一要坚持理论学习不断线。",
+          "id": "block_1i8w69t"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "离开岗位并不意味着学习任务结束。要坚持通过报刊、电视、网络平台以及党支部学习等方式，及时了解党中央重大决策部署，自觉用党的创新理论武装头脑。"
+          "text": "离开岗位并不意味着学习任务结束。要坚持通过报刊、电视、网络平台以及党支部学习等方式，及时了解党中央重大决策部署，自觉用党的创新理论武装头脑。",
+          "id": "block_f03yxu"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "二要做到政治立场不动摇。"
+          "text": "二要做到政治立场不动摇。",
+          "id": "block_14p0h5n"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "在重大原则问题上头脑清醒、立场坚定，不听信政治谣言，不传播未经证实的信息，不发表与党员身份不相符的言论。"
+          "text": "在重大原则问题上头脑清醒、立场坚定，不听信政治谣言，不传播未经证实的信息，不发表与党员身份不相符的言论。",
+          "id": "block_1947pd8"
         }
-      ]
+      ],
+      "id": "page_1u9kgmw"
     },
     {
       "type": "theory",
@@ -343,34 +384,41 @@
         {
           "type": "paragraph",
           "style": "small",
-          "text": "三要做到党员意识不淡化。"
+          "text": "三要做到党员意识不淡化。",
+          "id": "block_d2gci4"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "继续积极参加组织生活，主动接受党组织教育管理监督，在家庭、社区和社会生活中发挥党员先锋模范作用。"
+          "text": "继续积极参加组织生活，主动接受党组织教育管理监督，在家庭、社区和社会生活中发挥党员先锋模范作用。",
+          "id": "block_1jb05q3"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "四要做到优良传统不丢失。"
+          "text": "四要做到优良传统不丢失。",
+          "id": "block_q9e2f6"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "广大老干部经历丰富、阅历深厚，要积极发挥政治优势、经验优势和威望优势，多讲党的光荣传统，多讲改革发展的巨大成就，多向年轻干部传递正能量。"
+          "text": "广大老干部经历丰富、阅历深厚，要积极发挥政治优势、经验优势和威望优势，多讲党的光荣传统，多讲改革发展的巨大成就，多向年轻干部传递正能量。",
+          "id": "block_1hplnl"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "学习习近平党建思想，就是要更加深刻认识到：政治上的坚定，源自理论上的清醒；退休可以离岗，党员永不离党。"
+          "text": "学习习近平党建思想，就是要更加深刻认识到：政治上的坚定，源自理论上的清醒；退休可以离岗，党员永不离党。",
+          "id": "block_1yd61w8"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "资料来源：人民日报、中国纪检监察报"
+          "text": "资料来源：人民日报、中国纪检监察报",
+          "id": "block_1mxy053"
         }
-      ]
+      ],
+      "id": "page_18aatu5"
     },
     {
       "type": "theory",
@@ -382,50 +430,59 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "创新、协调、绿色、开放、共享的新发展理念，是习近平新时代中国特色社会主义思想的重要内容，也是贯穿《习近平谈治国理政》第一至五卷的一条鲜明主线。"
+          "text": "创新、协调、绿色、开放、共享的新发展理念，是习近平新时代中国特色社会主义思想的重要内容，也是贯穿《习近平谈治国理政》第一至五卷的一条鲜明主线。",
+          "id": "block_1iu4apl"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "习近平总书记深刻指出，新发展理念不是一个简单的发展口号，而是关系我国发展全局的一场深刻变革。"
+          "text": "习近平总书记深刻指出，新发展理念不是一个简单的发展口号，而是关系我国发展全局的一场深刻变革。",
+          "id": "block_1r45jq2"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "近年来，我国经济社会发展不断向高质量迈进，新产业、新技术、新业态蓬勃发展，绿色转型深入推进，民生福祉持续改善。进入“十五五”时期，更需要完整、准确、全面贯彻新发展理念，把发展的质量和效益摆在更加突出的位置。"
+          "text": "近年来，我国经济社会发展不断向高质量迈进，新产业、新技术、新业态蓬勃发展，绿色转型深入推进，民生福祉持续改善。进入“十五五”时期，更需要完整、准确、全面贯彻新发展理念，把发展的质量和效益摆在更加突出的位置。",
+          "id": "block_11p8kfn"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "对广大老同志而言，学习新发展理念，可以帮助我们更好认识新时代的发展变化，更加理性、客观地看待经济社会发展中的新情况新问题。"
+          "text": "对广大老同志而言，学习新发展理念，可以帮助我们更好认识新时代的发展变化，更加理性、客观地看待经济社会发展中的新情况新问题。",
+          "id": "block_1ckp6x0"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "五个关键词，一起学起来"
+          "text": "五个关键词，一起学起来",
+          "id": "block_hd1ib9"
         },
         {
           "type": "cardline",
-          "badge": "•",
+          "badge": "1",
           "title": "创新",
           "text": "解决发展动力问题。科技创新不断催生新质生产力，人工智能、新能源、新材料等领域加快发展。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1fdpnh8"
         },
         {
           "type": "cardline",
-          "badge": "•",
+          "badge": "2",
           "title": "协调",
           "text": "解决发展不平衡问题。推动城乡之间、区域之间、经济社会各领域更加均衡协调发展。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_xoyifr"
         },
         {
           "type": "cardline",
-          "badge": "•",
+          "badge": "3",
           "title": "绿色",
           "text": "解决人与自然和谐共生问题。绿水青山就是金山银山，绿色发展正在成为中国式现代化的重要底色。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_vz97aq"
         }
-      ]
+      ],
+      "id": "page_151ck5q"
     },
     {
       "type": "theory",
@@ -436,29 +493,34 @@
       "blocks": [
         {
           "type": "cardline",
-          "badge": "•",
+          "badge": "4",
           "title": "开放",
           "text": "解决发展内外联动问题。中国坚持扩大高水平开放，与世界共享发展机遇。",
-          "tone": "default"
+          "tone": "green",
+          "id": "block_crf3t8"
         },
         {
           "type": "cardline",
-          "badge": "•",
+          "badge": "5",
           "title": "共享",
           "text": "解决社会公平正义问题。发展的最终目的，是让发展成果更多更公平惠及全体人民。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1ej9ic9"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "新发展理念相互贯通、相互促进，是一个具有内在联系的整体。理解今天的中国，就要读懂新发展理念；展望未来的中国，更要坚定高质量发展的信心。"
+          "text": "新发展理念相互贯通、相互促进，是一个具有内在联系的整体。理解今天的中国，就要读懂新发展理念；展望未来的中国，更要坚定高质量发展的信心。",
+          "id": "block_1jgpeyo"
         },
         {
           "type": "paragraph",
           "style": "xsmall",
-          "text": "资料来源：人民日报"
+          "text": "资料来源：人民日报",
+          "id": "block_sb05cv"
         }
-      ]
+      ],
+      "id": "page_fh2avv"
     },
     {
       "type": "safety",
@@ -470,19 +532,23 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "随着人工智能技术快速发展，AI给生活带来便利的同时，也被部分不法分子利用。"
+          "text": "随着人工智能技术快速发展，AI给生活带来便利的同时，也被部分不法分子利用。",
+          "id": "block_ejhx2g"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "过去，我们常说“眼见为实、耳听为真”。如今，在AI换脸、声音克隆等技术面前，“看见本人”“听见声音”也未必等于身份真实。"
+          "text": "过去，我们常说“眼见为实、耳听为真”。如今，在AI换脸、声音克隆等技术面前，“看见本人”“听见声音”也未必等于身份真实。",
+          "id": "block_13r4v5z"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "本期“安全防范”版块开设："
+          "text": "本期“安全防范”版块开设：",
+          "id": "block_1n3hp32"
         }
-      ]
+      ],
+      "id": "page_0ov2as"
     },
     {
       "type": "safety",
@@ -494,54 +560,65 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "案例回放"
+          "text": "案例回放",
+          "id": "block_d85ih0"
         },
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "王先生突然接到在国外留学的“女儿”发来的微信视频。"
+          "text": "王先生突然接到在国外留学的“女儿”发来的微信视频。",
+          "id": "block_2covzn"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "视频中，“女儿”神情焦急，告诉父亲自己发生了交通事故，急需20万元缴纳保证金。"
+          "text": "视频中，“女儿”神情焦急，告诉父亲自己发生了交通事故，急需20万元缴纳保证金。",
+          "id": "block_rrlva2"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "视频中的面容、表情甚至说话方式，都与女儿十分相似。王先生非常着急，准备前往银行转账。"
+          "text": "视频中的面容、表情甚至说话方式，都与女儿十分相似。王先生非常着急，准备前往银行转账。",
+          "id": "block_jhkm9l"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "银行工作人员在询问资金用途时发现异常，提醒王先生当前AI换脸诈骗较多，建议通过其他联系方式再次核实。"
+          "text": "银行工作人员在询问资金用途时发现异常，提醒王先生当前AI换脸诈骗较多，建议通过其他联系方式再次核实。",
+          "id": "block_17tazww"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "王先生随即拨打女儿平时使用的电话号码，才发现女儿一切平安，视频中的“女儿”竟然是骗子利用AI技术伪造的。"
+          "text": "王先生随即拨打女儿平时使用的电话号码，才发现女儿一切平安，视频中的“女儿”竟然是骗子利用AI技术伪造的。",
+          "id": "block_1iy3wkv"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "诈骗套路"
+          "text": "诈骗套路",
+          "id": "block_lhe69y"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "骗子首先通过社交网络收集目标人物及其亲属的照片、视频、声音等信息，再利用AI换脸和声音合成技术制造“本人出镜”的假象。"
+          "text": "骗子首先通过社交网络收集目标人物及其亲属的照片、视频、声音等信息，再利用AI换脸和声音合成技术制造“本人出镜”的假象。",
+          "id": "block_1h1lvud"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "随后，以："
+          "text": "随后，以：",
+          "id": "block_13evfw"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“出了交通事故”"
+          "text": "“出了交通事故”",
+          "id": "block_1vpbp7f"
         }
-      ]
+      ],
+      "id": "page_19ora4h"
     },
     {
       "type": "safety",
@@ -553,57 +630,67 @@
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“正在医院急需用钱”"
+          "text": "“正在医院急需用钱”",
+          "id": "block_1ymcaib"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“工作上临时周转”"
+          "text": "“工作上临时周转”",
+          "id": "block_1in8e10"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“需要缴纳保证金”"
+          "text": "“需要缴纳保证金”",
+          "id": "block_nceku1"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "等紧急理由制造时间压力，让受害者没有时间仔细思考和核实。"
+          "text": "等紧急理由制造时间压力，让受害者没有时间仔细思考和核实。",
+          "id": "block_eorpp6"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "防骗提醒"
+          "text": "防骗提醒",
+          "id": "block_1tpxcdr"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "视频不能代替核实",
           "text": "即使对方通过视频露脸，也不要轻易相信。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_c1cusy"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "约定家庭“安全暗号”",
           "text": "家庭成员可以提前约定只有彼此知道的问题或暗号。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_172fc2x"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "换一种渠道确认",
           "text": "挂断当前电话，通过原有号码重新拨打，或联系其他家人核实。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1m4j9wc"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "越催越要慢",
           "text": "凡是强调“马上转”“千万别告诉别人”的情况，更要提高警惕。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_14sty37"
         }
-      ]
+      ],
+      "id": "page_1mg1zui"
     },
     {
       "type": "safety",
@@ -615,58 +702,69 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "过去骗子冒充熟人，最容易露馅的地方就是声音不像。"
+          "text": "过去骗子冒充熟人，最容易露馅的地方就是声音不像。",
+          "id": "block_1ructbw"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "如今，不法分子可能通过短视频、语音聊天等公开或泄露的信息获取声音样本，再通过AI技术模拟本人声音。"
+          "text": "如今，不法分子可能通过短视频、语音聊天等公开或泄露的信息获取声音样本，再通过AI技术模拟本人声音。",
+          "id": "block_1py5krv"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "于是，一通听起来十分熟悉的电话就可能出现："
+          "text": "于是，一通听起来十分熟悉的电话就可能出现：",
+          "id": "block_w7wu2a"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“爸，我手机坏了，用朋友电话打给你。”"
+          "text": "“爸，我手机坏了，用朋友电话打给你。”",
+          "id": "block_nsm68h"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“妈，我出了点事，你先给我转点钱。”"
+          "text": "“妈，我出了点事，你先给我转点钱。”",
+          "id": "block_5qq0js"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“这件事比较急，别跟其他人说。”"
+          "text": "“这件事比较急，别跟其他人说。”",
+          "id": "block_1g4bfxj"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "如何识别？"
+          "text": "如何识别？",
+          "id": "block_na5rku"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "如果亲属突然通过陌生号码联系并要求转账："
+          "text": "如果亲属突然通过陌生号码联系并要求转账：",
+          "id": "block_106c7d9"
         },
         {
           "type": "cardline",
           "badge": "1",
           "title": "第一步",
           "text": "不急着答应。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_xzmjeu"
         },
         {
           "type": "cardline",
           "badge": "2",
           "title": "第二步",
           "text": "挂断电话。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1t8cs5n"
         }
-      ]
+      ],
+      "id": "page_1rpj9bb"
     },
     {
       "type": "safety",
@@ -680,26 +778,31 @@
           "badge": "3",
           "title": "第三步",
           "text": "拨打本人原来的电话号码。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1fj9et9"
         },
         {
           "type": "cardline",
           "badge": "4",
           "title": "第四步",
           "text": "再联系其他亲属共同核实。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_zushq8"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "只要多一道核实，很多骗局就会当场露馅。"
+          "text": "只要多一道核实，很多骗局就会当场露馅。",
+          "id": "block_cyi5f7"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "相关网络安全宣传材料已经提醒，诈骗分子可能将AI换脸与AI拟声技术组合使用，通过视频、语音等方式制造“身份已经核实”的假象。"
+          "text": "相关网络安全宣传材料已经提醒，诈骗分子可能将AI换脸与AI拟声技术组合使用，通过视频、语音等方式制造“身份已经核实”的假象。",
+          "id": "block_ntyrwk"
         }
-      ]
+      ],
+      "id": "page_1bfzsco"
     },
     {
       "type": "safety",
@@ -711,54 +814,65 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "很多老同志遇到诈骗电话时，会有一个疑问："
+          "text": "很多老同志遇到诈骗电话时，会有一个疑问：",
+          "id": "block_xo0l7n"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“他连我买了什么东西都知道，怎么可能是骗子？”"
+          "text": "“他连我买了什么东西都知道，怎么可能是骗子？”",
+          "id": "block_174m3uc"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "事实上，知道您的姓名、电话、购物记录，并不代表对方就是工作人员。"
+          "text": "事实上，知道您的姓名、电话、购物记录，并不代表对方就是工作人员。",
+          "id": "block_1xerbl5"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "骗子可能通过非法渠道获取快递、网购等个人信息，再以："
+          "text": "骗子可能通过非法渠道获取快递、网购等个人信息，再以：",
+          "id": "block_1sq35l6"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“商品质量有问题”"
+          "text": "“商品质量有问题”",
+          "id": "block_1w3cm3j"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“快递丢失需要退款”"
+          "text": "“快递丢失需要退款”",
+          "id": "block_fafyrk"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“会员自动扣费需要关闭”"
+          "text": "“会员自动扣费需要关闭”",
+          "id": "block_16tox5x"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“保险服务即将收费”"
+          "text": "“保险服务即将收费”",
+          "id": "block_tx09km"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "等理由联系受害者。"
+          "text": "等理由联系受害者。",
+          "id": "block_8n9osr"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "掌握的信息越准确，骗局越容易让人放松警惕。"
+          "text": "掌握的信息越准确，骗局越容易让人放松警惕。",
+          "id": "block_16mpae4"
         }
-      ]
+      ],
+      "id": "page_1m530z9"
     },
     {
       "type": "safety",
@@ -770,44 +884,51 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "防骗提醒"
+          "text": "防骗提醒",
+          "id": "block_127xrsd"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "不随意扫描陌生二维码",
           "text": "不随意扫描陌生二维码。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_b00nz8"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "不点击短信中的陌生退款、理赔链接",
           "text": "不点击短信中的陌生退款、理赔链接。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_wbuf4v"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "不安装陌生人要求安装的手机APP",
           "text": "不安装陌生人要求安装的手机APP。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1ncgxoa"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "不开启手机“屏幕共享”“远程协助”功能",
           "text": "不开启手机“屏幕共享”“远程协助”功能。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_y1iwn9"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "银行卡密码、支付密码、短信验证码任何时候都不能告诉别人",
           "text": "银行卡密码、支付密码、短信验证码任何时候都不能告诉别人。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1cq3xpk"
         }
-      ]
+      ],
+      "id": "page_d0k40e"
     },
     {
       "type": "safety",
@@ -819,54 +940,65 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "近年来，一些非法集资活动针对老年群体进行精准包装。"
+          "text": "近年来，一些非法集资活动针对老年群体进行精准包装。",
+          "id": "block_4te07b"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "骗子可能以："
+          "text": "骗子可能以：",
+          "id": "block_1mjdgmg"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“养老项目”"
+          "text": "“养老项目”",
+          "id": "block_13pv8ml"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“旅居养老”"
+          "text": "“旅居养老”",
+          "id": "block_3ko9oe"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“康养基地”"
+          "text": "“康养基地”",
+          "id": "block_unwzuz"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“老年产业加盟”"
+          "text": "“老年产业加盟”",
+          "id": "block_14yvhy4"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“银发经济投资”"
+          "text": "“银发经济投资”",
+          "id": "block_g71ooh"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“高额养老返利”"
+          "text": "“高额养老返利”",
+          "id": "block_ose24y"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "等名义吸引老年人投入资金。"
+          "text": "等名义吸引老年人投入资金。",
+          "id": "block_v93jxb"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "部分案件还通过短视频、社交平台进行精准“引流”，再转到线下培训会、说明会，通过赠送小礼品、组织免费旅游等方式建立信任。有关典型案例显示，一些犯罪分子甚至以“银发经济网络达人”等包装吸引老年人加盟投资。"
+          "text": "部分案件还通过短视频、社交平台进行精准“引流”，再转到线下培训会、说明会，通过赠送小礼品、组织免费旅游等方式建立信任。有关典型案例显示，一些犯罪分子甚至以“银发经济网络达人”等包装吸引老年人加盟投资。",
+          "id": "block_1mestj4"
         }
-      ]
+      ],
+      "id": "page_2v3mwb"
     },
     {
       "type": "safety",
@@ -878,61 +1010,71 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "请记住："
+          "text": "请记住：",
+          "id": "block_1qc6m0s"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "养老服务是服务，不能等同于高收益投资。"
+          "text": "养老服务是服务，不能等同于高收益投资。",
+          "id": "block_1ofzdgr"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "凡是同时具备以下几个特点，都应高度警惕："
+          "text": "凡是同时具备以下几个特点，都应高度警惕：",
+          "id": "block_upqmr6"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "承诺明显高于正常水平的收益",
           "text": "承诺明显高于正常水平的收益；",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_7plpgl"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "宣称“国家扶持”“内部项目”却拿不出正式文件",
           "text": "宣称“国家扶持”“内部项目”却拿不出正式文件；",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_10ii196"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "要求向个人账户转账",
           "text": "要求向个人账户转账；",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_xm4lmn"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "鼓励拉亲戚朋友一起投资",
           "text": "鼓励拉亲戚朋友一起投资；",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_kozwec"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "前期按时返利，后期不断要求追加资金",
           "text": "前期按时返利，后期不断要求追加资金；",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_n60sq9"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "强调“名额有限”“今天不交钱就没有机会”",
           "text": "强调“名额有限”“今天不交钱就没有机会”。",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_7a70p2"
         }
-      ]
+      ],
+      "id": "page_11n9dp8"
     },
     {
       "type": "safety",
@@ -944,51 +1086,59 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "遇到陌生电话、视频和转账要求，先问自己五个问题："
+          "text": "遇到陌生电话、视频和转账要求，先问自己五个问题：",
+          "id": "block_lnmx2z"
         },
         {
           "type": "cardline",
           "badge": "1",
           "title": "第一问",
           "text": "这个人真的是本人吗？",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1jrniq6"
         },
         {
           "type": "cardline",
           "badge": "2",
           "title": "第二问",
           "text": "为什么一定要现在马上转钱？",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_5fq6yd"
         },
         {
           "type": "cardline",
           "badge": "3",
           "title": "第三问",
           "text": "为什么不让我告诉家人？",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_1s53gpk"
         },
         {
           "type": "cardline",
           "badge": "4",
           "title": "第四问",
           "text": "为什么要安装陌生软件或开启屏幕共享？",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_vkeksv"
         },
         {
           "type": "cardline",
           "badge": "5",
           "title": "第五问",
           "text": "我能不能通过另一个电话重新核实？",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_z5y7l6"
         },
         {
           "type": "cardline",
           "badge": "•",
           "title": "只要有一个问题解释不清",
           "text": "—",
-          "tone": "default"
+          "tone": "default",
+          "id": "block_15ed1s1"
         }
-      ]
+      ],
+      "id": "page_zfytbt"
     },
     {
       "type": "safety",
@@ -1000,29 +1150,35 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "先不转账！"
+          "text": "先不转账！",
+          "id": "block_b7uzpz"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "先不操作！"
+          "text": "先不操作！",
+          "id": "block_lvnzug"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "先找家人核实！"
+          "text": "先找家人核实！",
+          "id": "block_tm60al"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "技术会变，骗局会变，但防骗原则不会变："
+          "text": "技术会变，骗局会变，但防骗原则不会变：",
+          "id": "block_bg68pa"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "不轻信、不转账、不泄密、多核实。"
+          "text": "不轻信、不转账、不泄密、多核实。",
+          "id": "block_1f57g2j"
         }
-      ]
+      ],
+      "id": "page_16y4ye5"
     },
     {
       "type": "discipline",
@@ -1034,19 +1190,23 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "退休意味着工作岗位发生变化，却不意味着党员身份发生变化，更不意味着纪律约束自动解除。"
+          "text": "退休意味着工作岗位发生变化，却不意味着党员身份发生变化，更不意味着纪律约束自动解除。",
+          "id": "block_1g62ruq"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "近年来，纪检监察机关查处的一些案件表明，个别党员干部产生“退休就安全了”“离岗就没人管了”的错误认识，最终付出了沉重代价。"
+          "text": "近年来，纪检监察机关查处的一些案件表明，个别党员干部产生“退休就安全了”“离岗就没人管了”的错误认识，最终付出了沉重代价。",
+          "id": "block_dceso1"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "本期我们围绕近期公开通报和纪法解读，再次梳理几条退休党员干部必须警惕的纪律红线。"
+          "text": "本期我们围绕近期公开通报和纪法解读，再次梳理几条退休党员干部必须警惕的纪律红线。",
+          "id": "block_acjqj0"
         }
-      ]
+      ],
+      "id": "page_2ctm2s"
     },
     {
       "type": "discipline",
@@ -1058,9 +1218,11 @@
         {
           "type": "casePair",
           "case": "2026年7月，中央纪委国家监委网站发布甘肃省纪委监委通报：\n甘肃省高级人民法院原党组成员、副院长陈天雄严重违纪违法，被开除党籍，并按规定取消其享受的退休待遇。\n通报指出，其长期破纪违法，存在违规收受礼金、接受旅游安排、借用管理服务对象钱款、干预和插手司法活动等问题；在退休后仍“退而不休，弄权敛财”，利用职务便利或职权影响为他人在项目承揽、案件诉讼等方面谋取利益，并收受巨额贿赂。涉嫌犯罪问题被移送检察机关依法审查起诉。",
-          "warning": "职务可以退休，纪律不能退休。\n过去形成的职务影响、人脉关系、工作资源，都不能成为退休后谋取私人利益的工具。\n退休不是“安全着陆”，更不能把曾经的公权力变成日后的私人资本。"
+          "warning": "职务可以退休，纪律不能退休。\n过去形成的职务影响、人脉关系、工作资源，都不能成为退休后谋取私人利益的工具。\n退休不是“安全着陆”，更不能把曾经的公权力变成日后的私人资本。",
+          "id": "block_1518ne4"
         }
-      ]
+      ],
+      "id": "page_rasnk3"
     },
     {
       "type": "discipline",
@@ -1072,24 +1234,29 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "中央纪委国家监委网站2026年4月专门刊文，对党政机关干部在职及退休后经商办企业问题进行纪法分析。"
+          "text": "中央纪委国家监委网站2026年4月专门刊文，对党政机关干部在职及退休后经商办企业问题进行纪法分析。",
+          "id": "block_1k2wzl7"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "文章明确指出，部分人员认为，只要退休后就可以不受约束自主从业，这种认识并不正确。"
+          "text": "文章明确指出，部分人员认为，只要退休后就可以不受约束自主从业，这种认识并不正确。",
+          "id": "block_1ehe918"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "退休党员干部特别是原党员领导干部，在从事经营活动、企业任职等事项时，仍应认真了解并严格遵守有关党纪法规以及离职、退休后从业限制规定，不得利用原职权或职务影响为经营活动谋利。"
+          "text": "退休党员干部特别是原党员领导干部，在从事经营活动、企业任职等事项时，仍应认真了解并严格遵守有关党纪法规以及离职、退休后从业限制规定，不得利用原职权或职务影响为经营活动谋利。",
+          "id": "block_qebkk1"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "2026年7月通报的重庆市丰都县人大常委会原副厅级干部秦俊仕案件中，就存在“退休后违规从事营利活动”“离职后仍利用原职务上的影响收钱敛财”等问题，最终受到开除党籍、取消退休待遇等严肃处理。"
+          "text": "2026年7月通报的重庆市丰都县人大常委会原副厅级干部秦俊仕案件中，就存在“退休后违规从事营利活动”“离职后仍利用原职务上的影响收钱敛财”等问题，最终受到开除党籍、取消退休待遇等严肃处理。",
+          "id": "block_yawt82"
         }
-      ]
+      ],
+      "id": "page_7q65ta"
     },
     {
       "type": "discipline",
@@ -1101,44 +1268,53 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "警示"
+          "text": "警示",
+          "id": "block_11u5o1m"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "退休后想发挥专业特长、服务社会，本身并无不妥。"
+          "text": "退休后想发挥专业特长、服务社会，本身并无不妥。",
+          "id": "block_1heu80p"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "但必须弄清楚："
+          "text": "但必须弄清楚：",
+          "id": "block_1mk4hlw"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "什么可以干？"
+          "text": "什么可以干？",
+          "id": "block_103ws43"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "什么需要报告审批？"
+          "text": "什么需要报告审批？",
+          "id": "block_1nu2u1y"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "哪些企业不能去？"
+          "text": "哪些企业不能去？",
+          "id": "block_6kt4gl"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "哪些利益不能拿？"
+          "text": "哪些利益不能拿？",
+          "id": "block_17kjv74"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "越是熟悉的行业、熟悉的企业、熟悉的老关系，越要保持距离、守住边界。"
+          "text": "越是熟悉的行业、熟悉的企业、熟悉的老关系，越要保持距离、守住边界。",
+          "id": "block_1o3e8en"
         }
-      ]
+      ],
+      "id": "page_18203th"
     },
     {
       "type": "discipline",
@@ -1150,54 +1326,65 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "有人认为："
+          "text": "有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：\n有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：\n有人认为：有人认为：有人认为：有人认为：有人认为：有人认为：\n有人认为：有人认为：有人认为：有人认为：\n",
+          "id": "block_117q8ie"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“我都退休了，老朋友请吃个饭有什么关系？”"
+          "text": "“我都退休了，老朋友请吃个饭有什么关系？”",
+          "id": "block_11ug64l"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "实际上并非如此。"
+          "text": "实际上并非如此。",
+          "id": "block_1st48v4"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "中央纪委国家监委发布的执纪执法指导性案例明确指出，中央八项规定精神是长期有效的铁规矩，党员领导干部无论退休与否，都应严格遵守党规党纪和中央八项规定精神。"
+          "text": "中央纪委国家监委发布的执纪执法指导性案例明确指出，中央八项规定精神是长期有效的铁规矩，党员领导干部无论退休与否，都应严格遵守党规党纪和中央八项规定精神。",
+          "id": "block_mq98u7"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "特别是退休党员领导干部接受其在职期间管理和服务对象安排的宴请，更应高度警惕其中可能存在的利益关系。"
+          "text": "特别是退休党员领导干部接受其在职期间管理和服务对象安排的宴请，更应高度警惕其中可能存在的利益关系。",
+          "id": "block_1toacdm"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "警示"
+          "text": "警示",
+          "id": "block_1ri1tah"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "一顿饭看似是“小事”，背后却可能连着人情、请托和利益。"
+          "text": "一顿饭看似是“小事”，背后却可能连着人情、请托和利益。",
+          "id": "block_dj6al0"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "退休之后交朋友、叙旧情无可厚非，但必须分清："
+          "text": "退休之后交朋友、叙旧情无可厚非，但必须分清：",
+          "id": "block_1gjhn5v"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "正常人情往来和利益输送不是一回事。"
+          "text": "正常人情往来和利益输送不是一回事。",
+          "id": "block_1kwm3xa"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "真正的老朋友，不会让您违反纪律。"
+          "text": "真正的老朋友，不会让您违反纪律。",
+          "id": "block_1xssjpp"
         }
-      ]
+      ],
+      "id": "page_59f82w"
     },
     {
       "type": "discipline",
@@ -1209,29 +1396,35 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "中央纪委国家监委有关纪法解读明确指出，对党员领导干部退休后违规收受礼品礼金的问题，可以根据具体情形依规依纪处理，并收缴违纪所得。"
+          "text": "中央纪委国家监委有关纪法解读明确指出，对党员领导干部退休后违规收受礼品礼金的问题，可以根据具体情形依规依纪处理，并收缴违纪所得。",
+          "id": "block_1xltm5m"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "尤其需要注意的是，有的礼品礼金表面上打着："
+          "text": "尤其需要注意的是，有的礼品礼金表面上打着：",
+          "id": "block_uiizm1"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“感谢老领导”"
+          "text": "“感谢老领导”",
+          "id": "block_70hljo"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“多年老朋友”"
+          "text": "“多年老朋友”",
+          "id": "block_3jh7sz"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“过年过节看看您”"
+          "text": "“过年过节看看您”",
+          "id": "block_vgqdau"
         }
-      ]
+      ],
+      "id": "page_19nc793"
     },
     {
       "type": "discipline",
@@ -1243,34 +1436,41 @@
         {
           "type": "paragraph",
           "style": "body",
-          "text": "等旗号，实质上却与过去的职务影响、管理服务关系密切。"
+          "text": "等旗号，实质上却与过去的职务影响、管理服务关系密切。",
+          "id": "block_1uwp4za"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "这种“延迟送礼”“退休后兑现人情”的方式，更具有隐蔽性。"
+          "text": "这种“延迟送礼”“退休后兑现人情”的方式，更具有隐蔽性。",
+          "id": "block_8s9qlh"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "警示"
+          "text": "警示",
+          "id": "block_1ga4u68"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "不能认为："
+          "text": "不能认为：",
+          "id": "block_y1xfj3"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "“退休前不能收，退休后就能收。”"
+          "text": "“退休前不能收，退休后就能收。”",
+          "id": "block_uonz0q"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "更不能把过去工作中形成的权力影响力，在退休后变成收受利益的“长期收益”。"
+          "text": "更不能把过去工作中形成的权力影响力，在退休后变成收受利益的“长期收益”。",
+          "id": "block_zdc50p"
         }
-      ]
+      ],
+      "id": "page_17sxpb6"
     },
     {
       "type": "discipline",
@@ -1282,54 +1482,65 @@
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "始终牢记党员身份"
+          "text": "始终牢记党员身份",
+          "id": "block_1hvsl60"
         },
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "组织上退休，思想上不能退休；岗位上离开，政治上不能离开。"
+          "text": "组织上退休，思想上不能退休；岗位上离开，政治上不能离开。",
+          "id": "block_82bhaf"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "始终保持纪法敬畏"
+          "text": "始终保持纪法敬畏",
+          "id": "block_reob7i"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "经常学习党章党规党纪，及时了解退休干部从业、兼职、社会交往等方面规定。"
+          "text": "经常学习党章党规党纪，及时了解退休干部从业、兼职、社会交往等方面规定。",
+          "id": "block_1krxir1"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "始终净化生活圈朋友圈"
+          "text": "始终净化生活圈朋友圈",
+          "id": "block_lbl5cs"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "少一点不必要的应酬，多一点健康生活；对过去管理服务对象的宴请、礼品和请托尤其保持警惕。"
+          "text": "少一点不必要的应酬，多一点健康生活；对过去管理服务对象的宴请、礼品和请托尤其保持警惕。",
+          "id": "block_1md9lqj"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "始终管好家人与身边人"
+          "text": "始终管好家人与身边人",
+          "id": "block_1374aaa"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "既约束自己，也教育好配偶、子女和亲属，不允许他人利用自己的老关系、老资源谋取利益。"
+          "text": "既约束自己，也教育好配偶、子女和亲属，不允许他人利用自己的老关系、老资源谋取利益。",
+          "id": "block_s1hd69"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "退休是人生的新阶段，也是党性修养的新考场。"
+          "text": "退休是人生的新阶段，也是党性修养的新考场。",
+          "id": "block_1t0fvpc"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "清清白白一辈子，安安心心度晚年，才是最宝贵的人生财富。"
+          "text": "清清白白一辈子，安安心心度晚年，才是最宝贵的人生财富。",
+          "id": "block_1as8h27"
         }
-      ]
+      ],
+      "id": "page_1k3bcg9"
     },
     {
       "type": "health",
@@ -1341,19 +1552,23 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "2026年8月23日交处暑，9月7日交白露。"
+          "text": "2026年8月23日交处暑，9月7日交白露。",
+          "id": "block_vnivyj"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "处暑之后，暑气逐渐消退；进入白露，昼夜温差进一步加大，空气也开始变得更加干燥。对于身体调节能力相对减弱的老年人来说，这一阶段既要防残暑，也要防秋凉、秋燥。"
+          "text": "处暑之后，暑气逐渐消退；进入白露，昼夜温差进一步加大，空气也开始变得更加干燥。对于身体调节能力相对减弱的老年人来说，这一阶段既要防残暑，也要防秋凉、秋燥。",
+          "id": "block_1tmyhjw"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "当前权威健康科普提示，老年人秋季调养应注意温差变化、清淡饮食、适当补水和适度运动，并关注呼吸系统、心脑血管疾病以及跌倒风险。"
+          "text": "当前权威健康科普提示，老年人秋季调养应注意温差变化、清淡饮食、适当补水和适度运动，并关注呼吸系统、心脑血管疾病以及跌倒风险。",
+          "id": "block_1bqne9"
         }
-      ]
+      ],
+      "id": "page_iac494"
     },
     {
       "type": "health",
@@ -1365,49 +1580,59 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "“处”有止息之意，处暑意味着暑热逐渐结束，但并不意味着天气会立即转凉。"
+          "text": "“处”有止息之意，处暑意味着暑热逐渐结束，但并不意味着天气会立即转凉。",
+          "id": "block_bk6dfr"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "金昌地区秋季昼夜温差较大，常常出现："
+          "text": "金昌地区秋季昼夜温差较大，常常出现：",
+          "id": "block_1ta5tuw"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "中午仍热，早晚已经明显转凉。"
+          "text": "中午仍热，早晚已经明显转凉。",
+          "id": "block_1agnlv1"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "因此，老同志在这一阶段不要急于完全换上厚衣服，也不要继续按照盛夏习惯长时间吹空调、吹冷风。"
+          "text": "因此，老同志在这一阶段不要急于完全换上厚衣服，也不要继续按照盛夏习惯长时间吹空调、吹冷风。",
+          "id": "block_abgmwu"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "注意三件事："
+          "text": "注意三件事：",
+          "id": "block_11epd3f"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "早晚添一件。清晨、夜间外出时可适当增加薄外套。"
+          "text": "早晚添一件。清晨、夜间外出时可适当增加薄外套。",
+          "id": "block_1bpnv6k"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "睡觉护好腹部。夜间气温下降后注意腹部、肩颈和腰背保暖。"
+          "text": "睡觉护好腹部。夜间气温下降后注意腹部、肩颈和腰背保暖。",
+          "id": "block_mxu1wx"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "出汗及时更衣。散步、锻炼后如果衣物潮湿，应及时更换，避免吹风受凉。"
+          "text": "出汗及时更衣。散步、锻炼后如果衣物潮湿，应及时更换，避免吹风受凉。",
+          "id": "block_vj6fde"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "国家卫生健康委有关处暑健康科普也提示，处暑阶段应注意夏秋转换带来的脾胃和呼吸道不适。"
+          "text": "国家卫生健康委有关处暑健康科普也提示，处暑阶段应注意夏秋转换带来的脾胃和呼吸道不适。",
+          "id": "block_11zvx5r"
         }
-      ]
+      ],
+      "id": "page_zt50o6"
     },
     {
       "type": "health",
@@ -1419,53 +1644,63 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "俗话说："
+          "text": "俗话说：",
+          "id": "block_1kpvbfc"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "“白露秋分夜，一夜凉一夜。”"
+          "text": "“白露秋分夜，一夜凉一夜。”",
+          "id": "block_19an9o7"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "进入白露后，北方空气湿度逐渐下降，昼夜温差明显扩大。"
+          "text": "进入白露后，北方空气湿度逐渐下降，昼夜温差明显扩大。",
+          "id": "block_f2zf8u"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "一些老同志容易出现："
+          "text": "一些老同志容易出现：",
+          "id": "block_whmm3h"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "口干、咽干、鼻腔干燥、皮肤干燥等不适。"
+          "text": "口干、咽干、鼻腔干燥、皮肤干燥等不适。",
+          "id": "block_1yg9o0c"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "有慢性呼吸系统疾病的老年人，更应注意天气变化。"
+          "text": "有慢性呼吸系统疾病的老年人，更应注意天气变化。",
+          "id": "block_15npf97"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "建议："
+          "text": "建议：",
+          "id": "block_cm3bya"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "根据天气变化及时增减衣物",
           "text": "根据天气变化及时增减衣物。",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_b1dyr9"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "室内适度通风，但避免长时间迎风直吹",
           "text": "室内适度通风，但避免长时间迎风直吹。",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_hfyr82"
         }
-      ]
+      ],
+      "id": "page_8ohjyj"
     },
     {
       "type": "health",
@@ -1479,23 +1714,27 @@
           "badge": "★",
           "title": "外出归来及时洗手",
           "text": "外出归来及时洗手。",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_35iat4"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "尽量避免到空气污浊、过于拥挤的环境长时间停留",
           "text": "尽量避免到空气污浊、过于拥挤的环境长时间停留。",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_mhyoid"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "出现持续咳嗽、胸闷、气短、发热等明显不适，应及时就医，不要自行长期服药。",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_12shylq"
         }
-      ]
+      ],
+      "id": "page_f3tx80"
     },
     {
       "type": "health",
@@ -1507,49 +1746,59 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "经过一个夏季的暑热和冷饮刺激后，进入初秋，饮食不宜突然“大补”。"
+          "text": "经过一个夏季的暑热和冷饮刺激后，进入初秋，饮食不宜突然“大补”。",
+          "id": "block_9kihko"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "国家卫生健康委有关处暑科普建议，这一阶段饮食仍应以清淡为主，并注意保护脾胃；进入秋燥明显阶段，可以根据自身情况适当选择百合、银耳、莲子、梨等食物。"
+          "text": "国家卫生健康委有关处暑科普建议，这一阶段饮食仍应以清淡为主，并注意保护脾胃；进入秋燥明显阶段，可以根据自身情况适当选择百合、银耳、莲子、梨等食物。",
+          "id": "block_15azes7"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "推荐食材"
+          "text": "推荐食材",
+          "id": "block_ilz55a"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "润燥类：梨、银耳、百合、莲藕。"
+          "text": "润燥类：梨、银耳、百合、莲藕。",
+          "id": "block_1xdtkcd"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "健脾类：山药、莲子、小米、南瓜。"
+          "text": "健脾类：山药、莲子、小米、南瓜。",
+          "id": "block_1ufud9o"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "秋季水果：苹果、葡萄等。"
+          "text": "秋季水果：苹果、葡萄等。",
+          "id": "block_1q0n523"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "少吃什么？"
+          "text": "少吃什么？",
+          "id": "block_10bqmua"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "少吃过度辛辣、煎炸和油腻食物。"
+          "text": "少吃过度辛辣、煎炸和油腻食物。",
+          "id": "block_4jes75"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "冰箱里刚取出的水果、冰镇饮料也应适量减少，特别是脾胃功能较弱的老同志，更不宜贪凉。"
+          "text": "冰箱里刚取出的水果、冰镇饮料也应适量减少，特别是脾胃功能较弱的老同志，更不宜贪凉。",
+          "id": "block_124mfrk"
         }
-      ]
+      ],
+      "id": "page_qoxbxp"
     },
     {
       "type": "health",
@@ -1561,34 +1810,41 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "秋季虽然没有盛夏出汗多，但空气干燥，同样需要注意补水。"
+          "text": "秋季虽然没有盛夏出汗多，但空气干燥，同样需要注意补水。",
+          "id": "block_1ijnyqo"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "老年人的口渴感觉可能不如年轻人敏感，因此不要完全等到明显口渴后才想到喝水。"
+          "text": "老年人的口渴感觉可能不如年轻人敏感，因此不要完全等到明显口渴后才想到喝水。",
+          "id": "block_16glvb3"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "建议："
+          "text": "建议：",
+          "id": "block_1x661xy"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "少量、多次、温饮。"
+          "text": "少量、多次、温饮。",
+          "id": "block_19ulyh1"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "可以把温水放在随手可取的位置，养成主动喝水的习惯。"
+          "text": "可以把温水放在随手可取的位置，养成主动喝水的习惯。",
+          "id": "block_18pxa6s"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "国家卫生健康委对白露时节健康问题的科普提出，补水应结合天气、活动量以及个人疾病情况进行调整；心、肾功能不全等需要限制饮水的人群，应严格遵从医生建议，不能盲目增加饮水量。"
+          "text": "国家卫生健康委对白露时节健康问题的科普提出，补水应结合天气、活动量以及个人疾病情况进行调整；心、肾功能不全等需要限制饮水的人群，应严格遵从医生建议，不能盲目增加饮水量。",
+          "id": "block_158wwg3"
         }
-      ]
+      ],
+      "id": "page_1i03glu"
     },
     {
       "type": "health",
@@ -1600,39 +1856,47 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "秋高气爽，非常适合户外活动。"
+          "text": "秋高气爽，非常适合户外活动。",
+          "id": "block_1j87xi8"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "但老年人锻炼的目的不是追求强度，而是维持身体活动能力。"
+          "text": "但老年人锻炼的目的不是追求强度，而是维持身体活动能力。",
+          "id": "block_d5cxhb"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "推荐："
+          "text": "推荐：",
+          "id": "block_rmtx5i"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "散步太极拳八段锦健身操适度快走"
+          "text": "散步太极拳八段锦健身操适度快走",
+          "id": "block_s9jurp"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "运动过程中以身体微微发热、感觉舒适为宜。"
+          "text": "运动过程中以身体微微发热、感觉舒适为宜。",
+          "id": "block_3y9z84"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "如果出现明显胸闷、头晕、心慌或呼吸困难，应立即停止活动。"
+          "text": "如果出现明显胸闷、头晕、心慌或呼吸困难，应立即停止活动。",
+          "id": "block_16ylbsz"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "中国疾控中心在老年健康科普中还特别提醒，适度运动有助于预防跌倒，老年人可以结合自身情况加强肌肉力量和平衡能力锻炼。"
+          "text": "中国疾控中心在老年健康科普中还特别提醒，适度运动有助于预防跌倒，老年人可以结合自身情况加强肌肉力量和平衡能力锻炼。",
+          "id": "block_1k3e10q"
         }
-      ]
+      ],
+      "id": "page_erng2v"
     },
     {
       "type": "health",
@@ -1644,47 +1908,55 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "天气逐渐转凉后，衣物增加、天黑时间提前，部分老年人的行动灵活性也会受到影响。"
+          "text": "天气逐渐转凉后，衣物增加、天黑时间提前，部分老年人的行动灵活性也会受到影响。",
+          "id": "block_qki149"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "因此，除了“养生”，秋季还要特别做好居家防跌倒。"
+          "text": "因此，除了“养生”，秋季还要特别做好居家防跌倒。",
+          "id": "block_rz9ayy"
         },
         {
           "type": "paragraph",
           "style": "subhead",
-          "text": "家里检查一下："
+          "text": "家里检查一下：",
+          "id": "block_n4lfs3"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "卫生间地面是否容易打滑？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_7atrvq"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "夜间起床的通道是否有灯？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_179zst5"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "床边是否堆放杂物？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_5i5ea4"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "浴室是否安装扶手？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_778shz"
         }
-      ]
+      ],
+      "id": "page_1kew3rw"
     },
     {
       "type": "health",
@@ -1698,26 +1970,31 @@
           "badge": "★",
           "title": "重点提示",
           "text": "常走的地面是否有卷边的地毯？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_66qium"
         },
         {
           "type": "cardline",
           "badge": "★",
           "title": "重点提示",
           "text": "穿的鞋底是否防滑？",
-          "tone": "green"
+          "tone": "green",
+          "id": "block_6o3s43"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "中国疾控中心建议，可通过增加小夜灯和扶手、保持地面干燥平整等适老化措施降低跌倒风险。"
+          "text": "中国疾控中心建议，可通过增加小夜灯和扶手、保持地面干燥平整等适老化措施降低跌倒风险。",
+          "id": "block_jkwq02"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "一次小小的环境调整，可能避免一次严重的跌倒。"
+          "text": "一次小小的环境调整，可能避免一次严重的跌倒。",
+          "id": "block_1mtoxc1"
         }
-      ]
+      ],
+      "id": "page_1654wuh"
     },
     {
       "type": "health",
@@ -1729,54 +2006,65 @@
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "秋季万物由繁盛走向收敛，一些老同志容易产生思念、孤独或者情绪低落。"
+          "text": "秋季万物由繁盛走向收敛，一些老同志容易产生思念、孤独或者情绪低落。",
+          "id": "block_5f9cp1"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "这时候，更应该让生活充实起来。"
+          "text": "这时候，更应该让生活充实起来。",
+          "id": "block_4sjf2u"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "可以："
+          "text": "可以：",
+          "id": "block_1pc6hdr"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "读一本喜欢的书；"
+          "text": "读一本喜欢的书；",
+          "id": "block_wdxffk"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "写写字、练练书法；"
+          "text": "写写字、练练书法；",
+          "id": "block_v2uzux"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "和老同事聊聊天；"
+          "text": "和老同事聊聊天；",
+          "id": "block_x93iy2"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "陪家人散散步；"
+          "text": "陪家人散散步；",
+          "id": "block_k4atqb"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "养花、听音乐；"
+          "text": "养花、听音乐；",
+          "id": "block_1g53j4k"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "参加老干部党支部或社区集体活动。"
+          "text": "参加老干部党支部或社区集体活动。",
+          "id": "block_11dlqa5"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "保持稳定的作息、积极的社交和良好的情绪，同样是健康的重要组成部分。中国疾控中心也倡导老年人保持积极心态，与家人朋友保持沟通，积极参与社会活动。"
+          "text": "保持稳定的作息、积极的社交和良好的情绪，同样是健康的重要组成部分。中国疾控中心也倡导老年人保持积极心态，与家人朋友保持沟通，积极参与社会活动。",
+          "id": "block_ohfahq"
         }
-      ]
+      ],
+      "id": "page_1wtmswe"
     },
     {
       "type": "health",
@@ -1812,9 +2100,11 @@
               "text": "心宽常乐享金秋",
               "tone": "green"
             }
-          ]
+          ],
+          "id": "block_1lo0h35"
         }
-      ]
+      ],
+      "id": "page_hw8as3"
     },
     {
       "type": "closing",
@@ -1826,40 +2116,56 @@
         {
           "type": "paragraph",
           "style": "body",
-          "text": "从盛夏走向金秋，是自然的节律，也是岁月给予我们的从容与丰盈。"
+          "text": "从盛夏走向金秋，是自然的节律，也是岁月给予我们的从容与丰盈。",
+          "id": "block_18qn94j"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "希望各位离退休老干部始终保持“活到老、学到老”的精神状态，常读时政、常学理论，在时代发展中坚定信心；始终牢记共产党员身份，知敬畏、守底线，在退休生活中永葆清廉本色；主动学习新的安全知识，识破AI时代不断翻新的诈骗套路，守护好自己和家人的财产安全；顺应季节变化科学调养，让健康成为幸福晚年最坚实的基础。"
+          "text": "希望各位离退休老干部始终保持“活到老、学到老”的精神状态，常读时政、常学理论，在时代发展中坚定信心；始终牢记共产党员身份，知敬畏、守底线，在退休生活中永葆清廉本色；主动学习新的安全知识，识破AI时代不断翻新的诈骗套路，守护好自己和家人的财产安全；顺应季节变化科学调养，让健康成为幸福晚年最坚实的基础。",
+          "id": "block_1jm3vlw"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "莫道桑榆晚，为霞尚满天。"
+          "text": "莫道桑榆晚，为霞尚满天。",
+          "id": "block_1pvizeh"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "退休不是奋斗的终点，而是一段从容、充实而精彩的新旅程。"
+          "text": "退休不是奋斗的终点，而是一段从容、充实而精彩的新旅程。",
+          "id": "block_1y5k8ey"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "愿各位老同志："
+          "text": "愿各位老同志：",
+          "id": "block_qay7qn"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "心中有信仰，岁月有芬芳；身边有温暖，生活有安康；银发映初心，清风伴晚晴。"
+          "text": "心中有信仰，岁月有芬芳；身边有温暖，生活有安康；银发映初心，清风伴晚晴。",
+          "id": "block_f65b2o"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "下一步，我们将继续围绕老同志关心关注的时政理论、党纪法规、金融反诈、健康生活等内容，持续丰富电子期刊形式和内容，用心用情做好离退休干部服务保障工作，让老同志政治上有荣誉感、组织上有归属感、生活上有幸福感。"
+          "text": "下一步，我们将继续围绕老同志关心关注的时政理论、党纪法规、金融反诈、健康生活等内容，持续丰富电子期刊形式和内容，用心用情做好离退休干部服务保障工作，让老同志政治上有荣誉感、组织上有归属感、生活上有幸福感。",
+          "id": "block_oeg705"
         }
-      ]
+      ],
+      "id": "page_1tfssks"
     }
   ],
-  "publishedAt": "2026-08-27T14:30:28.906Z"
+  "publishedAt": "2026-09-08T10:57:46.296Z",
+  "revision": {
+    "pending": true,
+    "updatedAt": "2026-09-08T11:48:38.882Z",
+    "basePublishedAt": "2026-09-08T10:57:46.296Z",
+    "source": "studio",
+    "publishedAt": "2026-09-08T10:57:46.296Z",
+    "releaseSnapshot": "20260908T105745Z-pre-publish"
+  }
 }

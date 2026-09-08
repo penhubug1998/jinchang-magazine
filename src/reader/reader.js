@@ -207,7 +207,8 @@ function renderBlockContent(block,ctx={}) {
       return `<div class="toc-block">${(block.items || []).map((item) => `<button class="toc-jump" type="button" data-jump-page="${Number(item.page) - 1}"><b>${escapeHtml(item.number || "")}</b><span><strong>${escapeHtml(item.title || "")}</strong><small>${escapeHtml(item.subtitle || "")}</small></span></button>`).join("")}</div>`;
     case "table": {
       const rows=(block.rows||[]).slice(0,40),heads=Math.max(0,Math.min(rows.length,Number(block.headerRows)||0));
-      return `<figure class="table-block"><div class="table-scroll"><table>${rows.map((row,ri)=>`<tr>${(row||[]).slice(0,12).map(cell=>ri<heads?`<th>${escapeHtml(cell||"")}</th>`:`<td>${escapeHtml(cell||"")}</td>`).join("")}</tr>`).join("")}</table></div>${block.caption?`<figcaption>${escapeHtml(block.caption)}</figcaption>`:""}</figure>`;
+      const tableStyle=["plain","striped","accent"].includes(block.tableStyle)?block.tableStyle:"plain",density=["compact","comfortable","spacious"].includes(block.density)?block.density:"comfortable",align=["left","center","right"].includes(block.align)?block.align:"left",minWidth=block.minWidth==='wide'?'wide':'auto';
+      return `<figure class="table-block table-style-${tableStyle} table-density-${density} table-align-${align} table-width-${minWidth}"><div class="table-scroll"><table>${rows.map((row,ri)=>`<tr>${(row||[]).slice(0,12).map(cell=>ri<heads?`<th>${escapeHtml(cell||"")}</th>`:`<td>${escapeHtml(cell||"")}</td>`).join("")}</tr>`).join("")}</table></div>${block.caption?`<figcaption>${escapeHtml(block.caption)}</figcaption>`:""}</figure>`;
     }
     case "articleLink": {
       const article=state.issue?.articles?.[block.articleId]||{};

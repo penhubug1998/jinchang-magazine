@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs><linearGradient id="paper" x2="0" y2="1"><stop stop-color="#faf8ed"/><stop offset="1" stop-color="#dce9db"/></linearGradient><linearGradient id="mountain" x2="1"><stop stop-color="#88ad93"/><stop offset="1" stop-color="#356a5c"/></linearGradient></defs>
+  <rect width="1200" height="800" fill="url(#paper)"/><circle cx="878" cy="180" r="97" fill="#d9b96d" opacity=".75"/><path d="M0 579 174 375l148 164 174-257 190 261 156-176 358 230v203H0z" fill="url(#mountain)" opacity=".85"/><path d="M0 648c224-114 390-44 575 44 178 85 405 91 625-23v131H0z" fill="#2f6156" opacity=".88"/><g fill="none" stroke="#d5af56" stroke-width="4" opacity=".75"><path d="M95 145h270"/><path d="M95 168h181"/></g>
+</svg>
