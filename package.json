@@ -166,7 +166,10 @@
     "test:v31-final-promotion": "node scripts/v31-final-promotion-smoke-v3.mjs",
     "final:v31:acceptance": "node scripts/studio-v3.mjs --host 0.0.0.0 --port 4186 --acceptance-only",
     "test:p1-07": "node scripts/p1-07-publish-wizard-smoke-v3.mjs",
-    "test:p1-08": "node scripts/p1-08-production-e2e-v3.mjs"
+    "test:p1-08": "node scripts/p1-08-production-e2e-v3.mjs",
+    "test:p1-09": "node scripts/p1-09-final-evidence-smoke-v3.mjs",
+    "final:v31:current-gate": "node scripts/p1-09-final-evidence-gate-v3.mjs",
+    "final:v31:current-gate:strict": "node scripts/p1-09-final-evidence-gate-v3.mjs --strict"
   },
   "engines": {
     "node": ">=20"
