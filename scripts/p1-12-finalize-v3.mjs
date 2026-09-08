@@ -50,5 +50,6 @@ await mkdir(path.dirname(path.join(root,FINAL_RELEASE_FILE)),{recursive:true});
 await writeFile(path.join(root,FINAL_RELEASE_FILE),JSON.stringify(release,null,2)+'\n');
 // Compatibility receipt points back to the canonical signed receipt; it is not a second canonical signature surface.
 await writeFile(path.join(root,'reports/v31-final-release.json'),JSON.stringify({...release,compatibilityAlias:'v31-final-release.json',canonicalReleaseSha256:release.releaseSha256},null,2)+'\n');
+run('p1-18-final-artifact-verify-v3.mjs');
 run('p1-21-final-delivery-verify-v3.mjs');
 console.log(`P1-12 Finalization PASS · ${context.source.commit}\nSession ${context.session.sessionId}\nEvidence ${context.manifest.bundleSha256}\nWeb ${delivery.web.treeSha256}\nPDF ${delivery.pdf.sha256}\nArchive ${delivery.archive.sha256}\nDelivery ${delivery.deliverySha256}\nRelease ${release.releaseSha256}`);
