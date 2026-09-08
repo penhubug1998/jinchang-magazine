@@ -16,6 +16,7 @@ jobs:
       - run: npm run test:import-safety
       - run: npm run test:publication-share
       - run: npm run test:publication-pdf
+      - run: npm run test:production-preflight
       - run: npm run test:workflow-usability
       - run: npm run test:default-templates
       - run: npm run verify:v31

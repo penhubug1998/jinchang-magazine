@@ -26,6 +26,8 @@
     "test:narration-scope": "node scripts/narration-scope-smoke-v3.mjs",
     "test:import-safety": "node scripts/import-safety-smoke-v3.mjs",
     "test:publication-pdf": "node scripts/publication-pdf-smoke-v3.mjs",
+    "production:preflight": "node scripts/production-preflight-v3.mjs",
+    "test:production-preflight": "node scripts/production-preflight-smoke-v3.mjs",
     "test:workflow-usability": "node scripts/workflow-usability-smoke-v3.mjs",
     "test:default-templates": "node scripts/default-templates-smoke-v3.mjs",
     "test:admin-auth": "node scripts/admin-auth-smoke-v3.mjs",
