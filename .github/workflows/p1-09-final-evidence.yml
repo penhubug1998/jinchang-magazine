@@ -1,0 +1,73 @@
+name: P1-09 current-source final evidence
+
+on:
+  push:
+    branches:
+      - feat/p1-09-final-evidence-binding
+    paths:
+      - scripts/p1-09-final-evidence-gate-v3.mjs
+      - scripts/p1-09-final-evidence-smoke-v3.mjs
+      - .github/workflows/p1-09-final-evidence.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  final-evidence:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-09-final-evidence-binding
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Register P1-09 commands
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          p.scripts['test:p1-09']='node scripts/p1-09-final-evidence-smoke-v3.mjs';
+          p.scripts['final:v31:current-gate']='node scripts/p1-09-final-evidence-gate-v3.mjs';
+          p.scripts['final:v31:current-gate:strict']='node scripts/p1-09-final-evidence-gate-v3.mjs --strict';
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          NODE
+          git diff --check
+      - name: Verify evidence freshness contract
+        run: npm run test:p1-09
+      - name: Re-run full current production E2E
+        run: npm run test:p1-08
+      - name: Verify real current gate holds without external evidence
+        run: |
+          npm run final:v31:current-gate
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/p1-09-final-evidence-gate.json','utf8'));
+          if(r.status!=='HOLD') throw new Error('CI must not fabricate external device/media/HTTPS evidence');
+          const e2e=r.gates.find(x=>x.id==='current-e2e');
+          if(e2e?.status!=='READY') throw new Error('fresh current-source P1-08 E2E should be READY');
+          NODE
+          if npm run final:v31:current-gate:strict; then
+            echo 'strict current gate unexpectedly passed without external evidence' >&2
+            exit 1
+          fi
+      - name: Preserve adjacent production contracts
+        run: |
+          npm run test:p1-07
+          npm run check:v3
+          node --check scripts/p1-09-final-evidence-gate-v3.mjs
+          node --check scripts/p1-09-final-evidence-smoke-v3.mjs
+          git diff --check
+      - name: Commit verified P1-09 commands
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/p1-09-final-evidence.yml
+          git add package.json
+          git commit -m "test(p1-09): seal current-source final evidence gate"
+          git push origin HEAD:feat/p1-09-final-evidence-binding
