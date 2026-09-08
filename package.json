@@ -172,9 +172,16 @@
     "final:v31:current-gate:strict": "node scripts/p1-09-final-evidence-gate-v3.mjs --strict",
     "test:p1-10": "node scripts/p1-10-final-acceptance-smoke-v3.mjs",
     "final:v31:acceptance:status": "node scripts/p1-10-final-acceptance-gate-v3.mjs",
-    "final:v31:evidence:verify": "node scripts/p1-10-final-acceptance-gate-v3.mjs --strict",
+    "final:v31:evidence:verify": "node scripts/p1-11-final-evidence-verify-v3.mjs",
     "final:v31:evidence:export": "node scripts/p1-10-final-acceptance-gate-v3.mjs --export",
-    "final:v31:package-guard": "node scripts/p1-10-final-package-guard-v3.mjs"
+    "final:v31:package-guard": "node scripts/p1-10-final-package-guard-v3.mjs",
+    "test:p1-11": "node scripts/p1-11-final-session-smoke-v3.mjs",
+    "final:v31:session:start": "node scripts/p1-11-final-session-v3.mjs start",
+    "final:v31:session:status": "node scripts/p1-11-final-session-v3.mjs status",
+    "final:v31:session:show": "node scripts/p1-11-final-session-v3.mjs show",
+    "final:v31:session:seal": "node scripts/p1-11-final-session-v3.mjs seal",
+    "final:v31:evidence:bundle": "node scripts/p1-11-final-evidence-bundle-v3.mjs",
+    "final:v31:evidence:bundle:strict": "node scripts/p1-11-final-evidence-bundle-v3.mjs --strict"
   },
   "engines": {
     "node": ">=20"
