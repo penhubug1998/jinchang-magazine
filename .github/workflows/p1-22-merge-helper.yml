@@ -15,18 +15,29 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: fix/p1-22-mainline-reconciliation
+          ref: work/p1-22-merge-result
           fetch-depth: 0
-      - name: Create deterministic merge result
-        env:
-          EXPECTED_MAIN: 5320bc610347ce2fb8eb2bce7722a9d356c33626
+      - name: Apply reviewed reconciliation fixes
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
           git config user.email "p1-22-merge-helper@users.noreply.github.com"
-          git fetch origin main
-          test "$(git rev-parse origin/main)" = "$EXPECTED_MAIN"
-          git checkout -B work/p1-22-merge-result origin/fix/p1-22-mainline-reconciliation
-          git merge --no-ff -X ours "$EXPECTED_MAIN" -m "merge(p1-22): reconcile mainline into Final baseline"
-          test -z "$(git status --porcelain)"
-          git push origin HEAD:refs/heads/work/p1-22-merge-result
+          git checkout -B work/p1-22-merge-fixed origin/work/p1-22-merge-result
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('scripts/studio-v3.mjs')
+          s=p.read_text()
+          s=s.replace("import { issueTemplateCatalog } from '../src/studio/issue-templates.js';\n","")
+          old="    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true});"
+          new="    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});"
+          if old not in s: raise SystemExit('expected Chromium spawn line not found')
+          s=s.replace(old,new,1)
+          template_forward="    if(templateId)argv.push('--template',templateId);\n"
+          if template_forward not in s: raise SystemExit('expected Studio template forwarding line not found')
+          s=s.replace(template_forward,'',1)
+          p.write_text(s)
+          PY
+          git diff --check
+          git add scripts/studio-v3.mjs
+          git commit -m "fix(p1-22): isolate PDF runtime and preserve Studio template contract"
+          git push origin HEAD:refs/heads/work/p1-22-merge-fixed
