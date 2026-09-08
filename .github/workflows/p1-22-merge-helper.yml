@@ -17,9 +17,9 @@ jobs:
         with:
           ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Verify embedded images in generated PDF
+      - name: Migrate Alpha3 final gate hash lock
         env:
-          EXPECTED_HEAD: 193b10725c1ae39785dcec9545876c9b6bbc5e33
+          EXPECTED_HEAD: 383fbc9da88e85e608a6cac7f173dadb7ca77088
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
@@ -27,14 +27,28 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/p1-08-production-e2e-v3.mjs')
-          s=p.read_text()
-          old="const pdf=await api(`/api/issues/${id}/publication/pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const pdfFile=path.join(sandbox,pdf.output.path),pdfBytes=await readFile(pdfFile);assert(pdfBytes.subarray(0,5).toString()==='%PDF-','invalid PDF header');report.artifacts.pdf={path:pdf.output.path,bytes:pdfBytes.length,sha256:sha(pdfBytes)};mark('PDF 导出',{note:`${Math.round(pdfBytes.length/1024)} KB`});"
-          new="const pdf=await api(`/api/issues/${id}/publication/pdf`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});const pdfFile=path.join(sandbox,pdf.output.path),pdfBytes=await readFile(pdfFile);assert(pdfBytes.subarray(0,5).toString()==='%PDF-','invalid PDF header');assert(pdfBytes.includes(Buffer.from('/Subtype /Image')),'Print PDF missing embedded image object');report.artifacts.pdf={path:pdf.output.path,bytes:pdfBytes.length,sha256:sha(pdfBytes),embeddedImage:true};mark('PDF 导出',{note:`${Math.round(pdfBytes.length/1024)} KB · embedded image`});"
-          if old not in s: raise SystemExit('expected P1-08 PDF assertion line not found')
-          p.write_text(s.replace(old,new,1))
+          import hashlib, json
+
+          def sha256(path):
+              return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+          lock_path=Path('baselines/v3.0-final-gate-lock-alpha3.json')
+          lock=json.loads(lock_path.read_text())
+          files=lock.setdefault('files',{})
+          files['scripts/final-release-v3.mjs']=sha256('scripts/final-release-v3.mjs')
+          files['scripts/final-release-v30-v3.mjs']=sha256('scripts/final-release-v30-v3.mjs')
+          lock['releaseBoundaryPolicy']='V3.1 generic final entrypoint fail-closed; V3.0 implementation preserved under versioned script'
+          lock_path.write_text(json.dumps(lock,ensure_ascii=False,indent=2)+'\n')
+
+          smoke_path=Path('scripts/v31-alpha3-smoke-v3.mjs')
+          s=smoke_path.read_text()
+          old="""for(const [file,expected] of Object.entries(lock.files||{})){\n  const actual=crypto.createHash('sha256').update(await readFile(file)).digest('hex');\n  if(actual!==expected)throw new Error(`V3.0 正式门禁关键文件被 Alpha3 改动：${file}`);\n}\nconst digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);"""
+          new="""for(const [file,expected] of Object.entries(lock.files||{})){\n  const actual=crypto.createHash('sha256').update(await readFile(file)).digest('hex');\n  if(actual!==expected)throw new Error(`Alpha3 发布边界关键文件发生漂移：${file}`);\n}\nif(lock.releaseBoundaryPolicy!=='V3.1 generic final entrypoint fail-closed; V3.0 implementation preserved under versioned script')throw new Error('Alpha3 发布边界策略声明异常');\nconst finalGuard=await readFile('scripts/final-release-v3.mjs','utf8');\nif(!finalGuard.includes('[P1-16]')||!finalGuard.includes('final:v31')||!finalGuard.includes('process.exit(64)'))throw new Error('Alpha3 未锁住 V3.1 通用 final 入口 fail-closed 行为');\nconst finalV30=await readFile('scripts/final-release-v30-v3.mjs','utf8');\nif(!finalV30.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!finalV30.includes("status:'RELEASED'"))throw new Error('Alpha3 未锁住 V3.0 版本化两阶段发布实现');\nconst digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);"""
+          if old not in s:
+              raise SystemExit('expected Alpha3 final gate lock loop not found')
+          smoke_path.write_text(s.replace(old,new,1))
           PY
           git diff --check
-          git add scripts/p1-08-production-e2e-v3.mjs
-          git commit -m "test(p1-22): verify embedded images in Print PDF"
+          git add baselines/v3.0-final-gate-lock-alpha3.json scripts/v31-alpha3-smoke-v3.mjs
+          git commit -m "test(p1-22): migrate Alpha3 final gate hash lock"
           git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
