@@ -1905,10 +1905,10 @@ function renderPublicationCenter(){
   let actionAdvice=$('#publicationActionAdvice');
   if(!actionAdvice&&outputSection){actionAdvice=document.createElement('section');actionAdvice.id='publicationActionAdvice';actionAdvice.className='publication-action-advice publication-section';actionAdvice.setAttribute('aria-live','polite');outputSection.after(actionAdvice);}
   if(actionAdvice){const last=state.publicationLastError;actionAdvice.classList.toggle('hidden',!last);actionAdvice.innerHTML=last?`<div class="publication-section-head"><div><span class="eyebrow">ACTION REQUIRED</span><strong>${escText(last.label||'发布操作未完成')}</strong></div><span class="publication-action-code">${escText(last.code||'请按建议处理')}</span></div><p>${escText(last.summary||'请按下列建议修复后重试。')}</p>${(last.advice||[]).map(x=>`<div class="publication-advice-line">• ${escText(x)}</div>`).join('')}`:'';}
-  $('#publicationPreflightState').textContent=st.lastPreflight?.at?`${st.lastPreflight.ok?'PASS':'FAIL'} · ${fmtTime(st.lastPreflight.at)}`:'尚未执行严格发布检查';
+  $('#publicationPreflightState').textContent=st.forceRelease?(st.lastPreflight?.at?`FORCE · ${fmtTime(st.lastPreflight.at)}`:'FORCE 模式 · 未执行检查'):st.lastPreflight?.at?`${st.lastPreflight.ok?'PASS':'FAIL'} · ${fmtTime(st.lastPreflight.at)}`:'尚未执行严格发布检查';
   const auditLink=$('#publicationAuditLink');
   if(auditLink)auditLink.href=appUrl(`/reports/v3-release-audit-${encodeURIComponent(issue.id)}.html`);
-  const releaseable=isReleaseableIssueStatus(issue.status);
+  const releaseable=Boolean(st.forceRelease)||isReleaseableIssueStatus(issue.status);
   const reviewButton=$('#publicationMarkReadyBtn');
   if(reviewButton){reviewButton.hidden=releaseable;reviewButton.disabled=Boolean(state.publicationBusy)||state.saving;}
   if($('#publicationReviewTitle'))$('#publicationReviewTitle').textContent=releaseable?'内容核对已确认':'先确认本期内容';
@@ -1923,16 +1923,16 @@ function renderPublicationCenter(){
   releaseButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);
   releaseButton.textContent=state.publicationBusy?'处理中…':'发布并上线';
   releaseButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');
-  releaseButton.title=!releaseable?'请先点击上方“内容已核对，设为待发布”':!st.canPublish?'存在严格硬性阻断，请先处理发布中心列出的页面和资源问题':'自动保存、刷新严格检查、正式发布并部署公开网站';
+  releaseButton.title=!releaseable?'请先点击上方“内容已核对，设为待发布”':st.forceRelease?'FORCE 模式：跳过全部发布门禁并发布上线':'自动保存、刷新严格检查、正式发布并部署公开网站';
   const quickButton=$('#publicationQuickPublishBtn');
   if(quickButton){quickButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);quickButton.textContent=state.publicationBusy?'处理中…':!st.canPublish?'先处理硬性阻断':'发布并上线';quickButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');}
   $('#publicationBusy').textContent=state.publicationBusy||'';
-  const hard=[...(st.audit?.findings||[]).filter(x=>x.severity==='blocker'||x.severity==='error'),...(Number(m.links?.invalid||0)>0?[{title:'不安全或格式错误链接',message:`${m.links.invalid} 个链接必须先修复`,severity:'blocker'}]:[])];
+  const hard=st.forceRelease?[]:[...(st.audit?.findings||[]).filter(x=>x.severity==='blocker'||x.severity==='error'),...(Number(m.links?.invalid||0)>0?[{title:'不安全或格式错误链接',message:`${m.links.invalid} 个链接必须先修复`,severity:'blocker'}]:[])];
   const advisory=(st.audit?.findings||[]).filter(x=>!hard.includes(x));
   const advisoryText=Array.isArray(st.advisories)?st.advisories:[];
   const issueEyebrow=$('#publicationIssuesEyebrow'),issueTitle=$('#publicationIssuesTitle');
-  if(issueEyebrow)issueEyebrow.textContent=hard.length?'HARD GATES · ADVISORIES':'ADVISORIES';
-  if(issueTitle)issueTitle.textContent=hard.length?'硬性阻断与提示检查项':'提示检查项（不阻断继续制作）';
+  if(issueEyebrow)issueEyebrow.textContent=st.forceRelease?'FORCE MODE · ADVISORIES':hard.length?'HARD GATES · ADVISORIES':'ADVISORIES';
+  if(issueTitle)issueTitle.textContent=st.forceRelease?'强制发布模式：所有检查项仅作提示':'硬性阻断与提示检查项';
   const rows=[
     ...hard.map(x=>publicationFindingRow(x,'hard',st.audit?.findings||[])),
     ...advisory.slice(0,8).map(x=>publicationFindingRow(x,'advisory',st.audit?.findings||[])),
@@ -2054,7 +2054,7 @@ function renderPublicationSnapshots(){const el=$('#publicationSnapshots');if(!el
 async function rollbackPublicationSnapshot(id){if(!id||!state.issue)return;if(!confirm('确认回滚到这个快照？当前未保存修改将丢失。'))return;try{await api(`/api/issues/${encodeURIComponent(state.issue.id)}/rollback`,{method:'POST',body:JSON.stringify({snapshot:id})});toast('回滚完成，正在重新载入');await openIssue(state.issue.id);await loadPublicationStatus({refresh:true});await loadPublicationSnapshots();}catch(e){toast(`回滚失败：${e.message}`,4200)}}
 async function formalPublicationUi(){
   if(!requireIssue()||state.publicationBusy)return;
-  if(!isReleaseableIssueStatus(state.issue.status))return toast('当前状态不允许发布，请先在“期刊信息”中修正状态',3600);
+  if(!state.publicationStatus?.forceRelease&&!isReleaseableIssueStatus(state.issue.status))return toast('当前状态不允许发布，请先在“期刊信息”中修正状态',3600);
   if(state.dirty&&(!await saveIssue({silent:true})))return;
   try{
     // Fold the old preparation step into the one-click flow. This repairs

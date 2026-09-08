@@ -1,7 +1,9 @@
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
+import { forceReleaseEnabled } from './lib-v3-production.mjs';
 
 const root = process.cwd();
+const force = forceReleaseEnabled();
 // When a release targets one issue, validate only that issue's assets. The
 // previous all-issues scan made an unrelated draft (for example 004) appear
 // in the 003 publish dialog and obscured the actual blocker.
@@ -190,6 +192,7 @@ for (const warning of warnings) console.warn(`V3 警告：${warning}`);
 if (errors.length) {
   console.error("V3 数据校验失败：");
   for (const error of errors) console.error(`- ${error}`);
-  process.exit(1);
+  if(!force) process.exit(1);
+  console.warn('V3_FORCE_RELEASE=1：数据校验错误已降级为强制发布提示。');
 }
 console.log(`V3 数据校验通过。${warnings.length ? `（${warnings.length} 条非阻断警告）` : ""}`);

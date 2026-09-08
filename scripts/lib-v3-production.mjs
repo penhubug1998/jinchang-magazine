@@ -20,6 +20,7 @@ export const V3_VERSION = PACKAGE_META.version;
 export const V3_STABLE_VERSION = PACKAGE_META.v3StableVersion || V3_VERSION;
 export const V31_SCHEMA_VERSION = PACKAGE_META.v31SchemaVersion || null;
 export const MiB = 1024 * 1024;
+export function forceReleaseEnabled(){return /^(1|true|yes|on)$/i.test(String(process.env.V3_FORCE_RELEASE||''));}
 export const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 export const posix = (file) => file.replaceAll('\\', '/');
 export const rel = (file) => posix(path.relative(root, file));
