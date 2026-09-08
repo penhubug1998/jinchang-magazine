@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - feat/p1-09-rc-final-promotion
-    paths:
-      - .github/workflows/p1-09-rc-final-promotion.yml
-      - scripts/v31-beta1-production-v3.mjs
   workflow_dispatch:
 
 permissions:
@@ -65,6 +62,7 @@ jobs:
       - name: Syntax and source cleanliness
         run: |
           node --check scripts/v31-beta1-production-v3.mjs
+          node --check scripts/v31-rc2-browser-v3.mjs
           node --check scripts/v31-rc2-gate-v3.mjs
           node --check scripts/v31-final-promotion-gate-v3.mjs
           git diff --check
