@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>V3.1 Final Acceptance</title>
+<link rel="stylesheet" href="./final-acceptance.css">
+</head>
+<body>
+<header class="hero">
+  <div><span class="eyebrow">P1-10 · REAL ENVIRONMENT</span><h1>Final Acceptance</h1><p>当前源码真实环境验收与 8/8 晋级门禁</p></div>
+  <div class="score"><strong id="score">—/8</strong><span id="overall">读取中</span></div>
+</header>
+<main>
+<section class="source card"><div><span>Current Source</span><code id="commit">读取中…</code></div><button id="refresh">重新计算 Gate</button></section>
+<section id="gateGrid" class="grid" aria-live="polite"></section>
+<section class="card help"><h2>真实设备怎么验收</h2><p>在对应设备上打开验收链接，完成自动探测与人工交互检查后提交。记录由服务器绑定当前 Git commit、记录时间与 SHA-256；源码变化后旧记录自动失效。</p><div class="links"><button data-device="edge-desktop">Edge 验收链接</button><button data-device="mac-safari">Mac Safari 验收链接</button><button data-device="iphone-safari">iPhone Safari 验收链接</button><button data-device="android-wechat">Android 微信验收链接</button></div><p id="copyState" class="muted"></p></section>
+<section class="card commands"><h2>非设备 Gate</h2><pre>完整媒体：npm run test:v31-rc2-media-local
+正式环境：npm run final:v31:production-receipt -- --issue &lt;期号&gt;
+状态汇总：npm run final:v31:acceptance:status
+严格晋级：npm run final:v31:acceptance:status -- --strict
+证据导出：npm run final:v31:evidence:export
+最终封包门禁：npm run final:v31:package-guard</pre></section>
+</main>
+<template id="gateTemplate"><article class="card gate"><div class="gate-head"><span class="gate-index"></span><span class="badge"></span></div><h2></h2><p class="detail"></p><p class="action"></p></article></template>
+<script src="./final-acceptance.js" type="module"></script>
+</body>
+</html>
