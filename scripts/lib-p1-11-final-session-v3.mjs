@@ -45,8 +45,9 @@ export async function startFinalSession({issue='003',reset=false}={}){
 export async function buildSessionStatus(){
   const source=sourceIdentity(),session=await readFinalSession(),state=sessionState(session,source),acceptance=await buildFinalAcceptanceReport();
   const ready=acceptance.ready,total=acceptance.total;
-  const canSeal=Boolean(state.status==='ACTIVE'&&state.sourceMatches&&acceptance.promotion?.allowed&&ready===total&&total===8);
-  return {stage:'P1-11',version:V3_VERSION,generatedAt:new Date().toISOString(),session,state,source,acceptance:{status:acceptance.status,ready,total,gates:acceptance.gates},canSeal,next:state.status==='NOT_STARTED'?'开始 Final Acceptance Session':state.status==='STALE'?'重新开始当前源码会话':canSeal?'生成 strict 证据包并 seal':'继续完成未通过的真实环境 Gate'};
+  const acceptanceReady=Boolean(acceptance.promotion?.allowed&&ready===total&&total===8);
+  const canSeal=Boolean(['ACTIVE','SEALED'].includes(state.status)&&state.sourceMatches&&acceptanceReady);
+  return {stage:'P1-11',version:V3_VERSION,generatedAt:new Date().toISOString(),session,state,source,acceptance:{status:acceptance.status,ready,total,gates:acceptance.gates},canSeal,next:state.status==='NOT_STARTED'?'开始 Final Acceptance Session':state.status==='STALE'?'重新开始当前源码会话':state.status==='SEALED'?'会话已封存；验证 strict evidence bundle 后即可 Final packaging':canSeal?'封存 Session 并生成 strict 证据包':'继续完成未通过的真实环境 Gate'};
 }
 
 export async function evidenceFileEntry(rel){
@@ -58,7 +59,8 @@ export async function evidenceFileEntry(rel){
 
 export async function buildEvidenceBundle({strict=false}={}){
   const status=await buildSessionStatus();
-  if(strict&&!status.canSeal)throw new Error(`Strict evidence bundle requires ACTIVE current-source session and 8/8 READY; current ${status.acceptance.ready}/${status.acceptance.total}`);
+  if(strict&&!status.canSeal)throw new Error(`Strict evidence bundle requires current-source session and 8/8 READY; current ${status.acceptance.ready}/${status.acceptance.total} · ${status.state.status}`);
+  if(strict&&status.state.status!=='SEALED')throw new Error('Strict evidence bundle requires the Final Acceptance Session to be SEALED first');
   const evidencePaths=[FINAL_SESSION_FILE,'reports/p1-08-production-e2e-last.json','reports/p1-09-final-evidence-gate.json','reports/v31-final-media-receipt.json','reports/v3-rc1-device-acceptance.json','reports/v31-final-production-receipt.json','reports/p1-10-final-acceptance.json'];
   const files=[];for(const rel of evidencePaths)files.push(await evidenceFileEntry(rel));
   const generatedAt=new Date().toISOString();
@@ -87,11 +89,21 @@ export function verifyBundleObjects(bundle,manifest){
   return {ok:errors.length===0,errors,bundleSha256:bundleSha,manifestSha256:manifestSha};
 }
 
+export async function verifyEvidenceFiles(manifest){
+  const errors=[];
+  for(const row of manifest?.files||[]){const actual=await evidenceFileEntry(row.path);if(actual.present!==row.present||actual.bytes!==row.bytes||actual.sha256!==row.sha256)errors.push(`磁盘证据已变化：${row.path}`);}
+  return {ok:errors.length===0,errors};
+}
+
 export async function sealFinalSession(){
   const status=await buildSessionStatus();
+  if(status.state.status==='SEALED')return status.session;
   if(!status.canSeal)throw new Error(`Final Acceptance Session 尚不能 seal：${status.acceptance.ready}/${status.acceptance.total} READY · ${status.state.status}`);
-  const {manifest}=await buildEvidenceBundle({strict:true});
-  const session={...status.session,status:'SEALED',sealedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),finalReady:status.acceptance.ready,finalTotal:status.acceptance.total,bundleSha256:manifest.bundleSha256,manifestSha256:manifest.manifestSha256};
+  const sealedAt=new Date().toISOString();
+  const session={...status.session,status:'SEALED',sealedAt,updatedAt:sealedAt,finalReady:status.acceptance.ready,finalTotal:status.acceptance.total};
   await writeFile(path.join(root,FINAL_SESSION_FILE),JSON.stringify(session,null,2)+'\n');
+  const {manifest}=await buildEvidenceBundle({strict:true});
+  const disk=await verifyEvidenceFiles(manifest);
+  if(!disk.ok)throw new Error(`Session 已封存，但 strict evidence files 校验失败：${disk.errors.join('；')}`);
   return session;
 }
