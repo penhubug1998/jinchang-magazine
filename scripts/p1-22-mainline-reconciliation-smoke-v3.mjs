@@ -60,6 +60,10 @@ assert(studioSource.includes('applyWholeMagazineTemplate(templateId,target)'),'S
 assert(studioSource.includes('HOME:userDataDir'),'PDF Chromium HOME isolation missing');
 assert(studioSource.includes("XDG_CONFIG_HOME:path.join(userDataDir,'config')"),'PDF Chromium XDG config isolation missing');
 assert(studioSource.includes("XDG_CACHE_HOME:path.join(userDataDir,'cache')"),'PDF Chromium XDG cache isolation missing');
+assert(studioSource.includes("const src=printImages.get(stripAssetsPrefix(b.src||''))"),'Print PDF must resolve the actual local image payload');
+assert(studioSource.includes('<img class="print-image" src="${src}"'),'Print PDF must render real images instead of a placeholder');
+assert(studioSource.includes("publicationFailure('PDF_IMAGE_UNAVAILABLE','页面图片未绑定本地资源'"),'Print PDF must fail closed when an image cannot be resolved');
+assert(!studioSource.includes("else if(t==='image')body=`<figure><div class=\"media-placeholder\">图片</div>"),'Print PDF must not silently replace images with a generic placeholder');
 
 const auditSource=await readFile('scripts/audit-v3.mjs','utf8');
 assert(auditSource.includes("'video','image','table','coverMeta'"),'strict audit must accept table blocks produced by DOCX import');
@@ -78,4 +82,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · strict audit accepts tables · P1-08 media-right edit survives image-only rich continuation pages · P1-21 Final delivery retained');
+console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · Print PDF renders real local images · strict audit accepts tables · P1-08 media-right edit survives image-only rich continuation pages · P1-21 Final delivery retained');
