@@ -8,19 +8,24 @@
 </head>
 <body>
 <header class="hero">
-  <div><span class="eyebrow">P1-10 · REAL ENVIRONMENT</span><h1>Final Acceptance</h1><p>当前源码真实环境验收与 8/8 晋级门禁</p></div>
+  <div><span class="eyebrow">P1-11 · FINAL ACCEPTANCE SESSION</span><h1>Final Acceptance</h1><p>锁定当前源码，完成真实环境 8/8 验收，再生成可离线复核的最终证据包</p></div>
   <div class="score"><strong id="score">—/8</strong><span id="overall">读取中</span></div>
 </header>
 <main>
 <section class="source card"><div><span>Current Source</span><code id="commit">读取中…</code></div><button id="refresh">重新计算 Gate</button></section>
+<section class="card session-card"><div><h2>Final Acceptance Session</h2><p id="sessionSummary">正在读取验收会话…</p><code id="sessionId">—</code></div><div class="session-actions"><a href="/reports/p1-11-final-acceptance-session.json" target="_blank" rel="noopener">查看 Session JSON</a><a href="/reports/p1-11-final-evidence-manifest.json" target="_blank" rel="noopener">查看 Evidence Manifest</a><a href="/reports/p1-11-final-evidence-bundle.json" target="_blank" rel="noopener">查看 Evidence Bundle</a></div><p id="sessionWarning" class="muted"></p></section>
 <section id="gateGrid" class="grid" aria-live="polite"></section>
-<section class="card help"><h2>真实设备怎么验收</h2><p>在对应设备上打开验收链接，完成自动探测与人工交互检查后提交。记录由服务器绑定当前 Git commit、记录时间与 SHA-256；源码变化后旧记录自动失效。</p><div class="links"><button data-device="edge-desktop">Edge 验收链接</button><button data-device="mac-safari">Mac Safari 验收链接</button><button data-device="iphone-safari">iPhone Safari 验收链接</button><button data-device="android-wechat">Android 微信验收链接</button></div><p id="copyState" class="muted"></p></section>
-<section class="card commands"><h2>非设备 Gate</h2><pre>完整媒体：npm run test:v31-rc2-media-local
-正式环境：npm run final:v31:production-receipt -- --issue &lt;期号&gt;
-状态汇总：npm run final:v31:acceptance:status
-严格晋级：npm run final:v31:acceptance:status -- --strict
-证据导出：npm run final:v31:evidence:export
-最终封包门禁：npm run final:v31:package-guard</pre></section>
+<section class="card help"><h2>真实设备怎么验收</h2><p>先在命令行开始 P1-11 Session，再在对应设备打开验收链接。设备记录会绑定当前 Git commit、Session 所属源码、记录时间与 SHA-256；源码变化后旧记录自动失效。</p><div class="links"><button data-device="edge-desktop">Edge 验收链接</button><button data-device="mac-safari">Mac Safari 验收链接</button><button data-device="iphone-safari">iPhone Safari 验收链接</button><button data-device="android-wechat">Android 微信验收链接</button></div><p id="copyState" class="muted"></p></section>
+<section class="card commands"><h2>P1-11 操作顺序</h2><pre>1. 开始会话：npm run final:v31:session:start -- --issue &lt;期号&gt;
+2. 当前 E2E：npm run test:p1-08
+3. 完整媒体：npm run test:v31-rc2-media-local
+4. Edge / Mac Safari / iPhone Safari / Android 微信：在上方真实设备逐项提交
+5. 正式环境：npm run final:v31:production-receipt -- --issue &lt;期号&gt;
+6. 状态汇总：npm run final:v31:session:status
+7. 导出证据包：npm run final:v31:evidence:bundle
+8. 离线校验：npm run final:v31:evidence:verify
+9. 8/8 后封存：npm run final:v31:session:seal
+10. 最终封包门禁：npm run final:v31:package-guard</pre><p class="muted">Session 开始后不要再提交源码改动。任何新 commit 都会使这次会话变为 STALE，必须重新开始。</p></section>
 </main>
 <template id="gateTemplate"><article class="card gate"><div class="gate-head"><span class="gate-index"></span><span class="badge"></span></div><h2></h2><p class="detail"></p><p class="action"></p></article></template>
 <script src="./final-acceptance.js" type="module"></script>
