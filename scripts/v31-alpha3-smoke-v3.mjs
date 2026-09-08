@@ -30,7 +30,12 @@ const lock=JSON.parse(await readFile('baselines/v3.0-final-gate-lock-alpha3.json
 if(lock.stableVersion!=='3.0.0'||lock.parentOverlaySha256!=='88b0528541f67401613f8bd2df98998d8ff5ed58e2c784e7f27f0c65a2228daa')throw new Error('正式门禁锁定基线信息异常');
 for(const [file,expected] of Object.entries(lock.files||{})){
   const actual=crypto.createHash('sha256').update(await readFile(file)).digest('hex');
-  if(actual!==expected)throw new Error(`V3.0 正式门禁关键文件被 Alpha3 改动：${file}`);
+  if(actual!==expected)throw new Error(`Alpha3 发布边界关键文件发生漂移：${file}`);
 }
+if(lock.releaseBoundaryPolicy!=='V3.1 generic final entrypoint fail-closed; V3.0 implementation preserved under versioned script')throw new Error('Alpha3 发布边界策略声明异常');
+const finalGuard=await readFile('scripts/final-release-v3.mjs','utf8');
+if(!finalGuard.includes('[P1-16]')||!finalGuard.includes('final:v31')||!finalGuard.includes('process.exit(64)'))throw new Error('Alpha3 未锁住 V3.1 通用 final 入口 fail-closed 行为');
+const finalV30=await readFile('scripts/final-release-v30-v3.mjs','utf8');
+if(!finalV30.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!finalV30.includes("status:'RELEASED'"))throw new Error('Alpha3 未锁住 V3.0 版本化两阶段发布实现');
 const digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);
 console.log(`V3.1-alpha3 smoke 通过：主题预设、样式复制粘贴、页面/组件批量套用、设计撤销重做、Studio Reader 点选直达和 V3.0 证据绑定均正常。schema=${digest}`);
