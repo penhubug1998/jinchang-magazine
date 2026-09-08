@@ -17,7 +17,7 @@ jobs:
   final-evidence:
     runs-on: ubuntu-24.04
     env:
-      CHROMIUM: scripts/chrome-ci-wrapper.sh
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
       V3_REAL_CHROME: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
