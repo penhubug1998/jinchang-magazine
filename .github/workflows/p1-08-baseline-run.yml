@@ -1,0 +1,25 @@
+name: P1-08 baseline production rehearsal
+
+on:
+  push:
+    branches:
+      - ci/p1-08-baseline-run
+    paths:
+      - .github/workflows/p1-08-baseline-run.yml
+  workflow_dispatch:
+
+jobs:
+  baseline:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ci/p1-08-baseline-run
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Run current V3.1 full production rehearsal
+        run: npm run test:v31-beta1-production
