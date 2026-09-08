@@ -31,7 +31,7 @@ function run(label, script, scriptArgs=[]) {
 // Never turn real content/media/TTS blockers into a warning.  Browser device
 // checks are advisory for routine publishing and are handled separately.
 const checkArgs=force?['--issue',id,'--skip-browser']:['--issue',id,'--strict','--skip-browser'];
-if(force)console.warn('V3_FORCE_RELEASE=1：正式发布将跳过发布前门禁，仅保留构建、产物写入和运行时错误检查。');
+if(force)console.warn('直接发布模式：跳过发布前阻断检查，仅保留构建、产物写入和运行时错误检查。');
 run('发布前完整门禁','release-check-v3.mjs',checkArgs);
 
 const snapshot = await snapshotIssue(id, 'pre-publish');

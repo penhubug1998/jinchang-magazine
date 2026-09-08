@@ -1905,7 +1905,7 @@ function renderPublicationCenter(){
   let actionAdvice=$('#publicationActionAdvice');
   if(!actionAdvice&&outputSection){actionAdvice=document.createElement('section');actionAdvice.id='publicationActionAdvice';actionAdvice.className='publication-action-advice publication-section';actionAdvice.setAttribute('aria-live','polite');outputSection.after(actionAdvice);}
   if(actionAdvice){const last=state.publicationLastError;actionAdvice.classList.toggle('hidden',!last);actionAdvice.innerHTML=last?`<div class="publication-section-head"><div><span class="eyebrow">ACTION REQUIRED</span><strong>${escText(last.label||'发布操作未完成')}</strong></div><span class="publication-action-code">${escText(last.code||'请按建议处理')}</span></div><p>${escText(last.summary||'请按下列建议修复后重试。')}</p>${(last.advice||[]).map(x=>`<div class="publication-advice-line">• ${escText(x)}</div>`).join('')}`:'';}
-  $('#publicationPreflightState').textContent=st.forceRelease?(st.lastPreflight?.at?`FORCE · ${fmtTime(st.lastPreflight.at)}`:'FORCE 模式 · 未执行检查'):st.lastPreflight?.at?`${st.lastPreflight.ok?'PASS':'FAIL'} · ${fmtTime(st.lastPreflight.at)}`:'尚未执行严格发布检查';
+  $('#publicationPreflightState').textContent=st.forceRelease?(st.lastPreflight?.at?`直接发布 · ${fmtTime(st.lastPreflight.at)}`:'直接发布 · 检查仅作提示'):st.lastPreflight?.at?`${st.lastPreflight.ok?'PASS':'FAIL'} · ${fmtTime(st.lastPreflight.at)}`:'尚未执行发布检查';
   const auditLink=$('#publicationAuditLink');
   if(auditLink)auditLink.href=appUrl(`/reports/v3-release-audit-${encodeURIComponent(issue.id)}.html`);
   const releaseable=Boolean(st.forceRelease)||isReleaseableIssueStatus(issue.status);
@@ -1923,7 +1923,7 @@ function renderPublicationCenter(){
   releaseButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);
   releaseButton.textContent=state.publicationBusy?'处理中…':'发布并上线';
   releaseButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');
-  releaseButton.title=!releaseable?'请先点击上方“内容已核对，设为待发布”':st.forceRelease?'FORCE 模式：跳过全部发布门禁并发布上线':'自动保存、刷新严格检查、正式发布并部署公开网站';
+  releaseButton.title=!releaseable?'请先点击上方“内容已核对，设为待发布”':st.forceRelease?'直接发布：检查项仅作提示，不阻断上线':'自动保存、刷新发布检查、正式发布并部署公开网站';
   const quickButton=$('#publicationQuickPublishBtn');
   if(quickButton){quickButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);quickButton.textContent=state.publicationBusy?'处理中…':!st.canPublish?'先处理硬性阻断':'发布并上线';quickButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');}
   $('#publicationBusy').textContent=state.publicationBusy||'';
@@ -1931,8 +1931,8 @@ function renderPublicationCenter(){
   const advisory=(st.audit?.findings||[]).filter(x=>!hard.includes(x));
   const advisoryText=Array.isArray(st.advisories)?st.advisories:[];
   const issueEyebrow=$('#publicationIssuesEyebrow'),issueTitle=$('#publicationIssuesTitle');
-  if(issueEyebrow)issueEyebrow.textContent=st.forceRelease?'FORCE MODE · ADVISORIES':hard.length?'HARD GATES · ADVISORIES':'ADVISORIES';
-  if(issueTitle)issueTitle.textContent=st.forceRelease?'强制发布模式：所有检查项仅作提示':'硬性阻断与提示检查项';
+  if(issueEyebrow)issueEyebrow.textContent=st.forceRelease?'DIRECT RELEASE · ADVISORIES':hard.length?'CHECKS · ADVISORIES':'ADVISORIES';
+  if(issueTitle)issueTitle.textContent=st.forceRelease?'直接发布模式：所有检查项仅作提示':'检查与提示项';
   const rows=[
     ...hard.map(x=>publicationFindingRow(x,'hard',st.audit?.findings||[])),
     ...advisory.slice(0,8).map(x=>publicationFindingRow(x,'advisory',st.audit?.findings||[])),
@@ -2060,9 +2060,8 @@ async function formalPublicationUi(){
     // Fold the old preparation step into the one-click flow. This repairs
     // stale/missing TTS evidence before the strict release gate runs.
     await preparePublicationUi({silent:true});
-    // Keep the strict audit result produced by preparation. A fresh normal
-    // audit would downgrade strict blockers to warnings and unlock a release
-    // that publish-v3 --strict would reject anyway.
+    // Keep the audit result produced by preparation for the advisory report;
+    // findings are visible but never lock a direct release.
     if(!state.publicationStatus?.issue)await loadPublicationStatus({refresh:false});
     if(!state.publicationStatus?.canPublish)await runPublicationPreflightUi();
     if(!state.publicationStatus?.canPublish){renderPublicationCenter();return toast(`发布未完成：${publicationResultSummary({status:state.publicationStatus},'发布检查')}`,5200);}

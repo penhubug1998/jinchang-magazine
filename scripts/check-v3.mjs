@@ -193,6 +193,6 @@ if (errors.length) {
   console.error("V3 数据校验失败：");
   for (const error of errors) console.error(`- ${error}`);
   if(!force) process.exit(1);
-  console.warn('V3_FORCE_RELEASE=1：数据校验错误已降级为强制发布提示。');
+  console.warn('直接发布模式：数据校验错误仅记录为提示，不阻断发布。');
 }
 console.log(`V3 数据校验通过。${warnings.length ? `（${warnings.length} 条非阻断警告）` : ""}`);

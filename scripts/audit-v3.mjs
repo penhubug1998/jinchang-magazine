@@ -205,4 +205,4 @@ const html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta 
 await writeFile(htmlPath,html,'utf8');
 if(!quiet){console.log(`V3 发布审计完成：${path.relative(root,mdPath)}`);console.log(`浏览器报告：${path.relative(root,htmlPath)}`);for(const a of audits)console.log(`- ${a.id} ${a.label}: ${a.readiness} · score=${a.score??'-'} blockers=${a.blockers.length} warnings=${a.warnings.length}`)}
 if(strict&&summary.blocked>0&&!force)process.exit(1);
-if(strict&&summary.blocked>0&&force)console.warn('V3_FORCE_RELEASE=1：严格审计阻断已降级为强制发布提示。');
+if(strict&&summary.blocked>0&&force)console.warn('直接发布模式：审计阻断仅记录为提示，不阻断发布。');

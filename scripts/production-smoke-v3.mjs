@@ -66,7 +66,7 @@ try {
   assert(report.issues[0].readiness === 'ready', '资源齐全且 status=ready 时严格审计应通过');
   assert(report.summary.blockers === 0, '严格审计不应存在阻断项');
 
-  console.log('V3 production smoke 通过：自动建刊、资源清单、草稿审计、ready 严格门禁链路正常。');
+  console.log('V3 production smoke 通过：自动建刊、资源清单、草稿审计与直接发布链路正常。');
 } finally {
   await rm(sandbox, { recursive: true, force: true });
 }
