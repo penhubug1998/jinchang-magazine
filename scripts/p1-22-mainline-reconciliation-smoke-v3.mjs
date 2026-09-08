@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { narrationPageText } from './lib-v3-production.mjs';
 import { parsePastedText } from './lib-v3-import.mjs';
 import { issueTemplateCatalog, createIssueTemplate } from '../src/studio/issue-templates.js';
+import { WHOLE_MAGAZINE_TEMPLATES, applyWholeMagazineTemplate } from '../src/studio/whole-magazine-templates.js';
 
 const fixture={
   kicker:'朗读范围',title:'页面标题',subtitle:'页面副题',
@@ -37,10 +38,26 @@ for(const item of catalog){
   assert.equal(built.assets.length,2,'template local SVG assets');
 }
 
+assert.deepEqual(WHOLE_MAGAZINE_TEMPLATES.map(x=>x.id),['comprehensive','gallery','study'],'canonical Studio template ids changed');
+for(const item of WHOLE_MAGAZINE_TEMPLATES){
+  const base={id:'999',label:'测试期',publication:'测试期刊',publisher:'测试单位',subtitle:'测试主题',engine:'v3',status:'draft',assetSource:'issues/999/assets',theme:'classic-red',features:{},articles:{},pages:[]};
+  const built=applyWholeMagazineTemplate(item.id,base);
+  assert(built.pages.length>=8,`${item.id} whole-magazine template unexpectedly short`);
+  assert.equal(built.wholeTemplate?.id,item.id,`${item.id} whole template binding missing`);
+  assert.equal(built.brandLock?.templateId,item.id,`${item.id} brand lock missing`);
+}
+
+const studioSource=await readFile('scripts/studio-v3.mjs','utf8');
+assert(!studioSource.includes("if(templateId)argv.push('--template',templateId);"),'Studio must not forward canonical whole-magazine template ids into the CLI-only issue template catalog');
+assert(studioSource.includes('applyWholeMagazineTemplate(templateId,target)'),'Studio canonical whole-magazine template application missing');
+assert(studioSource.includes('HOME:userDataDir'),'PDF Chromium HOME isolation missing');
+assert(studioSource.includes("XDG_CONFIG_HOME:path.join(userDataDir,'config')"),'PDF Chromium XDG config isolation missing');
+assert(studioSource.includes("XDG_CACHE_HOME:path.join(userDataDir,'cache')"),'PDF Chromium XDG cache isolation missing');
+
 for(const path of [
   'scripts/lib-p1-21-final-delivery-v3.mjs',
   'scripts/p1-21-final-delivery-verify-v3.mjs',
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · 3 default 8-page templates valid · P1-21 Final delivery files retained');
+console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · P1-21 Final delivery files retained');
