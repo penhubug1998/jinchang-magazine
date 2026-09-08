@@ -68,6 +68,15 @@ assert(!studioSource.includes("else if(t==='image')body=`<figure><div class=\"me
 const auditSource=await readFile('scripts/audit-v3.mjs','utf8');
 assert(auditSource.includes("'video','image','table','coverMeta'"),'strict audit must accept table blocks produced by DOCX import');
 
+const alpha3Lock=JSON.parse(await readFile('baselines/v3.0-final-gate-lock-alpha3.json','utf8'));
+assert.equal(alpha3Lock.releaseBoundaryPolicy,'V3.1 generic final entrypoint fail-closed; V3.0 implementation preserved under versioned script','Alpha3 release boundary policy changed');
+assert.match(alpha3Lock.files?.['scripts/final-release-v3.mjs']||'',/^[0-9a-f]{64}$/,'Alpha3 must SHA-256 lock the V3.1 generic final guard');
+assert.match(alpha3Lock.files?.['scripts/final-release-v30-v3.mjs']||'',/^[0-9a-f]{64}$/,'Alpha3 must SHA-256 lock the versioned V3.0 final implementation');
+const finalGuard=await readFile('scripts/final-release-v3.mjs','utf8');
+const finalV30=await readFile('scripts/final-release-v30-v3.mjs','utf8');
+assert(finalGuard.includes('[P1-16]')&&finalGuard.includes('final:v31')&&finalGuard.includes('process.exit(64)'),'V3.1 generic final guard must remain fail-closed');
+assert(finalV30.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')&&finalV30.includes("status:'RELEASED'"),'versioned V3.0 two-stage release implementation must remain available for historical audit');
+
 const p108Source=await readFile('scripts/p1-08-production-e2e-v3.mjs','utf8');
 assert(p108Source.includes('targetChars=420&structureMode=auto'),'P1-08 print fixture pagination density must leave A4 safety margin');
 assert(p108Source.includes("columns:1,columnGap:24,balanceColumns:false"),'P1-08 PDF fixture must keep the outer page single-column');
@@ -84,4 +93,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · Print PDF renders and binary-verifies real local images · strict audit accepts tables · P1-08 media-right edit survives image-only rich continuation pages · P1-21 Final delivery retained');
+console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · Print PDF renders and binary-verifies real local images · strict audit accepts tables · Alpha3 SHA lock protects V3.1 guard + versioned V3.0 final implementation · P1-08 media-right edit survives image-only rich continuation pages · P1-21 Final delivery retained');
