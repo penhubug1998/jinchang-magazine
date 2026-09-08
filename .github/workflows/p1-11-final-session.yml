@@ -1,0 +1,149 @@
+name: P1-11 final acceptance session
+
+on:
+  push:
+    branches:
+      - feat/p1-11-final-acceptance-session
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p1-11-final-acceptance-session
+  cancel-in-progress: false
+
+jobs:
+  final-session:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-11-final-acceptance-session
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Integrate P1-11 package commands once
+        run: |
+          if node -e "const p=require('./package.json');process.exit(p.scripts?.['test:p1-11']?0:1)"; then
+            echo 'P1-11 package integration already present'
+          else
+            python3 scripts/p1-11-final-session-patch.py
+          fi
+          node --check scripts/lib-p1-11-final-session-v3.mjs
+          node --check scripts/p1-11-final-session-v3.mjs
+          node --check scripts/p1-11-final-evidence-bundle-v3.mjs
+          node --check scripts/p1-11-final-evidence-verify-v3.mjs
+          node --check scripts/p1-11-final-session-smoke-v3.mjs
+          node --check scripts/p1-10-final-package-guard-v3.mjs
+          node --check src/studio/final-acceptance.js
+          git diff --check
+
+      - name: P1-11 session and tamper contract smoke
+        run: npm run test:p1-11
+
+      - name: Start current-source acceptance session
+        run: |
+          npm run final:v31:session:start -- --issue 004 --reset
+          npm run final:v31:session:status
+          node <<'NODE'
+          const fs=require('fs');const s=JSON.parse(fs.readFileSync('reports/p1-11-final-acceptance-session.json','utf8'));
+          const {execFileSync}=require('child_process');const head=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+          if(s.status!=='ACTIVE'||s.source?.commit!==head) throw new Error('P1-11 session must bind current HEAD');
+          NODE
+
+      - name: Re-run current-source production E2E
+        run: npm run test:p1-08
+
+      - name: Keep real-environment gate fail-closed
+        run: |
+          npm run final:v31:acceptance:status
+          npm run final:v31:session:status
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/p1-10-final-acceptance.json','utf8'));
+          if(r.total!==8||r.status!=='HOLD'||r.ready<2) throw new Error(`expected current-source HOLD with at least 2/8, got ${r.status} ${r.ready}/${r.total}`);
+          if(r.promotion?.allowed) throw new Error('CI must not promote without external real-environment evidence');
+          NODE
+          if npm run final:v31:session:status -- --strict; then
+            echo 'P1-11 strict session unexpectedly became sealable without external evidence' >&2
+            exit 1
+          fi
+          if npm run final:v31:session:seal; then
+            echo 'P1-11 session unexpectedly sealed without 8/8 evidence' >&2
+            exit 1
+          fi
+          if npm run final:v31:package-guard; then
+            echo 'Final package guard unexpectedly passed without sealed 8/8 session' >&2
+            exit 1
+          fi
+
+      - name: Export and verify partial evidence bundle
+        run: |
+          npm run final:v31:evidence:bundle
+          npm run final:v31:evidence:verify
+          node <<'NODE'
+          const fs=require('fs');const m=JSON.parse(fs.readFileSync('reports/p1-11-final-evidence-manifest.json','utf8'));
+          if(m.strict!==false||m.ready>=8||m.total!==8) throw new Error('CI partial bundle must remain non-strict below 8/8');
+          if(!/^[0-9a-f]{64}$/.test(m.bundleSha256)||!/^[0-9a-f]{64}$/.test(m.manifestSha256)) throw new Error('P1-11 bundle hashes missing');
+          NODE
+          if npm run final:v31:evidence:bundle:strict; then
+            echo 'Strict evidence bundle unexpectedly passed below 8/8' >&2
+            exit 1
+          fi
+
+      - name: Smoke session UI and report serving
+        run: |
+          node scripts/studio-v3.mjs --host 127.0.0.1 --port 4186 --acceptance-only > /tmp/p1-11-studio.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4186/api/health >/tmp/p1-11-health.json; then ok=1; break; fi
+            sleep 0.25
+          done
+          if [ "$ok" != 1 ]; then cat /tmp/p1-11-studio.log; exit 1; fi
+          curl -fsS http://127.0.0.1:4186/ > /tmp/p1-11-root.html
+          grep -q 'P1-11' /tmp/p1-11-root.html
+          grep -q 'Final Acceptance Session' /tmp/p1-11-root.html
+          curl -fsS http://127.0.0.1:4186/reports/p1-11-final-acceptance-session.json > /tmp/p1-11-session.json
+          curl -fsS http://127.0.0.1:4186/reports/p1-11-final-evidence-manifest.json > /tmp/p1-11-manifest.json
+          node <<'NODE'
+          const fs=require('fs');const s=JSON.parse(fs.readFileSync('/tmp/p1-11-session.json','utf8'));const m=JSON.parse(fs.readFileSync('/tmp/p1-11-manifest.json','utf8'));
+          if(s.status!=='ACTIVE'||!s.sessionId) throw new Error('served session invalid');
+          if(m.sessionId!==s.sessionId) throw new Error('served manifest/session mismatch');
+          NODE
+          curl -sS -o /tmp/p1-11-readonly.json -w '%{http_code}' -X POST http://127.0.0.1:4186/api/issues > /tmp/p1-11-readonly-code.txt
+          test "$(cat /tmp/p1-11-readonly-code.txt)" = "403"
+          kill $PID 2>/dev/null || true
+          wait $PID 2>/dev/null || true
+          trap - EXIT
+
+      - name: Preserve P1-10 and production contracts
+        run: |
+          npm run test:p1-10
+          npm run test:p1-09
+          npm run test:p1-07
+          node scripts/studio-v3.mjs --check
+          npm run check:v3
+          git diff --check
+
+      - name: Commit integrated P1-11 package commands
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          if git diff --cached --quiet; then
+            echo 'No P1-11 package integration diff to commit'
+          else
+            git commit -m "feat(p1-11): integrate final acceptance session commands"
+            git push origin HEAD:feat/p1-11-final-acceptance-session
+          fi
