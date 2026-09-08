@@ -127,6 +127,7 @@ function blockSpeechText(block = {}, articles = {}) {
     case 'casePair': return [block.case, block.warning].filter(Boolean).join('。');
     case 'video': return block.caption || '';
     case 'image': return block.caption || '';
+    case 'table': return [block.caption, ...(block.rows || []).flatMap(row => (row || []).map(cell => String(cell ?? '')))].filter(Boolean).join('。');
     case 'coverSections': return (block.items || []).filter(Boolean).join('，');
     case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
     // articleLink opens a separate reading surface. Its linked article must not

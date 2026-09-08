@@ -11,7 +11,7 @@ const targetIssue = String(issueEqualsArg?.split('=').slice(1).join('=') || (iss
 const errors = [];
 const warnings = [];
 const allowedPageTypes = new Set(["cover","article","toc","news","theory","safety","discipline","health","closing"]);
-const allowedBlockTypes = new Set(["paragraph","quote","chips","cardline","casePair","toc","articleLink","video","image","coverMeta","coverSections","blessing","producer","cards","container","textFlow","pullQuote","sidebar","sectionHeading"]);
+const allowedBlockTypes = new Set(["paragraph","quote","chips","cardline","casePair","toc","articleLink","video","image","table","coverMeta","coverSections","blessing","producer","cards","container","textFlow","pullQuote","sidebar","sectionHeading"]);
 const allowedContainerLayouts = new Set(["single","two-equal","two-40-60","two-60-40","three-equal","media-left","media-right"]);
 const allowedContainerGaps = new Set(["sm","md","lg"]);
 const allowedContainerAlign = new Set(["start","center","stretch"]);
@@ -94,6 +94,21 @@ function validateBlocks(issue, page, pageIndex, source){
     }
     if (block.type === "articleLink" && !issue.articles?.[block.articleId]) fail(`${at}: articleId=${block.articleId} 未在 articles 中定义`);
     if (block.type === "toc") for (const item of block.items || []) if (!Number.isInteger(item.page) || item.page < 1 || item.page > issue.pages.length) fail(`${at}: 目录页码 ${item.page} 越界`);
+    if (block.type === "table") {
+      const rows=block.rows;
+      if(!Array.isArray(rows)||rows.length<1||rows.length>40) fail(`${at}: table.rows 必须为 1–40 行`);
+      else {
+        let width=null;
+        rows.forEach((row,ri)=>{
+          if(!Array.isArray(row)||row.length<1||row.length>12) return fail(`${at}: table.rows[${ri}] 必须为 1–12 列`);
+          if(width==null)width=row.length;else if(row.length!==width)fail(`${at}: table.rows[${ri}] 列数 ${row.length} 与首行 ${width} 不一致`);
+          row.forEach((cell,ci)=>{if(typeof cell!=="string"&&typeof cell!=="number")fail(`${at}: table.rows[${ri}][${ci}] 必须为文本或数字`);});
+        });
+      }
+      const headerRows=Number(block.headerRows||0);
+      if(!Number.isInteger(headerRows)||headerRows<0||headerRows>(Array.isArray(rows)?rows.length:0)) fail(`${at}: table.headerRows 必须在 0–行数之间`);
+      if(String(block.caption||'').length>500) fail(`${at}: table.caption 超过 500 个字符`);
+    }
     if ((block.type === "video" || block.type === "image") && (!block.src || /^(javascript|data):/i.test(block.src))) fail(`${at}: 媒体 src 无效`);
     if (block.type === "video" && block.poster && /^(javascript|data):/i.test(block.poster)) fail(`${at}: 视频 poster 无效`);
     if (block.type === "image") {
