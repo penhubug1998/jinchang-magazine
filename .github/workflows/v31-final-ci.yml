@@ -1,0 +1,115 @@
+name: V3.1 Final continuous verification
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - fix/ci-tts-baseline-20260906
+      - fix/p1-15-ci-consolidation
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v31-final-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-final:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Install exact dependencies
+        run: npm ci
+
+      - name: Dependency security and deterministic vendor
+        run: |
+          git config core.fileMode false
+          chmod +x scripts/chrome-ci-wrapper.sh
+          npm audit --audit-level=moderate
+          sha256sum src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json > /tmp/vendor-before.sha256
+          npm run vendor:tiptap
+          npm run test:p1-13
+          sha256sum src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json > /tmp/vendor-after.sha256
+          diff -u /tmp/vendor-before.sha256 /tmp/vendor-after.sha256
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Finalization safety contracts
+        run: |
+          npm run test:p1-12
+          npm run test:p1-11
+          npm run test:p1-10
+          npm run test:p1-09
+          npm run test:p1-07
+
+      - name: Current-source production E2E
+        run: npm run test:p1-08
+
+      - name: Verify real-environment gates remain fail-closed in CI
+        run: |
+          npm run final:v31:acceptance:status
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/p1-10-final-acceptance.json','utf8'));
+          if(r.total!==8||r.status!=='HOLD'||r.ready!==2) throw new Error(`CI must remain HOLD 2/8, got ${r.status} ${r.ready}/${r.total}`);
+          if(r.promotion?.allowed) throw new Error('CI must never promote without external real-environment evidence');
+          for(const id of ['source-identity','current-e2e']){
+            const gate=r.gates.find(x=>x.id===id);
+            if(gate?.status!=='READY') throw new Error(`${id} must be READY after current-source E2E`);
+          }
+          for(const id of ['full-media','edge-desktop','mac-safari','iphone-safari','android-wechat','production-https']){
+            const gate=r.gates.find(x=>x.id===id);
+            if(!gate||gate.status==='READY') throw new Error(`${id} must not be fabricated READY by CI`);
+          }
+          NODE
+          if npm run final:v31:gate; then
+            echo 'Finalization gate unexpectedly passed in CI without real-environment evidence' >&2
+            exit 1
+          fi
+          if npm run final:v31:package-guard; then
+            echo 'Package guard unexpectedly passed in CI without real-environment evidence' >&2
+            exit 1
+          fi
+
+      - name: Studio and build regression
+        run: |
+          node scripts/studio-v3.mjs --check
+          npm run check:v3
+          npm run build:v3
+          test -z "$(git status --porcelain --untracked-files=no)"
+          git diff --check
+
+      - name: Generate immutable CI receipt
+        if: always()
+        run: |
+          mkdir -p reports
+          node <<'NODE'
+          const fs=require('fs');
+          const receipt={stage:'P1-15',kind:'continuous-final-verification',generatedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,runner:'ubuntu-24.04',node:process.version,permissions:'contents:read',actions:{checkout:'v7',setupNode:'v7',uploadArtifact:'v7'},realEnvironmentPolicy:'CI must remain HOLD until real-device/media/HTTPS evidence is collected'};
+          fs.writeFileSync('reports/p1-15-final-ci-receipt.json',JSON.stringify(receipt,null,2)+'\n');
+          NODE
+
+      - name: Upload verification receipts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: v31-final-ci-${{ github.run_id }}
+          path: |
+            reports/p1-15-final-ci-receipt.json
+            reports/p1-08-production-e2e-last.json
+            reports/p1-10-final-acceptance.json
+            reports/p1-12-finalization-gate.json
+          if-no-files-found: warn
