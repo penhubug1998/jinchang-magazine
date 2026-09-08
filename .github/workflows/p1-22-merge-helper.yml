@@ -34,32 +34,32 @@ jobs:
           if old not in s: raise SystemExit('expected blockWeight definition not found')
           s=s.replace(old,new,1)
           marker="export { rebalanceContinuationGroups };\nexport function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){"
-          insert="""export { rebalanceContinuationGroups };
-function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){
-  const limit=Math.max(780,Math.min(1100,Math.round(target*.95))),out=[];
-  for(const page of pages){
-    const blocks=Array.isArray(page?.blocks)?page.blocks:[],hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx'),weight=semanticGroupWeight(blocks);
-    if(!hasRich||weight<=limit||['cover','closing'].includes(page?.type)){out.push(page);continue;}
-    const groups=[];let current=[],currentWeight=0;
-    for(const block of blocks){const w=blockWeight(block);if(current.length&&(currentWeight+w>limit||current.length>=10)){groups.push(current);current=[];currentWeight=0;}current.push(block);currentWeight+=w;}
-    if(current.length)groups.push(current);
-    const baseTitle=cleanText(page.title||page.navTitle||'续页'),baseNav=cleanText(page.navTitle||page.title||baseTitle);
-    groups.forEach((group,index)=>out.push(index===0?{...page,blocks:group}:{...page,navTitle:`${baseNav}（续${index}）`,title:`${continuationLabel(baseTitle)}（续${index}）`,blocks:group}));
-  }
-  if(out.length>maxPages)throw new Error(`整期结构识别在合并 Word 图片/表格后将生成 ${out.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);
-  return out;
-}
-export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){"""
+          insert=("export { rebalanceContinuationGroups };\n"
+                  "function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){\n"
+                  "  const limit=Math.max(780,Math.min(1100,Math.round(target*.95))),out=[];\n"
+                  "  for(const page of pages){\n"
+                  "    const blocks=Array.isArray(page?.blocks)?page.blocks:[],hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx'),weight=semanticGroupWeight(blocks);\n"
+                  "    if(!hasRich||weight<=limit||['cover','closing'].includes(page?.type)){out.push(page);continue;}\n"
+                  "    const groups=[];let current=[],currentWeight=0;\n"
+                  "    for(const block of blocks){const w=blockWeight(block);if(current.length&&(currentWeight+w>limit||current.length>=10)){groups.push(current);current=[];currentWeight=0;}current.push(block);currentWeight+=w;}\n"
+                  "    if(current.length)groups.push(current);\n"
+                  "    const baseTitle=cleanText(page.title||page.navTitle||'续页'),baseNav=cleanText(page.navTitle||page.title||baseTitle);\n"
+                  "    groups.forEach((group,index)=>out.push(index===0?{...page,blocks:group}:{...page,navTitle:`${baseNav}（续${index}）`,title:`${continuationLabel(baseTitle)}（续${index}）`,blocks:group}));\n"
+                  "  }\n"
+                  "  if(out.length>maxPages)throw new Error(`整期结构识别在合并 Word 图片/表格后将生成 ${out.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);\n"
+                  "  return out;\n"
+                  "}\n"
+                  "export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){")
           if marker not in s: raise SystemExit('paginatePublicationDocument marker not found')
           s=s.replace(marker,insert,1)
-          old_tail="""  mergeRichDocxObjects(doc,pages);
-  if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
-  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
-}"""
-          new_tail="""  mergeRichDocxObjects(doc,pages);const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages);
-  if(balancedPages.length>maxPages)throw new Error(`整期结构识别将生成 ${balancedPages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
-  return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
-}"""
+          old_tail=("  mergeRichDocxObjects(doc,pages);\n"
+                    "  if(pages.length>maxPages)throw new Error(`整期结构识别将生成 ${pages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);\n"
+                    "  return {pages,recommendedPages:pages.length,targetChars:requested,semanticTarget:target,totalWeight:pages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};\n"
+                    "}")
+          new_tail=("  mergeRichDocxObjects(doc,pages);const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages);\n"
+                    "  if(balancedPages.length>maxPages)throw new Error(`整期结构识别将生成 ${balancedPages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);\n"
+                    "  return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};\n"
+                    "}")
           if old_tail not in s: raise SystemExit('pagination rich-object tail not found')
           s=s.replace(old_tail,new_tail,1)
           p.write_text(s)
