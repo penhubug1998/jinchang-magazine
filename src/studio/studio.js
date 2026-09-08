@@ -65,7 +65,7 @@ const appUrl = (url='') => {
   const clean = raw.replace(/^\/+/, '');
   return `${APP_BASE}${clean}`;
 };
-const READER_EMBED_REVISION = 'reader-sync-20260902-ai-01';
+const READER_EMBED_REVISION = 'reader-narration-scope-20260908';
 function readerRuntimeCacheKey(){return `${state.runtimeVersion||'live'}-${READER_EMBED_REVISION}`;}
 
 const state = { runtimeVersion:'', issues: [], issue: null, originalIssue: null, sourceStatus:null, sourceFingerprint:'', sourceObservedFingerprint:'', sourceConflict:null, page: 0, dirty: false, audit: null, auditStale: false, auditFilter: 'all', editorMode: 'visual', dragIndex: null, pageSearch: '', pageTemplateMode: 'add', mediaTarget: null, mediaAssets: null, mediaFilter: 'all', mediaIntent:'asset', mediaSelected: null, imageAdjustBlock: null, previewMode: 'built', builtPreviewStale: true, readerPreviewReady:false, readerPreviewDevice:'desktop-1366', readerPreviewTimer:0, readerPreviewToken:0, readerSyncInFlight:false, readerSyncQueued:false, readerSyncQueuedReload:false, managerPreviewReady:false, managerPreviewIssueId:'', previewFrameReloadSeq:0, issueLoadToken:0, issueLoadingId:'', issueLoadPromise:null, designPreviewFrame:0, inlinePreviewFrame:0, workspaceAuditFrame:0, uiRefreshFrame:0, fieldStatsFrame:0, readerPreviewExpanded:false, articleId: null, metaExpanded: false, pageMetaExpanded: false, selectedPages: new Set(), undoStack: [], redoStack: [], historyCurrent: null, historyLastAt: 0, historyGroup: '', draftTimer: 0, draftSaving: false, draftSavedAt: null, importTab:'paste', importResults:[], importSkeletonMode:'append', userTemplates:[], sidebarCollapsed:false, pagesPanelCollapsed:false, blockCanvasCollapsed:false, quickFormatCollapsed:false, workspaceSplit:25, workspaceLayout:'preview', fastTrackRunning:false, designClipboard:null,designUndoStack:[],designRedoStack:[],designHistoryKey:'',designHistoryAt:0,designPresetPreviewId:'',designAssets:[],designAssetsLoaded:false,designDivergences:[],layoutAssets:[],layoutAssetsLoaded:false,layoutSuggestions:[],editorialPlan:null,editorialPlanLoadedFor:'',editorialPlanDirty:false,editorialPlanSavedAt:null,editorialBoardFilter:'all',reviewWorkspace:null,reviewWorkspaceLoadedFor:'',reviewWorkspaceDirty:false,reviewWorkspaceFilter:'all',reviewHandoffs:null,reviewHandoffsLoadedFor:'',reviewHandoffsDirty:false,reviewHandoffDiffTargetId:'',reviewHandoffDiffBase:null,reviewHandoffDiffLoading:false, selectedBlocks:new Set(), lastSelectedBlock:null, canvasMode:false, workspaceMode:WORKSPACE_MODE, routeApplied:false, visualMetrics:null, peerChannel:null, peerIssueId:'', peers:new Map(), remoteSavedIssue:null, remoteSavedAt:0, readerPageRequestSeq:0, readerPendingPageRequest:null, readerPageVerifyTimer:0, readerFullscreenFallback:false, selectedBlockIds:new Set(), readerZoomMode:'fit-page', readerZoomPercent:100, readerActualScale:1, contextInspectorOpen:true, publicationStatus:null, publicationBusy:'', publicationLastError:null, publicationQrUrl:'', mobileStudioActive:false, mobileSheetTab:'', mobileSheetOpen:false, publicationSnapshots:[], publicationWorkflow:null, studioEntry:'content' };
@@ -189,6 +189,7 @@ function updateMetaSummary() {
   $('#metaSummaryText').textContent = `${x.id} · ${statusLabel(x.status)} · ${pages} 页 · ${x.publisher || '未填写发布单位'}`;
 }
 function renderSourceStatus(){
+  $('#sourceConflictBanner')?.classList.toggle('hidden',!state.sourceConflict);
   const title=$('#sourceStatusTitle'),text=$('#sourceStatusText'),exportLink=$('#sourceExportBtn');if(!title||!text||!exportLink)return;
   const source=state.sourceStatus;
   exportLink.href=state.issue?appUrl(`/api/issues/${encodeURIComponent(state.issue.id)}/source-export`):'#';
@@ -305,6 +306,7 @@ function scheduleWorkspaceAuditRefresh(){
   state.workspaceAuditFrame=requestAnimationFrame(refresh);
 }
 function updateStateBadges() {
+  const guide=$('#productionGuideState');if(guide&&state.issue)guide.textContent=`${statusLabel(state.issue.status)} · ${state.issue.pages.length} 页${state.dirty?' · 有未保存修改':''}`;
   const dirty = $('#dirtyBadge'); const publishedBase=state.originalIssue?.status==='published'; const revisionPending=Boolean(state.issue?.revision?.pending);
   if(state.dirty){dirty.textContent=publishedBase?'已发布稿 · 有未保存修订':'有未保存修改';dirty.className=`state-badge ${publishedBase?'revision':'dirty'}`;}
   else if(revisionPending){dirty.textContent='已保存 · 未发布修订';dirty.className='state-badge revision';}
@@ -422,7 +424,7 @@ async function loadIssues(selectId) {
   const runtimePromise=loadRuntimeVersion().catch(()=>''),issuesPromise=api('/api/issues');
   state.issues = await issuesPromise; const list = $('#issueList'); list.innerHTML = '';
   state.issues.forEach(x => { const b = document.createElement('button'); b.dataset.issueId=String(x.id); b.className = 'issue-item' + (x.id === state.issue?.id ? ' active' : ''); b.title = `${x.label || x.id} · ${x.subtitle || x.status || ''}`; const pageMeta=Number.isFinite(x.pageCount)?`${x.pageCount} 页 · `:''; const revision=x.revisionPending?' · 未发布修订':''; b.innerHTML = `<b>${escText(x.label || x.id)}</b><span>${escText(x.subtitle || x.status || '')}</span><em>${escText(`${pageMeta}${statusLabel(x.status)}${revision} · ${x.engine === 'v3' ? 'V3 可编辑' : '旧版'}`)}</em>`; b.onclick = () => { void openIssue(x.id); }; list.appendChild(b); });
-  renderCloneOptions(); const target=selectId||((WORKSPACE_MODE||INITIAL_ROUTE.issue)?INITIAL_ROUTE.issue:''); if(target) await openIssue(target);
+  renderCloneOptions(); const target=selectId||((WORKSPACE_MODE||INITIAL_ROUTE.issue)?INITIAL_ROUTE.issue:''); if(target&&(selectId||state.issue?.id!==target)) await openIssue(target);
   // “我的样式”只会在打开设计器时读取，避免管理端首次进入额外请求和重绘。
   void runtimePromise;
 }
@@ -444,16 +446,17 @@ function askDraftRecovery(draft) {
     const done=()=>{dialog.removeEventListener('close',done);resolve(dialog.returnValue||'skip');};dialog.addEventListener('close',done);dialog.showModal();
   });
 }
-async function openIssue(id) {
+async function openIssue(id,{skipDraftRecovery=false}={}) {
   const issueId=String(id||'');if(!issueId)return false;
+  if(state.saving){toast('正在保存，请稍后切换期刊');return false;}
   if(state.issueLoadingId===issueId)return state.issueLoadPromise||false;
   const token=++state.issueLoadToken;
   const run=(async()=>{setIssueLoading(issueId);try{
-    if (state.dirty) { await saveDraftNow(); if (!confirm('当前有未保存修改，已自动保存为恢复草稿。仍要切换期刊吗？')) return false; }
+    if (state.dirty) { const saved=await saveDraftNow(); if (!confirm(saved?'当前有未保存修改，已自动保存为恢复草稿。仍要切换期刊吗？':'自动草稿尚未保存成功。建议取消并下载当前修改备份；仍要切换期刊吗？')) return false; }
     const issueRequest=api(`/api/issues/${encodeURIComponent(issueId)}`); const draftRequest=api(`/api/issues/${encodeURIComponent(issueId)}/draft`).catch(()=>null); const sourceRequest=api(`/api/issues/${encodeURIComponent(issueId)}/source-status`).catch(()=>null); const [diskIssue,draft,sourceStatus]=await Promise.all([issueRequest,draftRequest,sourceRequest]); if(token!==state.issueLoadToken)return false;
     const normalizedIssue=cloneData(diskIssue); const identityMigration=ensureIssueIdentity(normalizedIssue); state.issue=cloneData(normalizedIssue); state.originalIssue=cloneData(normalizedIssue); state.sourceStatus=sourceStatus; state.sourceFingerprint=String(sourceStatus?.fingerprint||''); state.sourceObservedFingerprint=state.sourceFingerprint; state.sourceConflict=null; state.identityMigrationPending=identityMigration.changed; state.page=0; state.dirty=false; state.audit=null; state.auditStale=false; state.publicationStatus=null; state.publicationStatusPromise=null; state.publicationWorkflow=null; state.editorMode='visual'; state.pageSearch=''; state.mediaAssets=null; state.builtPreviewStale=true; state.readerPreviewReady=false; state.managerPreviewReady=false; state.managerPreviewIssueId=''; state.articleId=null; state.selectedPages.clear(); state.selectedBlocks.clear(); state.selectedBlockIds.clear(); state.lastSelectedBlock=null; state.editorialPlan=null; state.editorialPlanLoadedFor=''; state.editorialPlanDirty=false; state.editorialPlanSavedAt=null; state.reviewWorkspace=null; state.reviewWorkspaceLoadedFor=''; state.reviewWorkspaceDirty=false; state.reviewWorkspaceFilter='all'; state.reviewHandoffs=null; state.reviewHandoffsLoadedFor=''; state.reviewHandoffsDirty=false; state.reviewHandoffDiffTargetId=''; state.reviewHandoffDiffBase=null; state.reviewHandoffDiffLoading=false; state.visualMetrics=null; $('#pageSearch').value=''; updateDraftBadge('',false);
     renderWorkspaceMediaStatus();
-    if(draft?.exists&&draft.issue){ensureIssueIdentity(draft.issue);} if(draft?.exists&&draft.issue&&!issuesEqual(draft.issue,normalizedIssue)){
+    if(draft?.exists&&draft.issue){ensureIssueIdentity(draft.issue);} if(!skipDraftRecovery&&draft?.exists&&draft.issue&&!issuesEqual(draft.issue,normalizedIssue)){
       const action=INITIAL_ROUTE.handoff?'recover':await askDraftRecovery(draft);
       if(action==='recover'){state.issue=cloneData(draft.issue);state.dirty=true;state.draftSavedAt=draft.savedAt||null;updateDraftBadge(`${INITIAL_ROUTE.handoff?'已继承新窗口草稿':'已恢复草稿'} · ${draft.savedAt?fmtTime(draft.savedAt):''}`,true);}
       else if(action==='discard'){try{await api(`/api/issues/${encodeURIComponent(issueId)}/draft`,{method:'DELETE',body:'{}'});}catch{}updateDraftBadge('',false);}
@@ -474,7 +477,14 @@ function renderIssue({preserveHistory=false,preserveDraft=false}={}) {
   if(!preserveHistory)resetHistory(); if(!preserveDraft&&!state.dirty)updateDraftBadge('',false);
 }
 function syncMeta() { const x = state.issue; x.label = $('#metaLabel').value.trim(); x.subtitle = $('#metaSubtitle').value.trim(); x.status = $('#metaStatus').value; x.publisher = $('#metaPublisher').value.trim(); x.features={...(x.features||{}),turnAnimation:$('#metaTurnAnimation').value}; }
-function syncPageMeta() { const p = currentPage(); if (!p) return; p.navTitle = $('#pageNav').value.trim(); p.type = $('#pageType').value; p.section = $('#pageSection').value.trim(); p.kicker = $('#pageKicker').value.trim(); p.title = $('#pageTitle').value.trim(); }
+function syncPageMeta() {
+  const p=currentPage();if(!p)return;
+  for(const [key,id] of Object.entries({navTitle:'pageNav',type:'pageType',section:'pageSection',kicker:'pageKicker',title:'pageTitle'})){
+    const value=$('#'+id).value.trim();
+    // Merely visiting a page must not add empty optional fields during an async save.
+    if(String(p[key]??'')!==value)p[key]=value;
+  }
+}
 function syncJsonFromPage() { const p = currentPage(); if (!p) return; $('#pageBlocks').value = JSON.stringify(p.blocks || [], null, 2); updateJsonStats(); }
 function syncJsonToPage({ notify = true } = {}) {
   const p = currentPage(); if (!p) return false; const raw = $('#pageBlocks').value || '[]';
@@ -1263,7 +1273,7 @@ async function loadMediaAssets() { if(!state.issue)return; try{state.mediaAssets
 function mediaKindLabel(kind){return ({image:'图片',video:'视频',music:'音乐',tts:'朗读',other:'其他'})[kind]||kind;}
 function formatDuration(seconds){const n=Number(seconds);if(!Number.isFinite(n)||n<=0)return '—';const m=Math.floor(n/60),s=Math.round(n%60);return m?`${m}:${String(s).padStart(2,'0')}`:`${s} 秒`;}
 function renderMediaSummary(){const d=state.mediaAssets||{};const s=d.summary||{};$('#mediaSummary').innerHTML=`<div><span>资源总数</span><b>${s.total??(d.items||[]).length}</b></div><div><span>已引用</span><b>${s.used??0}</b></div><div><span>未引用</span><b>${s.unused??0}</b></div><div><span>媒体总量</span><b>${escText(s.size||'0 B')}</b></div><div><span>精选素材</span><b>${CURATED_STOCK_ASSETS.length}</b></div>`;}
-function renderTtsStatus(){const tts=state.mediaAssets?.tts,box=$('#ttsStatus');if(!tts||!tts.expected){box.className='tts-status';box.innerHTML='<div class="tts-copy"><b>未配置预生成朗读</b><span>当前期刊没有 narration.pattern，将使用浏览器语音回退；可在下方一键生成。</span></div>';return;}const complete=tts.found===tts.expected;box.className=`tts-status ${tts.stale?'stale':complete?'good':''}`;const stateText=!complete?`缺失 ${tts.expected-tts.found} 页${tts.missingPages?.length?`：${tts.missingPages.join('、')}`:''}`:tts.stale?'音频文件齐全，但页面正文/顺序已改变':'音频文件与当前页面基线一致';box.innerHTML=`<div class="tts-copy"><b>TTS ${tts.found}/${tts.expected}${tts.stale?' · 需要重新生成':''}</b><span>${escText(stateText)}${tts.baselinedAt?` · 基线 ${escText(fmtTime(tts.baselinedAt))}`:''}</span></div><button type="button" id="ttsBaselineBtn" ${!complete||state.dirty?'disabled':''}>确认朗读已重新生成</button>`;$('#ttsBaselineBtn')?.addEventListener('click',confirmTtsBaseline);}
+function renderTtsStatus(){const scopeNote=$('#ttsScopeNote');if(scopeNote)scopeNote.textContent=state.issue?.features?.narration?.scope==='page'?'本期朗读：页面正文（弹出文章可单独阅读）':'本期朗读：页面正文及关联文章全文';const tts=state.mediaAssets?.tts,box=$('#ttsStatus');if(!tts||!tts.expected){box.className='tts-status';box.innerHTML='<div class="tts-copy"><b>未配置预生成朗读</b><span>当前期刊没有 narration.pattern，将使用浏览器语音回退；可在下方一键生成。</span></div>';return;}const complete=tts.found===tts.expected;box.className=`tts-status ${tts.stale?'stale':complete?'good':''}`;const stateText=!complete?`缺失 ${tts.expected-tts.found} 页${tts.missingPages?.length?`：${tts.missingPages.join('、')}`:''}`:tts.stale?'音频文件齐全，但页面正文/顺序已改变':'音频文件与当前页面基线一致';box.innerHTML=`<div class="tts-copy"><b>TTS ${tts.found}/${tts.expected}${tts.stale?' · 需要重新生成':''}</b><span>${escText(stateText)}${tts.baselinedAt?` · 基线 ${escText(fmtTime(tts.baselinedAt))}`:''}</span></div><button type="button" id="ttsBaselineBtn" ${!complete||state.dirty?'disabled':''}>确认朗读已重新生成</button>`;$('#ttsBaselineBtn')?.addEventListener('click',confirmTtsBaseline);}
 function selectedMedia(){return [...CURATED_STOCK_ASSETS,...(state.mediaAssets?.items||[])].find(x=>x.path===state.mediaSelected)||null;}
 function mediaVisualUrl(x){return x?.stock?appUrl(`stock/${x.stockId}.svg`):issueAssetUrl(x?.path||'');}
 function mediaRows(){const items=state.mediaAssets?.items||[];return state.mediaFilter==='stock'?CURATED_STOCK_ASSETS:items.filter(x=>state.mediaFilter==='all'||x.kind===state.mediaFilter);}
@@ -1477,8 +1487,36 @@ async function saveIssue({ silent=false }={}) {
   try { const res = await api(`/api/issues/${state.issue.id}`, { method:'PUT', body:JSON.stringify({issue:state.issue,sourceFingerprint:baselineFingerprint,editorSessionId:PEER_SESSION_ID}) }); state.issue = res.issue; state.originalIssue=cloneData(res.issue); state.sourceStatus=res.source||state.sourceStatus; state.sourceFingerprint=String(res.source?.fingerprint||baselineFingerprint); state.sourceObservedFingerprint=state.sourceFingerprint; state.sourceConflict=null; state.historyCurrent=cloneData(res.issue); state.redoStack=[]; state.dirty = false; if (state.audit) state.auditStale = true; renderPages(); renderPage(); renderSourceStatus(); updateStateBadges(); await Promise.allSettled([deleteDraft(),loadIssues(),loadSnapshots()]); broadcastPeer('saved',{issue:state.issue,snapshotId:res.snapshot?.id||''}); if (!silent) toast(`已保存 · 快照 ${res.snapshot.id}`); return true; }
   catch (e) { if(e.code==='SOURCE_DRIFT'){state.sourceConflict={at:Date.now(),baselineFingerprint,serverFingerprint:state.sourceObservedFingerprint||'',localIssue:cloneData(state.issue)};toast('服务器制作源已被其他窗口更新。当前本地稿已保留，连续点击保存不会覆盖新稿；请重新打开本期后人工合并。',5600);void refreshSourceStatus({quiet:true,adoptBaseline:false});renderSourceStatus();return false;} toast(e.message,2800); return false; }
 }
+function saveFromToolbar(){
+  if(!requireIssue()||!commitPage())return;syncMeta();
+  if(!state.dirty)return toast('当前内容已保存');
+  if(state.originalIssue?.status==='published')return openSaveDiff();
+  return saveIssue();
+}
+function downloadCurrentDraft(){
+  if(!state.issue||!commitPage())return;syncMeta();
+  const blob=new Blob([JSON.stringify(state.issue,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=`${state.issue.id}-未合并修改.json`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);return true;
+}
+
+async function reloadLatestSource(){
+  if(!state.issue||state.saving)return;
+  if(!confirm('将先下载当前修改备份，再载入服务器最新稿件。之后可对照备份手动合并修改。继续吗？'))return;
+  if(!downloadCurrentDraft())return;
+  const id=state.issue.id,wasDirty=state.dirty;state.dirty=false;
+  const loaded=await openIssue(id,{skipDraftRecovery:true});
+  if(loaded)await deleteDraft();else {state.dirty=wasDirty;updateStateBadges();}
+}
+
 async function discardUnsaved(){ if(!state.dirty||!state.originalIssue)return; if(!confirm('放弃全部未保存修改，并恢复到最近一次正式保存状态？自动恢复草稿也会一并删除。'))return; const keepPage=state.page; state.issue=cloneData(state.originalIssue); state.page=Math.max(0,Math.min(keepPage,(state.issue.pages||[]).length-1)); state.dirty=false; state.audit=null; state.auditStale=false; state.selectedPages.clear(); $('#auditCard').classList.add('hidden'); resetHistory(); await deleteDraft(); renderIssue({preserveHistory:true}); updateStateBadges(); toast('已恢复到最近保存版本'); }
-$('#saveBtn').onclick = openSaveDiff;
+$('#saveBtn').onclick = saveFromToolbar;
+$('#downloadConflictDraft')?.addEventListener('click',downloadCurrentDraft);
+$('#reloadConflictIssue')?.addEventListener('click',reloadLatestSource);
+$('#welcomeNewIssue')?.addEventListener('click',()=>$('#newIssue').click());
+$('#guideImport')?.addEventListener('click',()=>openImportDialog('paste'));
+$('#guideEdit')?.addEventListener('click',enterWorkspaceFromManager);
+$('#guideCheck')?.addEventListener('click',()=>runAudit(true));
+$('#guidePublish')?.addEventListener('click',openPublicationCenter);
 $('#adminLogoutBtn')?.addEventListener('click',logoutAdmin);
 $('#confirmSaveDiff').onclick = async e => { e.preventDefault(); const ok=await saveIssue(); if(ok)$('#saveDiffDialog').close(); };
 $('#undoBtn').onclick = undoHistory;
@@ -1544,7 +1582,7 @@ $('#workspacePageList')?.addEventListener('change',e=>{const c=e.target.closest(
 $('#workspacePageList')?.addEventListener('click',e=>{if(e.target.closest('[data-workspace-page-select]'))return;const b=e.target.closest('[data-workspace-page]');if(!b)return;const dialog=$('#workspacePageDialog');if(dialog?.open)dialog.close('select');goToPage(Number(b.dataset.workspacePage));});
 $('#workspaceUndoBtn')?.addEventListener('click',undoHistory);
 $('#workspaceRedoBtn')?.addEventListener('click',redoHistory);
-$('#workspaceSaveBtn')?.addEventListener('click',()=>state.dirty?saveIssue():toast('当前内容已保存'));
+$('#workspaceSaveBtn')?.addEventListener('click',saveFromToolbar);
 $('#workspaceViewSelect')?.addEventListener('change',e=>setWorkspaceLayoutPreset(e.target.value));
 document.querySelectorAll('#workspaceLayoutToolbar [data-layout]').forEach(button=>button.addEventListener('click',()=>setWorkspaceLayoutPreset(button.dataset.layout)));
 document.querySelectorAll('[data-manager-action]').forEach(button=>button.addEventListener('click',()=>{
@@ -1871,6 +1909,11 @@ function renderPublicationCenter(){
   const auditLink=$('#publicationAuditLink');
   if(auditLink)auditLink.href=appUrl(`/reports/v3-release-audit-${encodeURIComponent(issue.id)}.html`);
   const releaseable=isReleaseableIssueStatus(issue.status);
+  const reviewButton=$('#publicationMarkReadyBtn');
+  if(reviewButton){reviewButton.hidden=releaseable;reviewButton.disabled=Boolean(state.publicationBusy)||state.saving;}
+  if($('#publicationReviewTitle'))$('#publicationReviewTitle').textContent=releaseable?'内容核对已确认':'先确认本期内容';
+  if($('#publicationReviewText'))$('#publicationReviewText').textContent=releaseable?'当前为'+statusLabel(issue.status)+'。发布前仍须通过内容、资源和版面检查。':'当前为'+statusLabel(issue.status)+'。请核对稿件与署名、替换模板占位内容，再设为待发布；此操作会保存制作稿。';
+
   const releaseButton=$('#publicationReleaseBtn');
   const releaseSection=releaseButton?.closest('.publication-release');
   const releaseHeading=releaseSection?.querySelector('strong');
@@ -1880,7 +1923,7 @@ function renderPublicationCenter(){
   releaseButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);
   releaseButton.textContent=state.publicationBusy?'处理中…':'发布并上线';
   releaseButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');
-  releaseButton.title=!releaseable?'当前状态不允许发布，请在期刊信息中设为 ready':!st.canPublish?'存在严格硬性阻断，请先处理发布中心列出的页面和资源问题':'自动保存、刷新严格检查、正式发布并部署公开网站';
+  releaseButton.title=!releaseable?'请先点击上方“内容已核对，设为待发布”':!st.canPublish?'存在严格硬性阻断，请先处理发布中心列出的页面和资源问题':'自动保存、刷新严格检查、正式发布并部署公开网站';
   const quickButton=$('#publicationQuickPublishBtn');
   if(quickButton){quickButton.disabled=!releaseable||!st.canPublish||Boolean(state.publicationBusy);quickButton.textContent=state.publicationBusy?'处理中…':!st.canPublish?'先处理硬性阻断':'发布并上线';quickButton.setAttribute('aria-busy',state.publicationBusy?'true':'false');}
   $('#publicationBusy').textContent=state.publicationBusy||'';
@@ -1891,8 +1934,8 @@ function renderPublicationCenter(){
   if(issueEyebrow)issueEyebrow.textContent=hard.length?'HARD GATES · ADVISORIES':'ADVISORIES';
   if(issueTitle)issueTitle.textContent=hard.length?'硬性阻断与提示检查项':'提示检查项（不阻断继续制作）';
   const rows=[
-    ...hard.map(x=>`<li class="publication-check-hard"><b>硬性阻断 · ${escText(x.title||x.code||'检查项')}</b><span>${escText(x.message||'')}</span></li>`),
-    ...advisory.slice(0,8).map(x=>`<li class="publication-check-advisory"><b>提示 · ${escText(x.title||x.code||'检查项')}</b><span>${escText(x.message||'')}</span></li>`),
+    ...hard.map(x=>publicationFindingRow(x,'hard',st.audit?.findings||[])),
+    ...advisory.slice(0,8).map(x=>publicationFindingRow(x,'advisory',st.audit?.findings||[])),
     ...advisoryText.slice(0,4).map(x=>`<li class="publication-check-advisory"><b>提示 · 发布流程</b><span>${escText(x)}</span></li>`)
   ];
   $('#publicationBlockers').innerHTML=rows.length?rows.join(''):'<li class="publication-clean">✓ 没有硬性阻断或提示项</li>';renderPublicationCompletion();renderPublicationWizard();
@@ -1991,12 +2034,12 @@ async function preparePublicationUi(options={}){
         const start=await api(`/api/issues/${encodeURIComponent(state.issue.id)}/tts/generate`,{method:'POST',body:JSON.stringify({pages:payload,rate:state.issue.features?.narration?.rate||1,async:true}),allowError:true}),r=await waitForBackgroundJob(start,'TTS 生成');
         if(!r.ok||r.error)throw new Error(r.error||'TTS 生成失败');
         generated=r.generated?.length||0;if(r.failed?.length)throw new Error(`TTS 生成失败：第 ${r.failed.map(x=>x.page).join('、')} 页`);
-        if(r.issue){state.issue=cloneData(r.issue);state.originalIssue=cloneData(r.issue);state.dirty=false;state.auditStale=Boolean(state.audit);resetHistory();}await loadMediaAssets();
+        if(r.issue){state.issue=cloneData(r.issue);state.originalIssue=cloneData(r.issue);state.dirty=false;state.auditStale=Boolean(state.audit);state.sourceStatus=r.source||state.sourceStatus;state.sourceFingerprint=String(r.source?.fingerprint||state.sourceFingerprint||'');renderSourceStatus();resetHistory();}await loadMediaAssets();
       }
       const nextTts=state.mediaAssets?.tts;
       if(nextTts?.expected&&nextTts.found===nextTts.expected&&(generated||!nextTts.baselinedAt)){
         state.publicationBusy='准备发布：更新 TTS 基线…';renderPublicationCenter();const x=await api(`/api/issues/${encodeURIComponent(state.issue.id)}/tts/baseline`,{method:'POST',body:'{}'});
-        state.issue.features={...(state.issue.features||{}),narration:x.narration};state.originalIssue=cloneData(state.issue);state.dirty=false;resetHistory();baselined=true;await loadMediaAssets();
+        state.issue.features={...(state.issue.features||{}),narration:x.narration};state.originalIssue=cloneData(state.issue);state.dirty=false;state.sourceStatus=x.source||state.sourceStatus;state.sourceFingerprint=String(x.source?.fingerprint||state.sourceFingerprint||'');renderSourceStatus();resetHistory();baselined=true;await loadMediaAssets();
       }
     }
     state.publicationBusy='准备发布：运行硬性门禁与提示审计…';renderPublicationCenter();state.publicationBusy='';const result=await runPublicationAction('preflight','发布准备检查',{silent});if(result?.status)state.publicationStatus=result.status;renderPublicationCenter();
@@ -2098,7 +2141,7 @@ $('#studioBuildBtn')?.addEventListener('click',openNewIssueDialog);
 document.querySelectorAll('input[name="newStartMode"]').forEach(r=>r.addEventListener('change',syncNewStartModeUi));
 $('#newForm').addEventListener('submit',async e => { if (e.submitter?.value === 'cancel') return; e.preventDefault(); const subtitle = $('#newSubtitle').value.trim(); if (!subtitle) return; const startMode=selectedNewStartMode(); const cloneFrom=startMode==='clone'?($('#newCloneFrom').value||''):''; const templateId=startMode==='template'?($('#newWholeTemplate').value||'comprehensive'):''; if(startMode==='clone'&&!cloneFrom)return toast('请选择要复制的上一期',2600); try { const x = await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),startMode,cloneFrom,templateId})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id} · ${startMode==='clone'?'复制上期':startMode==='import'?'导入稿件':'整刊模板'}`); await loadIssues(x.issue.id); if(startMode==='import')openImportDialog('file'); else if(startMode==='template')setStudioEntry('design'); else setStudioEntry('content'); } catch(err) { toast(err.message,3200); } });
 document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.action-menu[open]'))if(!menu.contains(e.target))menu.removeAttribute('open');});
-document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(!mod)return;const editable=e.target.closest?.('input,textarea,select,[contenteditable="true"]');if(e.key.toLowerCase()==='s'){e.preventDefault();openSaveDiff();return;}if(editable)return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return;}if(e.key.toLowerCase()==='y'){e.preventDefault();redoHistory();}});
+document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(!mod)return;const editable=e.target.closest?.('input,textarea,select,[contenteditable="true"]');if(e.key.toLowerCase()==='s'){e.preventDefault();saveFromToolbar();return;}if(editable)return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return;}if(e.key.toLowerCase()==='y'){e.preventDefault();redoHistory();}});
 window.addEventListener('visibilitychange',()=>{if(document.hidden&&state.dirty)saveDraftNow();});window.addEventListener('pagehide',()=>closePeerChannel());
 window.addEventListener('pagehide',()=>{if(!state.issue||!state.dirty)return;try{fetch(appUrl(`/api/issues/${encodeURIComponent(state.issue.id)}/draft`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({issue:state.issue}),keepalive:true});}catch{}});
 window.addEventListener('beforeunload',e => { if (state.dirty) { e.preventDefault(); e.returnValue=''; } });

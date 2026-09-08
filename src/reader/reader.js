@@ -300,7 +300,7 @@ function pageDesignStyle(page){
     const overlay=hexWithAlpha(paper,d.backgroundOverlay);
     out.push(`background-color:${paper}`,`background-image:linear-gradient(${overlay},${overlay}),url("${image}")`,`background-size:${fit}`,`background-position:${position}`, 'background-repeat:no-repeat');
   }else if(bg) out.push(`background:${bg}`);
-  if(color) out.push(`color:${color}`); if(accent) out.push(`--red:${accent}`);
+  if(color) out.push(`color:${color}`,`--page-design-color:${color}`); if(accent) out.push(`--red:${accent}`,`--page-design-accent:${accent}`);
   return out.join(';');
 }
 function pageScrollDesignStyle(page){ const d=page?.design||{},out=[]; const padding=clampNumber(d.padding,0,12,null),width=clampNumber(d.contentWidth,60,100,null); if(padding!=null)out.push(`padding:${padding}%`); if(width!=null&&width<100)out.push(`width:${width}%;margin-left:auto;margin-right:auto`); return out.join(';'); }
@@ -323,7 +323,7 @@ function renderPage(page, index = -1) {
     ${type === "cover" ? `<h1>${escapeHtml(page.title || state.issue.label)}</h1>` : `<h2>${escapeHtml(page.title || "未命名页面")}</h2>`}
     ${page.subtitle ? `<h3>${escapeHtml(page.subtitle)}</h3>` : ""}
     <div class="publishing-content columns-${publishing.columns}${publishing.balanceColumns?' is-balanced':''}"${contentStyle?` style="${escapeHtml(contentStyle)}"`:""}>${body}</div>
-  </div>${pageArt(type)}${pageNo}</article>`;
+  </div>${safePageBackgroundAsset(page.design?.backgroundImage) ? "" : pageArt(type)}${pageNo}</article>`;
 }
 
 function spreadNumberForPage(index) {
@@ -783,7 +783,7 @@ function speechTextOfBlock(block = {}) {
     case "image": case "video":
       return block.caption || "";
     case "articleLink": {
-      const article = state.issue?.articles?.[block.articleId] || {};
+      const article = state.issue?.features?.narration?.scope === "page" ? {} : (state.issue?.articles?.[block.articleId] || {});
       return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join("。 ");
     }
     case "container":
