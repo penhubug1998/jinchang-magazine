@@ -931,7 +931,7 @@ async function generatePublicationPdf(id){
   let chrome=null,ws=null;const pending=new Map();let seq=0;
   const cdpSend=(method,params={},timeoutMs=15000)=>new Promise((resolve,reject)=>{const requestId=++seq;pending.set(requestId,{resolve,reject});ws.send(JSON.stringify({id:requestId,method,params}));setTimeout(()=>{const p=pending.get(requestId);if(p){pending.delete(requestId);reject(publicationFailure('PDF_CDP_TIMEOUT',`CDP ${method} 超时`,['请检查服务器资源或稍后重试。']))}},timeoutMs)});
   try{
-    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true});
+    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});
     let tabs=null;for(let i=0;i<100;i++){try{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);if(response.ok){tabs=await response.json();if(tabs?.length)break}}catch{}await new Promise(resolve=>setTimeout(resolve,80));}
     if(!tabs?.length)throw publicationFailure('PDF_CHROMIUM_START_FAILED','Chromium 未能启动 PDF 调试端口。',['请确认服务器 Chromium 可执行并允许无头模式运行。']);
     const tab=tabs.find(item=>item.type==='page')||tabs[0];ws=new WebSocket(tab.webSocketDebuggerUrl);
