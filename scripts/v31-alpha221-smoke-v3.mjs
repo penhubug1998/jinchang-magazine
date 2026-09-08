@@ -6,7 +6,8 @@ const assert=(c,m)=>{if(!c)throw new Error(m)},sleep=ms=>new Promise(r=>setTimeo
 const pkg=JSON.parse(await readFile('package.json','utf8'));
 assert(pkg.version==='3.1.0'||['3.1.0-alpha.22.1','3.1.0-alpha.23','3.1.0-alpha.24','3.1.0-alpha.25','3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2'].includes(pkg.version),`version ${pkg.version}`);assert(['3.1-alpha22.1','3.1-alpha23','3.1-alpha24'].includes(pkg.v31SchemaVersion),`schema ${pkg.v31SchemaVersion}`);assert(pkg.v3StableVersion==='3.0.0','stable version changed');
 assert(pkg.richTextEngine?.runtime?.includes('self-hosted')||String(pkg.richTextEngine?.runtime).includes('self-hosted'),'runtime metadata missing self-hosted');
-assert(RICH_TEXT_ENGINE_INFO.name==='Tiptap Core'&&RICH_TEXT_ENGINE_INFO.version==='3.30.2'&&RICH_TEXT_ENGINE_INFO.selfHosted&&RICH_TEXT_ENGINE_INFO.externalCdnFallback===false&&RICH_TEXT_ENGINE_INFO.nativeStructuredFallback,'engine hardening contract failed');
+const tiptapVersion=pkg.richTextEngine?.version;assert(tiptapVersion==='3.31.3',`unsafe Tiptap version ${tiptapVersion}`);
+assert(RICH_TEXT_ENGINE_INFO.name==='Tiptap Core'&&RICH_TEXT_ENGINE_INFO.version===tiptapVersion&&RICH_TEXT_ENGINE_INFO.selfHosted&&RICH_TEXT_ENGINE_INFO.externalCdnFallback===false&&RICH_TEXT_ENGINE_INFO.nativeStructuredFallback,'engine hardening contract failed');
 const dirty='<p onclick="evil()"><strong>保留</strong><script>alert(1)</script><img src=x onerror=evil()><span style="color:#8d1f1c;font-size:18px;position:fixed">样式</span></p><iframe src=x></iframe>';
 const clean=sanitizePastedHtml(dirty);for(const bad of ['<script','onclick=','<img','onerror=','<iframe','position:fixed'])assert(!clean.toLowerCase().includes(bad),`paste sanitizer leaked ${bad}`);for(const ok of ['<p','<strong>','color:#8d1f1c','font-size:18px'])assert(clean.includes(ok),`paste sanitizer removed ${ok}`);
 assert(sanitizePastedText('A\r\nB\u0000\tC')==='A\nB  C','text sanitizer failed');
@@ -24,7 +25,7 @@ assert(server.includes("rest.startsWith('vendor/')"),'live preview vendor route 
 assert(vendorScript.includes('esbuild.build')&&vendorScript.includes('TIPTAP_VENDOR_READY = true'),'vendor build script incomplete');
 assert(vendorSource.includes('TIPTAP_VENDOR_READY'),'generated vendor marker missing');
 const vendorRuntime=await import('../src/reader/vendor/tiptap-runtime.js');
-assert(vendorRuntime.TIPTAP_VENDOR_READY===true&&vendorRuntime.TIPTAP_VERSION==='3.30.2','real self-hosted vendor exports missing');
+assert(vendorRuntime.TIPTAP_VENDOR_READY===true&&vendorRuntime.TIPTAP_VERSION===tiptapVersion,'real self-hosted vendor exports/version mismatch');
 for(const key of ['Editor','StarterKit','TextStyleKit','Highlight','TextAlign'])assert(vendorRuntime[key],`real self-hosted vendor missing ${key}`);
 const port=52000+Math.floor(Math.random()*800),child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);
 try{let health;for(let i=0;i<120;i++){try{const r=await fetch(`http://127.0.0.1:${port}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(40)}assert(health?.version==='3.1.0'||['3.1.0-alpha.22.1','3.1.0-alpha.23','3.1.0-alpha.24','3.1.0-alpha.25','3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2'].includes(health?.version),`health ${JSON.stringify(health)} ${logs}`);const vendor=await fetch(`http://127.0.0.1:${port}/live-preview/001/vendor/tiptap-runtime.js`);assert(vendor.ok&&(await vendor.text()).includes('TIPTAP_VENDOR_READY'),'self-hosted vendor route failed');}finally{child.kill('SIGTERM');await sleep(100)}

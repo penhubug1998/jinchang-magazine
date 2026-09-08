@@ -183,7 +183,8 @@
     "final:v31:evidence:bundle": "node scripts/p1-11-final-evidence-bundle-v3.mjs",
     "final:v31:evidence:bundle:strict": "node scripts/p1-11-final-evidence-bundle-v3.mjs --strict",
     "test:p1-12": "node scripts/p1-12-finalization-smoke-v3.mjs",
-    "final:v31:finalization:status": "node scripts/p1-12-finalization-gate-v3.mjs"
+    "final:v31:finalization:status": "node scripts/p1-12-finalization-gate-v3.mjs",
+    "test:p1-13": "node scripts/p1-13-dependency-security-smoke-v3.mjs"
   },
   "engines": {
     "node": ">=20"
@@ -192,16 +193,16 @@
   "v31SchemaVersion": "3.1-alpha24",
   "richTextEngine": {
     "name": "Tiptap Core",
-    "version": "3.30.2",
+    "version": "3.31.3",
     "storage": "issue.json richText JSON",
     "runtime": "self-hosted vendor bundle with structured native fallback; no external CDN runtime dependency"
   },
   "dependencies": {
-    "@tiptap/core": "3.30.2",
-    "@tiptap/starter-kit": "3.30.2",
-    "@tiptap/extension-text-style": "3.30.2",
-    "@tiptap/extension-highlight": "3.30.2",
-    "@tiptap/extension-text-align": "3.30.2"
+    "@tiptap/core": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
+    "@tiptap/extension-text-style": "3.31.3",
+    "@tiptap/extension-highlight": "3.31.3",
+    "@tiptap/extension-text-align": "3.31.3"
   },
   "devDependencies": {
     "esbuild": "0.25.9"

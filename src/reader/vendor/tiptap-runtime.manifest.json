@@ -1,8 +1,8 @@
 {
-  "version": "3.30.2",
-  "generatedAt": "2026-09-07T13:03:56.434Z",
-  "bytes": 389324,
-  "sha256": "c00695addc689ef37e87f68c76d163a730114d1691f4e944ee5a2a71de9ac98a",
+  "version": "3.31.3",
+  "generatedAt": "2026-09-08T02:37:57.331Z",
+  "bytes": 385564,
+  "sha256": "e9d69d129a4baa0a8ef621253260b62d7ad27ba90390768dfc1e040cc93b84a4",
   "source": "npm packages bundled by esbuild",
   "externalRuntime": false
 }

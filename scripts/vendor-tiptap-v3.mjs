@@ -7,7 +7,8 @@ const root=process.cwd();
 const out=path.join(root,'src','reader','vendor','tiptap-runtime.js');
 const manifestFile=path.join(root,'src','reader','vendor','tiptap-runtime.manifest.json');
 const pkg=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
-const version=pkg.richTextEngine?.version||'3.30.2';
+const version=pkg.richTextEngine?.version;
+if(!version){console.error('package.json 缺少 richTextEngine.version，拒绝生成无法绑定版本的 Tiptap vendor。');process.exit(2)}
 let esbuild;
 try{esbuild=await import('esbuild');}catch{
   console.error('缺少 esbuild / Tiptap 本地依赖。请先在可联网环境执行 npm install，再运行 npm run vendor:tiptap。');

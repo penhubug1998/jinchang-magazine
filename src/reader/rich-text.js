@@ -1,4 +1,4 @@
-const TIPTAP_VERSION = '3.30.2';
+const TIPTAP_VERSION = '3.31.3';
 const LOCAL_VENDOR_MODULE = './vendor/tiptap-runtime.js';
 
 const esc = (value='') => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
