@@ -7,6 +7,7 @@ on:
     paths:
       - scripts/p1-09-final-evidence-gate-v3.mjs
       - scripts/p1-09-final-evidence-smoke-v3.mjs
+      - scripts/p1-09-pdf-spawn-hardening-patch.py
       - .github/workflows/p1-09-final-evidence.yml
   workflow_dispatch:
 
@@ -28,6 +29,12 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - name: Harden PDF Chromium startup
+        run: |
+          chmod +x scripts/chrome-ci-wrapper.sh
+          test -x scripts/chrome-ci-wrapper.sh
+          python3 scripts/p1-09-pdf-spawn-hardening-patch.py
+          node --check scripts/studio-v3.mjs
       - name: Register P1-09 commands
         run: |
           node <<'NODE'
@@ -63,12 +70,13 @@ jobs:
           npm run check:v3
           node --check scripts/p1-09-final-evidence-gate-v3.mjs
           node --check scripts/p1-09-final-evidence-smoke-v3.mjs
+          node --check scripts/studio-v3.mjs
           git diff --check
       - name: Commit verified P1-09 commands
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/p1-09-final-evidence.yml
-          git add package.json
+          git rm .github/workflows/p1-09-final-evidence.yml scripts/p1-09-pdf-spawn-hardening-patch.py
+          git add package.json scripts/studio-v3.mjs
           git commit -m "test(p1-09): seal current-source final evidence gate"
           git push origin HEAD:feat/p1-09-final-evidence-binding
