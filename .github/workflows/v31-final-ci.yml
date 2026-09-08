@@ -53,6 +53,7 @@ jobs:
       - name: Finalization safety contracts
         run: |
           npm run test:p1-12
+          node scripts/p1-20-portable-tree-order-smoke-v3.mjs
           node scripts/p1-19-closed-set-integrity-smoke-v3.mjs
           node scripts/p1-18-final-artifact-binding-smoke-v3.mjs
           node scripts/p1-17-final-evidence-integrity-smoke-v3.mjs
@@ -105,7 +106,7 @@ jobs:
           mkdir -p reports
           node <<'NODE'
           const fs=require('fs');
-          const receipt={stage:'P1-19+',kind:'continuous-final-verification',generatedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,runner:'ubuntu-24.04',node:process.version,permissions:'contents:read',actions:{checkout:'v7',setupNode:'v7',uploadArtifact:'v7'},realEnvironmentPolicy:'CI must remain HOLD until real-device/media/HTTPS evidence is collected'};
+          const receipt={stage:'P1-20+',kind:'continuous-final-verification',generatedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA,runId:process.env.GITHUB_RUN_ID,runner:'ubuntu-24.04',node:process.version,permissions:'contents:read',actions:{checkout:'v7',setupNode:'v7',uploadArtifact:'v7'},realEnvironmentPolicy:'CI must remain HOLD until real-device/media/HTTPS evidence is collected'};
           fs.writeFileSync('reports/p1-15-final-ci-receipt.json',JSON.stringify(receipt,null,2)+'\n');
           NODE
 
