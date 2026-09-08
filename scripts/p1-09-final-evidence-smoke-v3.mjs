@@ -2,9 +2,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile, cp } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { evidenceSha256 } from './lib-final-evidence-integrity-v3.mjs';
 
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
+const seal=row=>{const copy={...row};copy.evidenceSha256=evidenceSha256(copy);return copy};
 const temp=await mkdtemp(path.join(os.tmpdir(),'jm-p109-gate-'));
 const repo=path.join(temp,'repo');
 try{
@@ -14,6 +16,8 @@ try{
   git(['config','user.email','p109@example.invalid']);git(['config','user.name','P1-09 Smoke']);
   git(['add','.']);assert(git(['commit','-m','fixture']).status===0,'fixture commit failed');
   const committedAt=String(git(['show','-s','--format=%cI','HEAD']).stdout||'').trim();
+  const sourceCommit=String(git(['rev-parse','HEAD']).stdout||'').trim();
+  assert(/^[0-9a-f]{40}$/.test(sourceCommit),'fixture source commit missing');
   const future=new Date(Date.parse(committedAt)+60_000).toISOString();
   await mkdir(path.join(repo,'reports'),{recursive:true});
   await writeFile(path.join(repo,'reports','p1-08-production-e2e-last.json'),JSON.stringify({version:'3.1.0',ok:true,completedAt:future,checkpoints:Array.from({length:26},(_,i)=>({name:`c${i+1}`,ok:true}))},null,2));
@@ -26,23 +30,42 @@ try{
   r=run(true);assert(r.status!==0,'strict gate must fail closed while external evidence missing');
 
   const stale=new Date(Date.parse(committedAt)-60_000).toISOString();
-  await writeFile(path.join(repo,'reports','v31-final-media-receipt.json'),JSON.stringify({version:'3.1.0',generatedAt:stale,strict:true,files:51,bytes:122533642},null,2));
-  await writeFile(path.join(repo,'reports','v3-rc1-device-acceptance.json'),JSON.stringify({version:'3.1.0',records:[
+  const staleMedia=seal({version:'3.1.0',generatedAt:stale,sourceCommit,sourceCommittedAt:committedAt,strict:true,files:51,bytes:122533642});
+  await writeFile(path.join(repo,'reports','v31-final-media-receipt.json'),JSON.stringify(staleMedia,null,2));
+  const deviceRows=[
     {deviceType:'edge-desktop',version:'3.1.0',passed:true,recordedAt:stale,userAgent:'Mozilla/5.0 Edg/151.0',checks:{a:true},auto:{corePass:true}},
     {deviceType:'mac-safari',version:'3.1.0',passed:true,recordedAt:stale,userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X) Version/26.0 Safari/605.1.15',checks:{a:true},auto:{corePass:true}},
     {deviceType:'iphone-safari',version:'3.1.0',passed:true,recordedAt:stale,userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) Version/26.0 Mobile/15E148 Safari/604.1',checks:{a:true},auto:{corePass:true}},
     {deviceType:'android-wechat',version:'3.1.0',passed:true,recordedAt:stale,userAgent:'Mozilla/5.0 (Linux; Android 16) MicroMessenger/8.0',checks:{a:true},auto:{corePass:true}}
-  ]},null,2));
-  await writeFile(path.join(repo,'reports','v31-final-production-receipt.json'),JSON.stringify({version:'3.1.0',generatedAt:stale,status:'passed',rollbackVerified:true,redeployVerified:true,httpsVerified:true,base:'https://example.invalid/'},null,2));
+  ].map(row=>seal({...row,sourceCommit,sourceCommittedAt:committedAt}));
+  await writeFile(path.join(repo,'reports','v3-rc1-device-acceptance.json'),JSON.stringify({version:'3.1.0',records:deviceRows},null,2));
+  const staleProd=seal({version:'3.1.0',generatedAt:stale,sourceCommit,sourceCommittedAt:committedAt,status:'passed',rollbackVerified:true,redeployVerified:true,httpsVerified:true,base:'https://example.invalid/'});
+  await writeFile(path.join(repo,'reports','v31-final-production-receipt.json'),JSON.stringify(staleProd,null,2));
   r=run(false);assert(r.status===0,'stale-evidence non-strict gate failed');
   report=JSON.parse(await readFile(path.join(repo,'reports','p1-09-final-evidence-gate.json'),'utf8'));
   for(const id of ['media','edge-desktop','mac-safari','iphone-safari','android-wechat','production-https'])assert(report.gates.find(x=>x.id===id)?.status==='PENDING',`${id} stale evidence must be rejected`);
 
-  const records=JSON.parse(await readFile(path.join(repo,'reports','v3-rc1-device-acceptance.json'),'utf8'));for(const row of records.records)row.recordedAt=future;await writeFile(path.join(repo,'reports','v3-rc1-device-acceptance.json'),JSON.stringify(records,null,2));
-  await writeFile(path.join(repo,'reports','v31-final-media-receipt.json'),JSON.stringify({version:'3.1.0',generatedAt:future,strict:true,files:51,bytes:122533642},null,2));
-  await writeFile(path.join(repo,'reports','v31-final-production-receipt.json'),JSON.stringify({version:'3.1.0',generatedAt:future,status:'passed',rollbackVerified:true,redeployVerified:true,httpsVerified:true,base:'https://example.invalid/'},null,2));
+  const freshRows=deviceRows.map(row=>{const copy={...row,recordedAt:future};delete copy.evidenceSha256;return seal(copy)});
+  await writeFile(path.join(repo,'reports','v3-rc1-device-acceptance.json'),JSON.stringify({version:'3.1.0',records:freshRows},null,2));
+  const freshMedia=seal({version:'3.1.0',generatedAt:future,sourceCommit,sourceCommittedAt:committedAt,strict:true,files:51,bytes:122533642});
+  const freshProd=seal({version:'3.1.0',generatedAt:future,sourceCommit,sourceCommittedAt:committedAt,status:'passed',rollbackVerified:true,redeployVerified:true,httpsVerified:true,base:'https://example.invalid/'});
+  await writeFile(path.join(repo,'reports','v31-final-media-receipt.json'),JSON.stringify(freshMedia,null,2));
+  await writeFile(path.join(repo,'reports','v31-final-production-receipt.json'),JSON.stringify(freshProd,null,2));
   r=run(true);assert(r.status===0,`fresh evidence strict gate failed\n${r.stdout}\n${r.stderr}`);
   report=JSON.parse(await readFile(path.join(repo,'reports','p1-09-final-evidence-gate.json'),'utf8'));
-  assert(report.status==='READY_FOR_CURRENT_3_1_0_RELEASE'&&report.ready===report.total,'fresh current-version evidence should pass');
-  console.log('P1-09 Final Evidence Gate smoke PASS：历史/过期证据被拒绝，当前 3.1.0 的 E2E、媒体、Edge、Safari、iPhone Safari、Android 微信和 HTTPS receipt 全部新鲜时才 READY。');
+  assert(report.status==='READY_FOR_CURRENT_3_1_0_RELEASE'&&report.ready===report.total,'fresh SHA-bound current-version evidence should pass');
+
+  const tampered={...freshMedia,bytes:1};
+  await writeFile(path.join(repo,'reports','v31-final-media-receipt.json'),JSON.stringify(tampered,null,2));
+  r=run(false);assert(r.status===0,'tampered receipt non-strict gate failed unexpectedly');
+  report=JSON.parse(await readFile(path.join(repo,'reports','p1-09-final-evidence-gate.json'),'utf8'));
+  assert(report.gates.find(x=>x.id==='media')?.status==='PENDING','tampered media receipt SHA must be rejected');
+
+  const wrongCommitProd={...freshProd,sourceCommit:'b'.repeat(40)};delete wrongCommitProd.evidenceSha256;wrongCommitProd.evidenceSha256=evidenceSha256(wrongCommitProd);
+  await writeFile(path.join(repo,'reports','v31-final-production-receipt.json'),JSON.stringify(wrongCommitProd,null,2));
+  r=run(false);assert(r.status===0,'wrong-commit receipt non-strict gate failed unexpectedly');
+  report=JSON.parse(await readFile(path.join(repo,'reports','p1-09-final-evidence-gate.json'),'utf8'));
+  assert(report.gates.find(x=>x.id==='production-https')?.status==='PENDING','different sourceCommit must be rejected even with valid SHA');
+
+  console.log('P1-09 Final Evidence Gate smoke PASS：旧/过期/错 commit/篡改证据均被拒绝；当前 3.1.0 的媒体、设备和 HTTPS receipt 必须 sourceCommit + evidenceSha256 双绑定。');
 } finally { await rm(temp,{recursive:true,force:true}); }
