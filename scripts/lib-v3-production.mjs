@@ -130,22 +130,23 @@ function blockSpeechText(block = {}, articles = {}) {
     case 'table': return [block.caption, ...(block.rows || []).flatMap(row => (row || []).map(cell => String(cell ?? '')))].filter(Boolean).join('。');
     case 'coverSections': return (block.items || []).filter(Boolean).join('，');
     case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
-    // articleLink opens a separate reading surface. Its linked article must not
-    // be injected into the current page narration, otherwise the same content
-    // is spoken twice and an interaction-only link invalidates existing TTS.
-    case 'articleLink': return '';
+    case 'articleLink': {
+      const article = articles?.[block.articleId] || {};
+      return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join('。');
+    }
     case 'container': return (block.columns || []).flatMap(column => (column.blocks || []).map(child => blockSpeechText(child, articles))).filter(Boolean).join('。');
     default: return '';
   }
 }
 
-export function narrationPageText(page = {}, articles = {}) {
-  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, articles))]
+export function narrationPageText(page = {}, articles = {}, { scope = 'page-and-articles' } = {}) {
+  const spokenArticles = scope === 'page' ? {} : articles;
+  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, spokenArticles))]
     .filter(Boolean).join('。').replace(/\s+/g, ' ').trim();
 }
 
 export function narrationPageDigests(issue = {}) {
-  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {})).digest('hex').slice(0, 20));
+  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {}, { scope: issue.features?.narration?.scope })).digest('hex').slice(0, 20));
 }
 
 export function narrationSourceDigest(issue = {}) {
