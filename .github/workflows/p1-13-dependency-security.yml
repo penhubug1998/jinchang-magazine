@@ -20,12 +20,12 @@ jobs:
       CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
       V3_REAL_CHROME: /usr/bin/google-chrome
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: fix/p1-13-dependency-security
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
