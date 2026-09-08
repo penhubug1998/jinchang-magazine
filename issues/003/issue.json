@@ -21,9 +21,9 @@
       "fallback": "speechSynthesis",
       "continuousDefault": false,
       "rate": 1,
-      "generator": "server",
-      "generatedAt": "2026-08-25T14:49:23.959Z",
-      "sourceDigest": "ff93ba9fbfd5c148a841036b9919faecd9c14505600669f8ef4b6778c5c3fc09",
+      "generator": "edge-neural",
+      "generatedAt": "2026-09-08T14:22:44.362Z",
+      "sourceDigest": "52665c9930df7d16e40b52520e6fe61096b526ec1741a72c9a724ce66adb94e5",
       "pageDigests": [
         "28d024d74038a66642ab",
         "dbed8dbb2cd7fa1d2287",
@@ -50,7 +50,7 @@
         "57b5e97659698064557a",
         "57b8b2cd90275aae54d8",
         "e643ae45cabe4d9d014e",
-        "3a7879f7c49df45129d1",
+        "e653d17907dcb3ba1f62",
         "7777094493cf480f5b6a",
         "cbf81f2853f6bfea09e5",
         "cf2a9186e74809d86f81",
@@ -67,7 +67,8 @@
         "c5a1455c7ff61c90e3b7",
         "a60c158af936edda292d"
       ],
-      "baselinedAt": "2026-08-25T14:55:05.256Z"
+      "baselinedAt": "2026-09-08T14:22:44.362Z",
+      "voice": "zh-CN-XiaoxiaoNeural"
     },
     "turnAnimation": "smooth"
   },

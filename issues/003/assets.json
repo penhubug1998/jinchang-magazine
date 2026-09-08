@@ -1,7 +1,7 @@
 {
   "issue": "003",
   "assetSource": "issues/003/assets",
-  "generatedAt": "2026-09-08T13:27:24.046Z",
+  "generatedAt": "2026-09-08T14:22:44.470Z",
   "expected": [
     {
       "path": "music/bgm.mp3",
