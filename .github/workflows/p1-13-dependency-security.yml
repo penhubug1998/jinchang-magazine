@@ -29,15 +29,12 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Capture pre-fix audit
+      - name: Install locked dependencies and capture baseline audit
         run: |
+          npm ci
           npm audit --json > /tmp/audit-before.json || true
           node <<'NODE'
-          const fs=require('fs');
-          const a=JSON.parse(fs.readFileSync('/tmp/audit-before.json','utf8'));
+          const fs=require('fs');const a=JSON.parse(fs.readFileSync('/tmp/audit-before.json','utf8'));
           console.log('PRE',JSON.stringify(a.metadata?.vulnerabilities||{}));
           for(const [name,v] of Object.entries(a.vulnerabilities||{})){
             console.log(`VULN ${name} severity=${v.severity} direct=${v.isDirect} range=${v.range} fix=${JSON.stringify(v.fixAvailable)}`);
@@ -45,35 +42,52 @@ jobs:
           }
           NODE
 
-      - name: Apply compatible audit fix to lockfile only
+      - name: Upgrade Tiptap security patch line and rebuild lockfile
         run: |
-          npm audit fix --package-lock-only || true
+          node <<'NODE'
+          const fs=require('fs');
+          const file='package.json';const pkg=JSON.parse(fs.readFileSync(file,'utf8'));
+          const version='3.31.3';
+          for(const name of ['@tiptap/core','@tiptap/starter-kit','@tiptap/extension-text-style','@tiptap/extension-highlight','@tiptap/extension-text-align']) pkg.dependencies[name]=version;
+          pkg.richTextEngine.version=version;
+          pkg.scripts['test:p1-13']='node scripts/p1-13-dependency-security-smoke-v3.mjs';
+          fs.writeFileSync(file,JSON.stringify(pkg,null,2)+'\n');
+          NODE
+          npm install --ignore-scripts
           git diff --check
-          git diff --stat -- package-lock.json
+          git diff --stat -- package.json package-lock.json
 
-      - name: Reinstall remediated lockfile
-        run: npm ci
+      - name: Rebuild self-hosted Tiptap vendor
+        run: |
+          npm run vendor:tiptap
+          npm run test:p1-13
+          git diff --check
+          git diff --stat -- src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json
 
-      - name: Verify post-fix audit
+      - name: Verify zero moderate/high/critical audit findings
         run: |
           npm audit --json > /tmp/audit-after.json || true
           node <<'NODE'
-          const fs=require('fs');
-          const a=JSON.parse(fs.readFileSync('/tmp/audit-after.json','utf8'));
-          const v=a.metadata?.vulnerabilities||{};
-          console.log('POST',JSON.stringify(v));
-          for(const [name,row] of Object.entries(a.vulnerabilities||{})){
-            console.log(`REMAIN ${name} severity=${row.severity} direct=${row.isDirect} range=${row.range} fix=${JSON.stringify(row.fixAvailable)}`);
-            for(const via of row.via||[]) if(typeof via==='object') console.log(`  via ${via.source} ${via.title} ${via.range} ${via.url}`);
-          }
+          const fs=require('fs');const a=JSON.parse(fs.readFileSync('/tmp/audit-after.json','utf8'));
+          const v=a.metadata?.vulnerabilities||{};console.log('POST',JSON.stringify(v));
+          for(const [name,row] of Object.entries(a.vulnerabilities||{})) console.log(`REMAIN ${name} severity=${row.severity} range=${row.range} fix=${JSON.stringify(row.fixAvailable)}`);
           const blocking=(v.critical||0)+(v.high||0)+(v.moderate||0);
-          if(blocking!==0) throw new Error(`P1-13 compatible remediation incomplete: critical/high/moderate=${blocking}`);
+          if(blocking!==0) throw new Error(`P1-13 audit still has critical/high/moderate=${blocking}`);
           NODE
 
-      - name: Preserve P1 finalization contracts
+      - name: Rich-text compatibility regression
         run: |
           git config core.fileMode false
           chmod +x scripts/chrome-ci-wrapper.sh
+          npm run test:v31-alpha22
+          npm run test:v31-alpha22-1
+          npm run test:v31-alpha23
+          npm run test:v31-alpha24
+          npm run test:v31-alpha22-browser
+          npm run test:v31-alpha22-1-browser
+
+      - name: Preserve P1 finalization contracts
+        run: |
           npm run test:p1-12
           npm run test:p1-11
           npm run test:p1-10
@@ -85,14 +99,14 @@ jobs:
           npm run build:v3
           git diff --check
 
-      - name: Commit lockfile remediation
+      - name: Commit security remediation
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
+          git add package.json package-lock.json src/reader/vendor/tiptap-runtime.js src/reader/vendor/tiptap-runtime.manifest.json scripts/p1-13-dependency-security-smoke-v3.mjs
           if git diff --cached --quiet; then
-            echo 'No lockfile changes were required'
+            echo 'P1-13 security remediation already committed'
           else
-            git commit -m "fix(p1-13): remediate compatible dependency advisories"
+            git commit -m "fix(p1-13): upgrade Tiptap past security advisory"
             git push origin HEAD:fix/p1-13-dependency-security
           fi
