@@ -1,0 +1,129 @@
+name: P1-10 real-environment final acceptance
+
+on:
+  push:
+    branches:
+      - feat/p1-10-final-acceptance
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p1-10-final-acceptance
+  cancel-in-progress: false
+
+jobs:
+  final-acceptance:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-10-final-acceptance
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm ci
+
+      - name: Integrate P1-10 once
+        run: |
+          if node -e "const p=require('./package.json');process.exit(p.scripts?.['test:p1-10']?0:1)"; then
+            echo 'P1-10 integration already present on branch'
+          else
+            python3 scripts/p1-10-final-acceptance-patch.py
+          fi
+          chmod +x scripts/chrome-ci-wrapper.sh
+          node --check scripts/lib-p1-10-final-acceptance-v3.mjs
+          node --check scripts/p1-10-final-acceptance-gate-v3.mjs
+          node --check scripts/p1-10-final-acceptance-smoke-v3.mjs
+          node --check scripts/p1-10-final-package-guard-v3.mjs
+          node --check scripts/studio-v3.mjs
+          node --check src/studio/rc1-acceptance.js
+          node --check src/studio/final-acceptance.js
+          git diff --check
+
+      - name: P1-10 evidence contract smoke
+        run: npm run test:p1-10
+
+      - name: Re-run current-source production E2E
+        run: npm run test:p1-08
+
+      - name: Verify 8-gate fail-closed status
+        run: |
+          npm run final:v31:acceptance:status
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/p1-10-final-acceptance.json','utf8'));
+          if(r.total!==8) throw new Error(`expected 8 gates, got ${r.total}`);
+          if(r.status!=='HOLD') throw new Error('CI must HOLD until all external real-environment evidence is re-collected');
+          for(const id of ['source-identity','current-e2e']){
+            const g=r.gates.find(x=>x.id===id);
+            if(g?.status!=='READY') throw new Error(`${id} should be READY after current-source E2E, got ${g?.status}`);
+          }
+          const wechat=r.gates.find(x=>x.id==='android-wechat');
+          if(!wechat) throw new Error('Android WeChat gate missing');
+          if(r.promotion?.allowed!==false) throw new Error('promotion must remain blocked below 8/8');
+          NODE
+          if npm run final:v31:evidence:verify; then
+            echo 'strict Final Acceptance unexpectedly passed without external evidence' >&2
+            exit 1
+          fi
+          if npm run final:v31:package-guard; then
+            echo 'Final package guard unexpectedly passed below 8/8' >&2
+            exit 1
+          fi
+
+      - name: Smoke Final Acceptance server and UI
+        run: |
+          node scripts/studio-v3.mjs --host 127.0.0.1 --port 4186 --acceptance-only > /tmp/p1-10-studio.log 2>&1 &
+          PID=$!
+          trap 'kill $PID 2>/dev/null || true' EXIT
+          ok=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:4186/api/health >/tmp/p1-10-health.json; then ok=1; break; fi
+            sleep 0.25
+          done
+          if [ "$ok" != 1 ]; then cat /tmp/p1-10-studio.log; exit 1; fi
+          curl -fsS http://127.0.0.1:4186/ > /tmp/p1-10-root.html
+          grep -q 'Final Acceptance' /tmp/p1-10-root.html
+          curl -fsS 'http://127.0.0.1:4186/rc1-acceptance.html?target=android-wechat' > /tmp/p1-10-device.html
+          grep -q 'Android 微信' /tmp/p1-10-device.html
+          curl -fsS http://127.0.0.1:4186/api/final/acceptance > /tmp/p1-10-api.json
+          node <<'NODE'
+          const fs=require('fs');const x=JSON.parse(fs.readFileSync('/tmp/p1-10-api.json','utf8'));const r=x.report||x;
+          if(r.total!==8||r.status!=='HOLD') throw new Error('Final Acceptance API must expose HOLD 8-gate report in CI');
+          if(!r.gates.some(g=>g.id==='android-wechat')) throw new Error('Android WeChat missing from API');
+          NODE
+          curl -sS -o /tmp/p1-10-readonly.json -w '%{http_code}' -X POST http://127.0.0.1:4186/api/issues > /tmp/p1-10-readonly-code.txt
+          test "$(cat /tmp/p1-10-readonly-code.txt)" = "403"
+          kill $PID 2>/dev/null || true
+          wait $PID 2>/dev/null || true
+          trap - EXIT
+
+      - name: Preserve adjacent production contracts
+        run: |
+          npm run test:p1-09
+          npm run test:p1-07
+          node scripts/studio-v3.mjs --check
+          npm run check:v3
+          node --check scripts/v31-rc2-media-v3.mjs
+          node --check scripts/v31-final-production-receipt-v3.mjs
+          git diff --check
+
+      - name: Commit integrated P1-10 source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json scripts/studio-v3.mjs src/studio/rc1-acceptance.html src/studio/rc1-acceptance.js scripts/v31-rc2-media-v3.mjs scripts/v31-final-production-receipt-v3.mjs
+          if git diff --cached --quiet; then
+            echo 'No integration diff to commit'
+          else
+            git commit -m "feat(p1-10): integrate real-environment final acceptance"
+            git push origin HEAD:feat/p1-10-final-acceptance
+          fi
