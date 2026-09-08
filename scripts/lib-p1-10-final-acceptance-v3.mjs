@@ -1,8 +1,10 @@
-import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { V3_VERSION, exists, root } from './lib-v3-production.mjs';
+import { evidenceSha256, evidenceIntegrityStatus } from './lib-final-evidence-integrity-v3.mjs';
+
+export { evidenceSha256 } from './lib-final-evidence-integrity-v3.mjs';
 
 export const FINAL_ACCEPTANCE_GATES = [
   ['source-identity','当前源码身份'],
@@ -36,11 +38,6 @@ export function uaMatches(type,ua=''){
   return false;
 }
 
-export function evidenceSha256(record={}){
-  const copy={...record};delete copy.evidenceSha256;
-  return crypto.createHash('sha256').update(JSON.stringify(copy)).digest('hex');
-}
-
 export function deviceEvidenceStatus(row,source,type){
   if(!row)return {status:'NOT_RUN',reason:'尚未提交当前设备的真实环境验收记录'};
   if(row.version!==V3_VERSION)return {status:'STALE',reason:`证据版本 ${row.version||'unknown'} 不是当前 ${V3_VERSION}`};
@@ -49,17 +46,19 @@ export function deviceEvidenceStatus(row,source,type){
   if(!uaMatches(type,row.userAgent))return {status:'FAILED',reason:'浏览器 User-Agent 与目标真实环境不匹配'};
   if(!row.checks||!Object.keys(row.checks).length||!Object.values(row.checks).every(Boolean))return {status:'FAILED',reason:'人工验收项未全部通过'};
   if(row.auto?.corePass!==true||row.passed!==true)return {status:'FAILED',reason:'自动探测或综合验收未通过'};
-  if(!/^[0-9a-f]{64}$/i.test(String(row.evidenceSha256||'')))return {status:'STALE',reason:'旧设备证据缺少 P1-10 SHA-256 绑定，请重新验收'};
-  if(evidenceSha256(row)!==row.evidenceSha256)return {status:'FAILED',reason:'设备证据 SHA-256 校验失败，记录可能被改写'};
+  const integrity=evidenceIntegrityStatus(row);
+  if(!integrity.ok)return {status:integrity.status,reason:integrity.status==='STALE'?'旧设备证据缺少有效 SHA-256 绑定，请重新验收':'设备证据 SHA-256 校验失败，记录可能被改写'};
   return {status:'READY',reason:`${row.deviceName||type} · ${row.recordedAt}`};
 }
 
-function receiptStatus(receipt,source,{timeField='generatedAt',kind='receipt'}={}){
+export function receiptEvidenceStatus(receipt,source,{timeField='generatedAt',kind='receipt'}={}){
   if(!receipt)return {status:'NOT_RUN',reason:`尚未生成 ${kind}`};
   if(receipt.version!==V3_VERSION)return {status:'STALE',reason:`${kind} 版本不是当前 ${V3_VERSION}`};
   if(!receipt.sourceCommit||receipt.sourceCommit!==source.commit)return {status:'STALE',reason:`${kind} 未绑定当前源码 commit`};
   if(!freshAfter(receipt[timeField],source.committedAt))return {status:'STALE',reason:`${kind} 生成时间早于当前源码提交`};
-  return {status:'READY',reason:`${kind} 已绑定当前源码`};
+  const integrity=evidenceIntegrityStatus(receipt);
+  if(!integrity.ok)return {status:integrity.status,reason:integrity.status==='STALE'?`${kind} 缺少有效 evidenceSha256，请重新生成`:`${kind} evidenceSha256 校验失败，记录可能被改写`};
+  return {status:'READY',reason:`${kind} 已绑定当前源码且 SHA-256 校验通过`};
 }
 
 async function runP109(){
@@ -79,7 +78,7 @@ export async function buildFinalAcceptanceReport(){
   const e2e=byId.get('current-e2e');push('current-e2e',e2e?.status==='READY'?'READY':(e2e?.evidence?'STALE':'NOT_RUN'),e2e?.detail||'需要重新执行当前源码 E2E',e2e?.evidence||null,'npm run test:p1-08');
 
   const mediaFile='reports/v31-final-media-receipt.json';const media=await exists(path.join(root,mediaFile))?await readJson(mediaFile):null;
-  let mediaState=receiptStatus(media,source,{kind:'完整媒体 receipt'});
+  let mediaState=receiptEvidenceStatus(media,source,{kind:'完整媒体 receipt'});
   if(mediaState.status==='READY'&&!(media.strict===true&&media.files===51&&media.bytes===122533642))mediaState={status:'FAILED',reason:'媒体文件数、字节数或 strict 标记不符合固定 baseline'};
   push('media',mediaState.status,mediaState.reason,media,'npm run test:v31-rc2-media-local');
 
@@ -90,7 +89,7 @@ export async function buildFinalAcceptanceReport(){
   }
 
   const prodFile='reports/v31-final-production-receipt.json';const prod=await exists(path.join(root,prodFile))?await readJson(prodFile):null;
-  let prodState=receiptStatus(prod,source,{kind:'正式 HTTPS receipt'});
+  let prodState=receiptEvidenceStatus(prod,source,{kind:'正式 HTTPS receipt'});
   if(prodState.status==='READY'&&!(prod.status==='passed'&&prod.rollbackVerified&&prod.redeployVerified&&prod.httpsVerified&&String(prod.base||'').startsWith('https://')))prodState={status:'FAILED',reason:'正式 HTTPS deploy → rollback → redeploy 链不完整'};
   push('production-https',prodState.status,prodState.reason,prod,'npm run final:v31:production-receipt -- --issue <期号>');
 
