@@ -1,0 +1,98 @@
+name: P1-13 dependency security hardening
+
+on:
+  push:
+    branches:
+      - fix/p1-13-dependency-security
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: p1-13-dependency-security
+  cancel-in-progress: false
+
+jobs:
+  dependency-security:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: ${{ github.workspace }}/scripts/chrome-ci-wrapper.sh
+      V3_REAL_CHROME: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/p1-13-dependency-security
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Capture pre-fix audit
+        run: |
+          npm audit --json > /tmp/audit-before.json || true
+          node <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/audit-before.json','utf8'));
+          console.log('PRE',JSON.stringify(a.metadata?.vulnerabilities||{}));
+          for(const [name,v] of Object.entries(a.vulnerabilities||{})){
+            console.log(`VULN ${name} severity=${v.severity} direct=${v.isDirect} range=${v.range} fix=${JSON.stringify(v.fixAvailable)}`);
+            for(const via of v.via||[]) if(typeof via==='object') console.log(`  via ${via.source} ${via.title} ${via.range} ${via.url}`);
+          }
+          NODE
+
+      - name: Apply compatible audit fix to lockfile only
+        run: |
+          npm audit fix --package-lock-only || true
+          git diff --check
+          git diff --stat -- package-lock.json
+
+      - name: Reinstall remediated lockfile
+        run: npm ci
+
+      - name: Verify post-fix audit
+        run: |
+          npm audit --json > /tmp/audit-after.json || true
+          node <<'NODE'
+          const fs=require('fs');
+          const a=JSON.parse(fs.readFileSync('/tmp/audit-after.json','utf8'));
+          const v=a.metadata?.vulnerabilities||{};
+          console.log('POST',JSON.stringify(v));
+          for(const [name,row] of Object.entries(a.vulnerabilities||{})){
+            console.log(`REMAIN ${name} severity=${row.severity} direct=${row.isDirect} range=${row.range} fix=${JSON.stringify(row.fixAvailable)}`);
+            for(const via of row.via||[]) if(typeof via==='object') console.log(`  via ${via.source} ${via.title} ${via.range} ${via.url}`);
+          }
+          const blocking=(v.critical||0)+(v.high||0)+(v.moderate||0);
+          if(blocking!==0) throw new Error(`P1-13 compatible remediation incomplete: critical/high/moderate=${blocking}`);
+          NODE
+
+      - name: Preserve P1 finalization contracts
+        run: |
+          git config core.fileMode false
+          chmod +x scripts/chrome-ci-wrapper.sh
+          npm run test:p1-12
+          npm run test:p1-11
+          npm run test:p1-10
+          npm run test:p1-09
+          npm run test:p1-07
+          npm run test:p1-08
+          node scripts/studio-v3.mjs --check
+          npm run check:v3
+          npm run build:v3
+          git diff --check
+
+      - name: Commit lockfile remediation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo 'No lockfile changes were required'
+          else
+            git commit -m "fix(p1-13): remediate compatible dependency advisories"
+            git push origin HEAD:fix/p1-13-dependency-security
+          fi
