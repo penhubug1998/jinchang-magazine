@@ -67,8 +67,9 @@ assert(auditSource.includes("'video','image','table','coverMeta'"),'strict audit
 const p108Source=await readFile('scripts/p1-08-production-e2e-v3.mjs','utf8');
 assert(p108Source.includes('targetChars=420&structureMode=auto'),'P1-08 print fixture pagination density must leave A4 safety margin');
 assert(p108Source.includes("columns:1,columnGap:24,balanceColumns:false"),'P1-08 PDF fixture must keep the outer page single-column');
-assert(p108Source.includes("const pairedImage=pageBlocks[imageIndex],pairedText=pageBlocks[textIndex]"),'P1-08 media-right fixture must pair one image with one text block');
+assert(p108Source.includes("pairedText={type:'paragraph',style:'body',text:'图片说明：本段用于验证富 Word 分页后的 media-right 图文双栏编辑。'}"),'P1-08 media-right edit must remain valid even when rich reflow creates an image-only continuation page');
 assert(p108Source.includes("layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]"),'P1-08 must still exercise the inner media-right two-column container');
+assert(!p108Source.includes('textIndex=pageBlocks.findIndex'),'P1-08 must not assume the rebalanced image page still contains an imported paragraph');
 assert(!p108Source.includes("columns:2,columnGap:24,balanceColumns:true"),'P1-08 must not combine page-level and container-level double columns');
 
 for(const path of [
@@ -77,4 +78,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · strict audit accepts tables · P1-08 uses one realistic media-right pair · P1-21 Final delivery retained');
+console.log('P1-22 reconciliation smoke PASS · narration scope preserved · 500-block import fails closed · DOCX image/table pages rebalance with recursive container weight · template systems coexist · PDF Chromium isolated · strict audit accepts tables · P1-08 media-right edit survives image-only rich continuation pages · P1-21 Final delivery retained');
