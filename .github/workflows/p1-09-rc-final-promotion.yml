@@ -1,0 +1,70 @@
+name: P1-09 RC final promotion
+
+on:
+  push:
+    branches:
+      - feat/p1-09-rc-final-promotion
+    paths:
+      - .github/workflows/p1-09-rc-final-promotion.yml
+      - scripts/v31-beta1-production-v3.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rc-final-promotion:
+    runs-on: ubuntu-24.04
+    env:
+      CHROMIUM: /usr/bin/google-chrome
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/p1-09-rc-final-promotion
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Overlay RC2 candidate version
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const p=JSON.parse(fs.readFileSync('package.json','utf8'));
+          p.version='3.1.0-rc.2';
+          fs.writeFileSync('package.json',JSON.stringify(p,null,2)+'\n');
+          NODE
+          node -e "const p=require('./package.json'); if(p.version!=='3.1.0-rc.2') process.exit(1)"
+      - name: Run complete RC2 verification
+        run: npm run verify:v31-rc2
+      - name: Assert RC2 local candidate gate
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/v31-rc2-gate.json','utf8'));
+          if(r.version!=='3.1.0-rc.2'||r.releaseCandidate!==true||!String(r.status).startsWith('passed-local')) throw new Error(JSON.stringify(r));
+          if(r.openSeverity?.P0!==0||r.openSeverity?.P1!==0) throw new Error('RC2 still has P0/P1 blockers');
+          if(r.gates?.productionE2E?.status!=='pass'||r.gates.productionE2E.checkpoints<24) throw new Error('production E2E missing from RC2 gate');
+          console.log(`RC2 local candidate PASS: ${r.gates.productionE2E.checkpoints} production checkpoints; external gates intentionally remain HOLD.`);
+          NODE
+      - name: Restore final version and evaluate promotion
+        run: |
+          git checkout -- package.json
+          node -e "const p=require('./package.json'); if(p.version!=='3.1.0') process.exit(1)"
+          npm run final:v31:status
+          node <<'NODE'
+          const fs=require('fs');
+          const r=JSON.parse(fs.readFileSync('reports/v31-final-promotion-gate.json','utf8'));
+          const gate=id=>r.gates.find(x=>x.id===id);
+          if(r.candidateVersion!=='3.1.0-rc.2') throw new Error('candidate evidence version drift');
+          if(gate('rc2-local')?.status!=='READY') throw new Error('RC2 local evidence was not accepted by final promotion gate');
+          if(!['HOLD','READY_FOR_V3_1_0_FINAL','V3_1_0_FINAL_SEALED'].includes(r.status)) throw new Error(`unexpected final status ${r.status}`);
+          console.log(`Final Promotion status: ${r.status} · ${r.ready}/${r.total} READY`);
+          for(const x of r.gates) console.log(`${x.status}: ${x.id} · ${x.detail}`);
+          NODE
+      - name: Syntax and source cleanliness
+        run: |
+          node --check scripts/v31-beta1-production-v3.mjs
+          node --check scripts/v31-rc2-gate-v3.mjs
+          node --check scripts/v31-final-promotion-gate-v3.mjs
+          git diff --check
