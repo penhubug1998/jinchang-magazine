@@ -17,9 +17,9 @@ jobs:
         with:
           ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Fix P1-08 double-column overflow fixture
+      - name: Make P1-08 PDF fixture realistically paginated
         env:
-          EXPECTED_HEAD: 870440c926254fbf5076cbb6b0fea746116e084b
+          EXPECTED_HEAD: c0c85e5a4655789074dff5fa66aaf7027ace8906
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
@@ -29,12 +29,17 @@ jobs:
           from pathlib import Path
           p=Path('scripts/p1-08-production-e2e-v3.mjs')
           s=p.read_text()
-          old="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const imageBlocks=(pageWithImage.blocks||[]).filter(b=>b.type==='image'),textBlocks=(pageWithImage.blocks||[]).filter(b=>b.type!=='image');pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:2,columnGap:24,balanceColumns:true};pageWithImage.blocks=[{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:textBlocks},{blocks:imageBlocks}]}];mark('调整布局',{note:'media-right · 双栏 · mobile stack'});"
-          new="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const imageBlocks=(pageWithImage.blocks||[]).filter(b=>b.type==='image'),textBlocks=(pageWithImage.blocks||[]).filter(b=>b.type!=='image');pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=[{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:textBlocks},{blocks:imageBlocks}]}];mark('调整布局',{note:'media-right · 容器双栏 · mobile stack'});"
-          if old not in s: raise SystemExit('expected P1-08 layout line not found')
-          p.write_text(s.replace(old,new,1))
+          old_target="/api/import/parse?filename=p1-08-production.docx&targetChars=520&structureMode=auto"
+          new_target="/api/import/parse?filename=p1-08-production.docx&targetChars=420&structureMode=auto"
+          if old_target not in s: raise SystemExit('expected P1-08 targetChars URL not found')
+          s=s.replace(old_target,new_target,1)
+          old="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const imageBlocks=(pageWithImage.blocks||[]).filter(b=>b.type==='image'),textBlocks=(pageWithImage.blocks||[]).filter(b=>b.type!=='image');pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=[{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:textBlocks},{blocks:imageBlocks}]}];mark('调整布局',{note:'media-right · 容器双栏 · mobile stack'});"
+          new="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const pageBlocks=pageWithImage.blocks||[],imageIndex=pageBlocks.findIndex(b=>b.type==='image'),textIndex=pageBlocks.findIndex((b,i)=>i!==imageIndex&&b.type==='paragraph');assert(imageIndex>=0&&textIndex>=0,'没有可用于 media-right 的图文对');const pairedImage=pageBlocks[imageIndex],pairedText=pageBlocks[textIndex],insertAt=Math.min(imageIndex,textIndex),rest=pageBlocks.filter((_,i)=>i!==imageIndex&&i!==textIndex);rest.splice(insertAt,0,{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]});pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=rest;mark('调整布局',{note:'media-right · 单组图文双栏 · mobile stack'});"
+          if old not in s: raise SystemExit('expected P1-08 current layout line not found')
+          s=s.replace(old,new,1)
+          p.write_text(s)
           PY
           git diff --check
           git add scripts/p1-08-production-e2e-v3.mjs
-          git commit -m "fix(p1-22): keep P1-08 PDF fixture within A4"
+          git commit -m "fix(p1-22): keep P1-08 print layout within A4"
           git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
