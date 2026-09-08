@@ -9,7 +9,7 @@ export function issueTemplateCatalog() {
   return ISSUE_TEMPLATES.map(t => ({ ...t, sections: [...t.sections], pageCount: 8 }));
 }
 const paragraph = (text, style = 'body') => ({ type: 'paragraph', style, text });
-const card = (badge, title, text) => ({ type: 'cardline', badge, title, text, tone: 'default' });
+const card = (badge, title, text) => ({ type: 'cardline', badge, title, text: text.includes('【') ? text : `待补充：${text}`, tone: 'default' });
 const columns = (left, right, layout = 'two-equal') => ({ type: 'container', layout, gap: 'md', align: 'start', mobile: 'stack', columns: [{ blocks: left }, { blocks: right }] });
 const photo = caption => ({ type: 'image', src: 'assets/image/template-art.svg', alt: '模板抽象装饰插画，使用时可替换为本期照片', caption, frameRatio: '16:9', fit: 'cover', positionX: 50, positionY: 50 });
 
@@ -54,5 +54,8 @@ export function createIssueTemplate(templateId, { subtitle, publication, publish
     ...inner,
     { type: 'closing', navTitle: '封底', kicker: '编后记 / 下期再见', title: '每一次记录，都值得珍藏', design: { background: t.paper, color: t.accent, accent: t.accent, backgroundImage: 'assets/image/template-cover.svg', backgroundOverlay: 0.65 }, blocks: [paragraph('【编后记】感谢本期作者、读者与参与者，填写下一期的主题或征稿安排。', 'lead'), { type: 'quote', text: t.tagline }, { type: 'producer', text: `${publisher}制作` }, paragraph('【编辑信息】填写编辑、审核人员及发行日期。', 'small')] }
   ];
-  return { pages, design: { tokens: { accent: t.accent, paper: t.paper, canvas: t.canvas, text: '#303735', muted: '#747970', texture: 'plain', fontBase: 14, radius: 10, spacing: 12 } }, features: { flipAnimation: true, fullscreen: true, narration: { fallback: 'speechSynthesis', continuousDefault: false, rate: 1 } }, assets: [{ path: 'image/template-art.svg', content: artwork(t) }, { path: 'image/template-cover.svg', content: `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200"><rect width="900" height="1200" fill="${t.paper}"/>${artwork(t).replace('width="1200" height="800"', 'x="0" y="610" width="900" height="590"')}</svg>` }] };
+  // Use the existing strict-audit marker for every editable placeholder, including nested columns.
+  const markPlaceholders=value=>typeof value==='string'?value.replaceAll('【','【待补充·'):Array.isArray(value)?value.map(markPlaceholders):value&&typeof value==='object'?Object.fromEntries(Object.entries(value).map(([key,item])=>[key,markPlaceholders(item)])):value;
+  const markedPages=pages.map(markPlaceholders);
+  return { pages: markedPages, design: { tokens: { accent: t.accent, paper: t.paper, canvas: t.canvas, text: '#303735', muted: '#747970', texture: 'plain', fontBase: 14, radius: 10, spacing: 12 } }, features: { flipAnimation: true, fullscreen: true, narration: { fallback: 'speechSynthesis', continuousDefault: false, rate: 1 } }, assets: [{ path: 'image/template-art.svg', content: artwork(t) }, { path: 'image/template-cover.svg', content: `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1200" viewBox="0 0 900 1200"><rect width="900" height="1200" fill="${t.paper}"/>${artwork(t).replace('width="1200" height="800"', 'x="0" y="610" width="900" height="590"')}</svg>` }] };
 }

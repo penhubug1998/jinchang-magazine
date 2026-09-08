@@ -37,6 +37,11 @@ try {
     for(const ref of refs)await readFile(path.join(sandbox,issue.assetSource,stripAssetsPrefix(ref.path)));
     run('check-v3.mjs',['--issue',id]);run('build-v3.mjs',['--issue',id]);
     for(const ref of refs)await readFile(path.join(sandbox,'dist-v3',id,'assets',stripAssetsPrefix(ref.path)));
+    const auditRun=spawnSync(process.execPath,['scripts/audit-v3.mjs','--issue',id,'--strict'],{cwd:sandbox,encoding:'utf8'});
+    assert.equal(auditRun.status,1,'unfinished template must fail strict publication checks');
+    const audit=JSON.parse(await readFile(path.join(sandbox,'reports',`v3-release-audit-${id}.json`),'utf8')).issues[0];
+    const pendingPages=new Set(audit.blockers.filter(x=>x.code==='PLACEHOLDER_CONTENT').map(x=>x.location?.page));
+    for(const page of [3,4,5,6,7,8])assert(pendingPages.has(page),`${id} page ${page}: placeholder must be locatable before publishing`);
   }
   // Check server validation, new template route, real creation, and save compatibility.
   let logs='';

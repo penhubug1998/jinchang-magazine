@@ -12,6 +12,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - run: npm run test:workflow-usability
       - run: npm run test:default-templates
       - run: npm run verify:v31
       - name: Verify complete repository media
