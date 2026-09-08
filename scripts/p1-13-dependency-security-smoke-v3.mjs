@@ -28,6 +28,9 @@ const runtime=await readFile(path.join(root,'src/reader/vendor/tiptap-runtime.js
 const sha256=crypto.createHash('sha256').update(runtime).digest('hex');
 assert(manifest.version===EXPECTED,`vendor manifest version must be ${EXPECTED}`);
 assert(manifest.sha256===sha256,'vendor runtime SHA-256 does not match manifest');
+assert(manifest.bytes===runtime.length,'vendor manifest byte count does not match runtime');
+assert(manifest.reproducible===true,'vendor manifest must declare reproducible build');
+assert(!Object.prototype.hasOwnProperty.call(manifest,'generatedAt'),'source-controlled vendor manifest must not contain volatile generatedAt');
 assert(runtime.toString('utf8').includes(EXPECTED),'vendor runtime does not embed expected Tiptap version');
 
-console.log(`P1-13 dependency security smoke PASS · Tiptap ${EXPECTED} · vendor ${runtime.length} bytes · ${sha256}`);
+console.log(`P1-13 dependency security smoke PASS · Tiptap ${EXPECTED} · vendor ${runtime.length} bytes · ${sha256} · reproducible`);
