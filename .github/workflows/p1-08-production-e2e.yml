@@ -6,6 +6,7 @@ on:
       - feat/p1-08-e2e-production
     paths:
       - .github/workflows/p1-08-production-e2e.yml
+      - scripts/p1-08-table-production-patch.py
   workflow_dispatch:
 
 permissions:
@@ -25,6 +26,11 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
+      - name: Align table with production build contracts
+        run: |
+          python3 scripts/p1-08-table-production-patch.py
+          node --check scripts/check-v3.mjs
+          node --check scripts/lib-v3-production.mjs
       - name: Register P1-08 long-term command
         run: |
           node <<'NODE'
@@ -43,12 +49,13 @@ jobs:
           npm run test:v31-alpha26
           node --check scripts/p1-08-production-e2e-v3.mjs
           node --check scripts/v31-beta1-production-v3.mjs
+          npm run check:v3
           git diff --check
-      - name: Commit verified P1-08 command
+      - name: Commit verified P1-08 implementation
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm .github/workflows/p1-08-production-e2e.yml
-          git add package.json
+          git rm .github/workflows/p1-08-production-e2e.yml scripts/p1-08-table-production-patch.py
+          git add package.json scripts/check-v3.mjs scripts/lib-v3-production.mjs
           git commit -m "test(p1-08): seal full production E2E acceptance"
           git push origin HEAD:feat/p1-08-e2e-production
