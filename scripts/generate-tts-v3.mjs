@@ -46,7 +46,7 @@ try {
   const generated = [];
   for (const [index, page] of issue.pages.entries()) {
     const number = index + 1;
-    const text = narrationPageText(page, issue.articles || {});
+    const text = narrationPageText(page, issue.articles || {}, { scope: issue.features?.narration?.scope });
     if (!text) throw new Error(`第 ${number} 页没有可朗读正文，未生成不完整发布音频。`);
     const name = `page-${String(number).padStart(2, '0')}.mp3`;
     const file = path.join(staging, name);

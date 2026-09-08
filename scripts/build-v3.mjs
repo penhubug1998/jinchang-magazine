@@ -8,7 +8,7 @@ const root = process.cwd();
 const args = parseArgs();
 const output = path.join(root, "dist-v3");
 const readerSource = path.join(root, "src", "reader");
-const readerAssetTag = `${V3_VERSION}-ai-link-20260902-06`;
+const readerAssetTag = `${V3_VERSION}-production-20260908-1`;
 const selectedIssue = String(args.issue || "").trim() ? normalizeIssueId(args.issue) : "";
 const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 
