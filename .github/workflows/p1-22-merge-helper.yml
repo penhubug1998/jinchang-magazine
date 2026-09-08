@@ -17,9 +17,9 @@ jobs:
         with:
           ref: fix/p1-22-mainline-reconciliation
           fetch-depth: 0
-      - name: Adapt P1-08 media-right fixture to rich reflow
+      - name: Restore real images in Print PDF
         env:
-          EXPECTED_HEAD: 2b14f0fd20a464665801acfc3317cd0497225c86
+          EXPECTED_HEAD: 735417a33c8b31f4e9f26948344ce0f84a8ad4fd
         run: |
           set -euo pipefail
           git config user.name "p1-22 merge helper"
@@ -27,14 +27,14 @@ jobs:
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('scripts/p1-08-production-e2e-v3.mjs')
+          p=Path('scripts/studio-v3.mjs')
           s=p.read_text()
-          old="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const pageBlocks=pageWithImage.blocks||[],imageIndex=pageBlocks.findIndex(b=>b.type==='image'),textIndex=pageBlocks.findIndex((b,i)=>i!==imageIndex&&b.type==='paragraph');assert(imageIndex>=0&&textIndex>=0,'没有可用于 media-right 的图文对');const pairedImage=pageBlocks[imageIndex],pairedText=pageBlocks[textIndex],insertAt=Math.min(imageIndex,textIndex),rest=pageBlocks.filter((_,i)=>i!==imageIndex&&i!==textIndex);rest.splice(insertAt,0,{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]});pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=rest;mark('调整布局',{note:'media-right · 单组图文双栏 · mobile stack'});"
-          new="const pageWithImage=issue.pages.find(p=>collectBlocks([p],'image').length);const pageBlocks=pageWithImage.blocks||[],imageIndex=pageBlocks.findIndex(b=>b.type==='image');assert(imageIndex>=0,'没有可用于 media-right 的图片');const pairedImage=pageBlocks[imageIndex],pairedText={type:'paragraph',style:'body',text:'图片说明：本段用于验证富 Word 分页后的 media-right 图文双栏编辑。'},rest=pageBlocks.filter((_,i)=>i!==imageIndex);rest.splice(imageIndex,0,{type:'container',layout:'media-right',mobile:'stack',columns:[{blocks:[pairedText]},{blocks:[pairedImage]}]});pageWithImage.publishing={...(pageWithImage.publishing||{}),columns:1,columnGap:24,balanceColumns:false};pageWithImage.blocks=rest;mark('调整布局',{note:'media-right · 图片说明+图片双栏 · mobile stack'});"
-          if old not in s: raise SystemExit('expected P1-08 media-right fixture not found')
+          old="else if(t==='image')body=`<figure><div class=\"media-placeholder\">图片</div>${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;"
+          new="else if(t==='image'){const src=printImages.get(stripAssetsPrefix(b.src||''));if(!src)throw publicationFailure('PDF_IMAGE_UNAVAILABLE','页面图片未绑定本地资源',['请在素材库选择图片后重试。']);body=`<figure><img class=\"print-image\" src=\"${src}\" alt=\"${printEsc(b.alt||'')}\">${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;}"
+          if old not in s: raise SystemExit('expected Print PDF image placeholder renderer not found')
           p.write_text(s.replace(old,new,1))
           PY
           git diff --check
-          git add scripts/p1-08-production-e2e-v3.mjs
-          git commit -m "test(p1-22): adapt media-right edit after rich reflow"
+          git add scripts/studio-v3.mjs
+          git commit -m "fix(p1-22): render real images in Print PDF"
           git push origin HEAD:refs/heads/fix/p1-22-mainline-reconciliation
