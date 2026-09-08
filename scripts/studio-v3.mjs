@@ -1,4 +1,6 @@
 import http from 'node:http';
+import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
+import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
@@ -552,7 +554,8 @@ async function listAssets(issue,id) {
   rows.sort((a,b)=>a.kind.localeCompare(b.kind)||a.path.localeCompare(b.path,'zh-CN'));
   const ttsRefs=collectReferencedAssets(issue).filter(x=>x.kind==='tts'); const foundTts=new Set(rows.filter(x=>x.kind==='tts').map(x=>stripAssetsPrefix(x.path))); const missingTts=ttsRefs.filter(x=>!foundTts.has(stripAssetsPrefix(x.path))).map(x=>x.page).filter(Boolean);
   const stored=issue.features?.narration?.sourceDigest||null,current=narrationSourceDigest(issue);
-  return {assetSource:issue.assetSource||`issues/${id}/assets`,writable:isManagedAssetRoot(issue,id),items:rows,summary:{total:rows.length,used:rows.filter(x=>x.used).length,unused:rows.filter(x=>!x.used).length,bytes:rows.reduce((n,x)=>n+x.bytes,0),size:humanBytes(rows.reduce((n,x)=>n+x.bytes,0))},tts:{expected:ttsRefs.length,found:ttsRefs.length-missingTts.length,missingPages:missingTts,stale:Boolean(stored&&stored!==current),baselinedAt:issue.features?.narration?.baselinedAt||null}};
+  const changedPages=changedTtsPages(issue);
+  return {assetSource:issue.assetSource||`issues/${id}/assets`,writable:isManagedAssetRoot(issue,id),items:rows,summary:{total:rows.length,used:rows.filter(x=>x.used).length,unused:rows.filter(x=>!x.used).length,bytes:rows.reduce((n,x)=>n+x.bytes,0),size:humanBytes(rows.reduce((n,x)=>n+x.bytes,0))},tts:{expected:ttsRefs.length,found:ttsRefs.length-missingTts.length,missingPages:missingTts,changedPages,stale:changedPages.length>0||Boolean(stored&&stored!==current),baselinedAt:issue.features?.narration?.baselinedAt||null}};
 }
 function safeUploadName(input) {
   const raw=decodeURIComponent(String(input||'').trim()).normalize('NFKC');
@@ -816,7 +819,10 @@ async function readPublicationAudit(id,{refresh=true,strict=false}={}){
 }
 async function publicationStatus(id,{refreshAudit=true}={}){
   const issue=await readJson(path.join(root,'issues',id,'issue.json'));const {audit,run}=await readPublicationAudit(id,{refresh:true,strict:true});const evidence=await readPublicationEvidence(id);const status=buildPublicationStatus(issue,audit,evidence);
-  return {...status,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:evidence.publicDeployment||null};
+  const savedFingerprint=issueSourceFingerprint(issue),deployment=evidence.publicDeployment||null;
+  // A successful historical deployment is not proof that the edited source is online.
+  const publicDeployment=deployment?{...deployment,sourceMatchesCurrent:deployment.sourceFingerprint?deployment.sourceFingerprint===savedFingerprint:null}:null;
+  return {...status,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment};
 }
 function publicIssuePath(id){const raw=String(id||'').trim();const n=Number(raw);return Number.isInteger(n)&&n>0?String(n).padStart(2,'0'):raw;}
 function publicIssueUrl(id){return publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null;}
@@ -903,6 +909,7 @@ async function deployPublicIssue(id){
     for(const name of rootFiles){const file=path.join(publicMagazineRoot,name);const existed=await exists(file);rootState.find(x=>x.name===name).existed=existed;if(existed)await cp(file,path.join(backupDir,'root',name));await atomicPublicWrite(file,rootPayload[name]);}
     legacyRoute=await ensureLegacyPublicRoute(id,remotePath);
     const verification=await verifyPublicDeployment(id);const deployment={kind:'public',version:V3_VERSION,issue:id,remotePath,publicRoot:publicMagazineRoot,url:publicIssueUrl(id),archiveUrl:publicMagazineBaseUrl,deployedAt,treeSha256:staged.manifest?.treeSha256||null,verification,verified:Boolean(verification.ok),legacyRoute:legacyRoute?.legacyPath||null,backupDir:path.relative(root,backupDir).replaceAll('\\','/')};
+    deployment.sourceFingerprint=issueSourceFingerprint(await readJson(path.join(target,'issue.json')));
     const receiptFile=path.join(receiptDir,`${id}-${token}.json`);await writeFile(receiptFile,`${JSON.stringify(deployment,null,2)}\n`,'utf8');await writeFile(path.join(receiptDir,`${id}-latest.json`),`${JSON.stringify(deployment,null,2)}\n`,'utf8');await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports',`v3-public-deployment-${id}.json`),`${JSON.stringify({...deployment,receiptFile:path.relative(root,receiptFile).replaceAll('\\','/')},null,2)}\n`,'utf8');await writePublicationEvidence(id,{publicDeployment:deployment,outputs:{public:deployment}});return deployment;
   }catch(error){
     await rm(staging,{recursive:true,force:true}).catch(()=>{});if(targetSwapped)await rm(target,{recursive:true,force:true}).catch(()=>{});if(legacyRoute?.created)await rm(legacyRoute.legacyDir,{recursive:true,force:true}).catch(()=>{});if(previousExisted&&await exists(path.join(backupDir,'issue')))await rename(path.join(backupDir,'issue'),target).catch(()=>{});for(const row of rootState){const file=path.join(publicMagazineRoot,row.name),backup=path.join(backupDir,'root',row.name);if(row.existed&&await exists(backup))await cp(backup,file).catch(()=>{});else if(!row.existed)await rm(file,{force:true}).catch(()=>{});}throw error;
@@ -1000,12 +1007,12 @@ async function publicationWorkflowStatus(id,{refreshAudit=false}={}){
   const reviewReady=unresolved.length===0,signoffReady=reviewReady&&fresh;
   const web=status.outputs?.web||{},buildReady=Boolean(web.url||web.href||web.path),gateReady=Boolean(status.canPublish);
   const releaseOutput=status.outputs?.release||{},releaseDone=Boolean(issue.status==='published'&&(releaseOutput.path||releaseOutput.generatedAt));
-  const configured=Boolean(status.publicShare?.configured),verified=Boolean(status.publicDeployment?.verified||status.outputs?.public?.verified);
+  const configured=Boolean(status.publicShare?.configured),verified=Boolean(status.publicDeployment?.verified&&status.publicDeployment?.sourceMatchesCurrent===true);
   // Internal review and handoff remain available as records, but they are no
   // longer release blockers. The release flow only advances through the
   // machine-verifiable publication check, generated outputs, and deployment.
   let nextAction='done';
-  if(!gateReady)nextAction='preflight';else if(!buildReady)nextAction='build';else if(!releaseDone)nextAction='release';else if(configured&&!verified)nextAction='deploy';
+  if(!gateReady)nextAction='preflight';else if(!buildReady)nextAction='build';else if(!releaseDone||status.publicDeployment&&status.publicDeployment.sourceMatchesCurrent!==true)nextAction='release';else if(configured&&!verified)nextAction='deploy';
   return {version:1,issue:id,generatedAt:new Date().toISOString(),sourceFingerprint:fingerprint,nextAction,review:{ready:reviewReady,required:false,unresolved:unresolved.length,important:important.length,updatedAt:review.updatedAt||null},signoff:{ready:signoffReady,required:false,accepted:Boolean(accepted),fresh,legacy:legacyAccepted,round:latest?.round||null,recipient:latest?.recipient||'',role:latest?.role||'',acceptedAt:latest?.acceptedAt||null,status:latest?.status||'missing'},gate:{ready:gateReady,lastPreflight:status.lastPreflight||null,reason:status.reason||''},build:{ready:buildReady,web},release:{ready:gateReady&&buildReady,completed:releaseDone,output:releaseOutput},deployment:{configured,verified,url:status.publicShare?.url||status.publicDeployment?.url||''}};
 }
 async function assertPublicationWorkflowReleaseReady(id){
@@ -1017,17 +1024,36 @@ async function assertPublicationWorkflowReleaseReady(id){
 }
 
 async function generateFormalRelease(id,report=()=>{}){await assertPublicationWorkflowReleaseReady(id);report({stage:forceReleaseEnabled()?'直接发布':'执行正式发布检查',percent:15});const result=await runScriptAsync('publish-v3.mjs',['--issue',id,'--mark-published',...(forceReleaseEnabled()?[]:['--strict']),'--skip-browser']);if(!result.ok){const detail=summarizeCommandFailure(result.output,'正式发布',id);throw Object.assign(new Error(detail),{statusCode:409,code:'PUBLICATION_RELEASE_BLOCKED',details:detail});}report({stage:'写入发布回执',percent:90});const releaseDir=path.join(root,'release-v3',id);const manifest={kind:'release',generatedAt:new Date().toISOString(),path:path.relative(root,releaseDir).replaceAll('\\','/'),forceRelease:forceReleaseEnabled(),output:result.output};await writePublicationEvidence(id,{outputs:{release:manifest}});return manifest;}
+async function replaceTtsFile(bin,target,text,options){
+  const ext=path.extname(target),temporary=`${target.slice(0,-ext.length)}.${randomUUID()}.pending${ext}`;
+  try{
+    await generateTtsFile(bin,temporary,text,options);
+    const info=await stat(temporary);if(!info.size)throw new Error('生成了空音频');
+    await rename(temporary,target);
+    return info;
+  }finally{await rm(temporary,{force:true});}
+}
 async function generateTtsForIssue(id,data,bin,report=()=>{}){
   const issueFile=path.join(root,'issues',id,'issue.json'),issue=await readJson(issueFile),rows=Array.isArray(data.pages)?data.pages.slice(0,200):[];
+  data={...data,voice:data.voice||issue.features?.narration?.voice||'zh-CN-XiaoxiaoNeural',rate:data.rate??issue.features?.narration?.rate??1};
   if(!rows.length)throw Object.assign(new Error('没有可生成的页面正文'),{statusCode:400,code:'TTS_NO_PAGES'});
   const pattern=ttsOutputPattern(issue,bin),base=managedAssetRoot(id),snapshot=await snapshotIssue(id,'tts-generate-before'),generated=[],failed=[];await mkdir(path.join(base,'tts'),{recursive:true});
   for(const [index,row] of rows.entries()){
-    const page=Number(row.page),text=String(row.text||'').trim();report({stage:`生成 TTS：第 ${page||'?'} 页`,percent:Math.min(90,5+Math.round((index/Math.max(1,rows.length))*80))});
+    const page=Number(row.page),text=serverNarrationPageText(issue.pages?.[page-1]||{},issue.articles||{},{scope:issue.features?.narration?.scope});report({stage:`生成 TTS：第 ${page||'?'} 页`,percent:Math.min(90,5+Math.round((index/Math.max(1,rows.length))*80))});
     if(!Number.isInteger(page)||page<1||page>(issue.pages?.length||0)||!text){failed.push({page,error:'页面编号或正文无效'});continue;}
     const rel=ttsOutputPath(pattern,page),target=path.resolve(base,rel);if(!target.startsWith(path.resolve(base)+path.sep)){failed.push({page,error:'TTS 输出路径越界'});continue;}
-    try{await rm(target,{force:true});await generateTtsFile(bin,target,text,{voice:data.voice,rate:data.rate});const info=await stat(target);if(!info.size)throw new Error('生成了空音频');generated.push({page,path:`assets/${rel}`,bytes:info.size,size:humanBytes(info.size)});}catch(e){await rm(target,{force:true});failed.push({page,error:e.message||String(e)});}
+    try{const info=await replaceTtsFile(bin,target,text,{voice:data.voice,rate:data.rate});generated.push({page,path:`assets/${rel}`,bytes:info.size,size:humanBytes(info.size)});}catch(e){failed.push({page,error:e.message||String(e)});}
   }
   if(generated.length){const neural=path.basename(bin).toLowerCase().includes('edge-tts');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.pattern=pattern;issue.features.narration.rate=Number(data.rate)||issue.features.narration.rate||1;issue.features.narration.generator=neural?'edge-neural':'server';if(neural)issue.features.narration.voice=String(data.voice||'zh-CN-XiaoxiaoNeural');issue.features.narration.generatedAt=new Date().toISOString();await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);}
+  if(generated.length){
+    const n=issue.features.narration,current=ttsGenerationDigests(issue);
+    n.generationDigests=(n.generationDigests||[]).slice(0,current.length);
+    for(const row of generated)n.generationDigests[row.page-1]=current[row.page-1];
+    if(current.every((digest,i)=>n.generationDigests[i]===digest)){
+      n.sourceDigest=narrationSourceDigest(issue);n.pageDigests=narrationPageDigests(issue);n.baselinedAt=new Date().toISOString();
+    }
+    await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');
+  }
   const source=generated.length?await writeSourceReceipt(id,issue,{reason:'tts-generate',snapshot}):null;report({stage:'TTS 结果已写入',percent:95});return {ok:Boolean(generated.length),snapshot,pattern,generated,failed,narration:issue.features?.narration||null,issue:generated.length?issue:null,source};
 }
 
@@ -1240,6 +1266,16 @@ const server=http.createServer(async(req,res)=>{try{
     if (seg[3]==='assets'&&seg[4]==='delete'&&req.method==='DELETE') { const data=await body(req); try{return send(res,200,await deleteAsset(issue,id,data.path));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR',references:e.references||[]});} }
     if (seg[3]==='assets'&&seg[4]==='cleanup'&&req.method==='POST') { const data=await body(req); try{return send(res,200,await cleanupAssets(issue,id,Boolean(data.confirm)));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR'});} }
     if (seg[3]==='assets'&&seg[4]==='poster'&&req.method==='POST') { const data=await body(req); try{return send(res,201,await generateVideoPoster(issue,id,data.path));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR'});} }
+    if(seg[3]==='tts'&&seg[4]==='preview'&&req.method==='POST'){
+      const data=await body(req,32*1024),text=String(data.text||'').trim().slice(0,200),bin=resolveTtsGenerator();
+      if(!text)return send(res,400,{error:'当前页没有可试听正文'});
+      if(!bin||!path.basename(bin).toLowerCase().includes('edge-tts'))return send(res,503,{error:'服务器尚未配置 Edge TTS'});
+      const voice=String(data.voice||'zh-CN-XiaoxiaoNeural'),rate=Number(data.rate??1);
+      if(!/^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$/.test(voice)||!Number.isFinite(rate)||rate<.5||rate>2)return send(res,400,{error:'声音或语速无效'});
+      const dir=await mkdtemp(path.join(os.tmpdir(),'jinchang-tts-preview-'));
+      try{const file=path.join(dir,'preview.mp3');await generateTtsFile(bin,file,text,{voice,rate});const bytes=await readFile(file);if(!bytes.length)throw Error('生成了空音频');return send(res,200,{audio:`data:audio/mpeg;base64,${bytes.toString('base64')}`});}
+      finally{await rm(dir,{recursive:true,force:true});}
+    }
     if (seg[3]==='tts'&&seg[4]==='generate'&&req.method==='POST') {
       if(!isManagedAssetRoot(issue,id))return send(res,409,{error:'当前期刊使用历史/外部 assetSource，不能直接写入 TTS。请先迁移到本期独立 assets 目录。',code:'ASSET_SOURCE_READONLY'});
       const bin=resolveTtsGenerator();if(!bin)return send(res,501,{error:'服务器未配置 TTS 生成器。请在服务环境安装 espeak-ng，或设置 V3_TTS_BIN 与 V3_TTS_ARGS；浏览器朗读回退仍可用。',code:'TTS_GENERATOR_UNAVAILABLE'});

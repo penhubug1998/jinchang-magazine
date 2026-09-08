@@ -156,6 +156,14 @@ export function narrationPageDigests(issue = {}) {
 export function narrationSourceDigest(issue = {}) {
   return crypto.createHash('sha256').update(narrationPageDigests(issue).join('|')).digest('hex');
 }
+export function ttsGenerationDigests(issue){
+  const n=issue.features?.narration||{};
+  return narrationPageDigests(issue).map(text=>crypto.createHash('sha256').update(JSON.stringify([text,n.voice||'zh-CN-XiaoxiaoNeural',Number(n.rate)||1])).digest('hex'));
+}
+export function changedTtsPages(issue){
+  const n=issue.features?.narration||{},current=ttsGenerationDigests(issue);
+  return current.flatMap((value,i)=>n.generationDigests?.[i]===value?[]:[i+1]);
+}
 
 export async function listFilesRecursive(dir) {
   const output = [];

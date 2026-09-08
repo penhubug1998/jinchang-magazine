@@ -17,7 +17,7 @@
       "defaultOn": false
     },
     "narration": {
-      "pattern": "assets/tts/page-{page}.wav",
+      "pattern": "assets/tts/page-{page}.mp3",
       "fallback": "speechSynthesis",
       "continuousDefault": false,
       "rate": 1,
@@ -167,19 +167,107 @@
           "type": "paragraph",
           "style": "body",
           "text": "2026年8月23日迎来处暑，9月7日将迎来白露。暑气渐消，秋意渐浓，金昌也将逐步进入天高气爽、昼夜温差加大的时节。在这夏秋转换、硕果初成的美好时光里，第三期老干部电子期刊再次与各位老同志见面。",
-          "id": "block_vc6zes"
+          "id": "block_vc6zes",
+          "richText": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "orderedList",
+                "attrs": {
+                  "start": 1,
+                  "type": null
+                },
+                "content": [
+                  {
+                    "type": "listItem",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "attrs": {
+                          "textAlign": null
+                        },
+                        "content": [
+                          {
+                            "type": "text",
+                            "marks": [
+                              {
+                                "type": "bold"
+                              },
+                              {
+                                "type": "italic"
+                              },
+                              {
+                                "type": "underline"
+                              },
+                              {
+                                "type": "highlight",
+                                "attrs": {
+                                  "color": "#f231a8"
+                                }
+                              }
+                            ],
+                            "text": "2026年8月23日迎来处暑，9月7日将迎来白露。暑气渐消，秋意渐浓，金昌也将逐步进入天高气爽、昼夜温差加大的时节。在这夏秋转换、硕果初成的美好时光里，第三期老干部电子期刊再次与各位老同志见面。"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                }
+              }
+            ]
+          }
         },
         {
           "type": "paragraph",
           "style": "body",
           "text": "今年是中国共产党成立105周年，也是“十五五”开局之年。当前，全党全国各族人民正坚定信心、真抓实干，扎实推动高质量发展，不断把中国式现代化事业推向前进。广大离退休干部虽然离开了工作岗位，但政治本色不能褪、理想信念不能松、纪律规矩不能忘，仍然是党和国家事业发展的宝贵财富和重要力量。",
-          "id": "block_11lm37d"
+          "id": "block_11lm37d",
+          "richText": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "今年是中国共产党成立105周年，也是“十五五”开局之年。当前，全党全国各族人民正坚定信心、真抓实干，扎实推动高质量发展，不断把中国式现代化事业推向前进。广大离退休干部虽然离开了工作岗位，但政治本色不能褪、理想信念不能松、纪律规矩不能忘，仍然是党和国家事业发展的宝贵财富和重要力量。"
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "type": "paragraph",
           "style": "body",
           "text": "本期电子期刊继续设置时政要闻、政治理论学习、安全防范、警示教育、时令养生五大版块。我们将一起关注近期党和国家重要部署，学习领悟习近平党建思想，认识AI换脸、AI拟声等新型诈骗手段，重温退休党员干部必须严守的纪律红线，并围绕处暑、白露时节为大家送上秋季健康提醒。",
-          "id": "block_19vnc7u"
+          "id": "block_19vnc7u",
+          "richText": {
+            "type": "doc",
+            "content": [
+              {
+                "type": "paragraph",
+                "attrs": {
+                  "textAlign": null
+                },
+                "content": [
+                  {
+                    "type": "text",
+                    "text": "本期电子期刊继续设置时政要闻、政治理论学习、安全防范、警示教育、时令养生五大版块。我们将一起关注近期党和国家重要部署，学习领悟习近平党建思想，认识AI换脸、AI拟声等新型诈骗手段，重温退休党员干部必须严守的纪律红线，并围绕处暑、白露时节为大家送上秋季健康提醒。"
+                  }
+                ]
+              }
+            ]
+          }
         },
         {
           "type": "paragraph",
@@ -2162,7 +2250,7 @@
   "publishedAt": "2026-09-08T10:57:46.296Z",
   "revision": {
     "pending": true,
-    "updatedAt": "2026-09-08T11:48:38.882Z",
+    "updatedAt": "2026-09-08T13:27:23.977Z",
     "basePublishedAt": "2026-09-08T10:57:46.296Z",
     "source": "studio",
     "publishedAt": "2026-09-08T10:57:46.296Z",

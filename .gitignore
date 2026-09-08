@@ -5,6 +5,7 @@
 !.env.example
 .vscode/
 .idea/
+node_modules/
 *.log
 .tmp-v3-*/
 .v3-drafts/
