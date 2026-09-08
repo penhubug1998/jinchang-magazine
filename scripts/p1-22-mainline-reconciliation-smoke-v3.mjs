@@ -54,6 +54,9 @@ assert(studioSource.includes('HOME:userDataDir'),'PDF Chromium HOME isolation mi
 assert(studioSource.includes("XDG_CONFIG_HOME:path.join(userDataDir,'config')"),'PDF Chromium XDG config isolation missing');
 assert(studioSource.includes("XDG_CACHE_HOME:path.join(userDataDir,'cache')"),'PDF Chromium XDG cache isolation missing');
 
+const auditSource=await readFile('scripts/audit-v3.mjs','utf8');
+assert(auditSource.includes("'video','image','table','coverMeta'"),'strict audit must accept table blocks produced by DOCX import');
+
 const p108Source=await readFile('scripts/p1-08-production-e2e-v3.mjs','utf8');
 assert(p108Source.includes('targetChars=420&structureMode=auto'),'P1-08 print fixture pagination density must leave A4 safety margin');
 assert(p108Source.includes("columns:1,columnGap:24,balanceColumns:false"),'P1-08 PDF fixture must keep the outer page single-column');
@@ -67,4 +70,4 @@ for(const path of [
   'scripts/p1-21-final-delivery-smoke-v3.mjs'
 ]) await readFile(path);
 
-console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · P1-08 uses realistic print pagination and one media-right pair · P1-21 Final delivery files retained');
+console.log('P1-22 reconciliation smoke PASS · historical narration scope preserved · explicit page-and-articles supported · 500-block import fails closed · CLI and canonical Studio template systems coexist · PDF Chromium isolated · strict audit accepts DOCX table blocks · P1-08 uses realistic print pagination and one media-right pair · P1-21 Final delivery files retained');
