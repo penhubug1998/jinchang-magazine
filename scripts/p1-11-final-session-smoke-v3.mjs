@@ -1,4 +1,4 @@
-import { canonicalSessionId, sessionState, sha256Json, verifyBundleObjects } from './lib-p1-11-final-session-v3.mjs';
+import { canonicalSessionId, sessionState, sha256Json, verifyBundleObjects, evidenceFileEntry, verifyEvidenceFiles } from './lib-p1-11-final-session-v3.mjs';
 
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const source={commit:'a'.repeat(40),committedAt:'2026-09-08T00:00:00Z',available:true};
@@ -15,4 +15,10 @@ manifest.manifestSha256=sha256Json(manifest);
 assert(verifyBundleObjects(bundle,manifest).ok,'fresh bundle should verify');
 const tampered=structuredClone(bundle);tampered.acceptance.ready=8;assert(!verifyBundleObjects(tampered,manifest).ok,'tampered bundle must fail verification');
 const badManifest=structuredClone(manifest);badManifest.sourceCommit='d'.repeat(40);assert(!verifyBundleObjects(bundle,badManifest).ok,'tampered manifest must fail verification');
+
+const packageEntry=await evidenceFileEntry('package.json');
+const diskManifest={files:[{path:packageEntry.path,present:packageEntry.present,bytes:packageEntry.bytes,sha256:packageEntry.sha256}]};
+assert((await verifyEvidenceFiles(diskManifest)).ok,'current package.json evidence should verify');
+const wrongDisk={files:[{...diskManifest.files[0],sha256:'0'.repeat(64)}]};
+assert(!(await verifyEvidenceFiles(wrongDisk)).ok,'wrong on-disk hash must fail');
 console.log('P1-11 Final Acceptance Session smoke PASS');
