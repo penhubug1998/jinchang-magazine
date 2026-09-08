@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import crypto from 'node:crypto';
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-if(!/^3\.1\.0-alpha\.(?:[2-9]|10|11|12|13|14|15|16|17|18|19)$/.test(pkg.version))throw new Error(`V3.1 alpha2 回归不支持当前版本：${pkg.version}`);
+if(pkg.version!=='3.1.0'&&!/^3\.1\.0-alpha\.(?:[2-9]|10|11|12|13|14|15|16|17|18|19)$/.test(pkg.version))throw new Error(`V3.1 alpha2 回归不支持当前版本：${pkg.version}`);
 if(pkg.v3StableVersion!=='3.0.0')throw new Error('V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha2.json','utf8'));
 if(schema.design?.inheritance?.join('>')!=='theme>page>block')throw new Error('三级样式继承 schema 不完整');

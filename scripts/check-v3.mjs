@@ -126,6 +126,7 @@ function validateIssue(issue, source, { allowLegacy = true } = {}){
     validatePublishing(page.publishing,`${source}: pages[${index}]`,`page`);
     validateBlocks(issue, page, index, source);
   });
+  if (issue.features?.narration?.scope != null && !['page','page-and-articles'].includes(issue.features.narration.scope)) fail(`${source}: narration.scope 必须为 page 或 page-and-articles`);
   if (issue.features?.narration?.pattern && !issue.features.narration.pattern.includes("{page}")) fail(`${source}: narration.pattern 必须包含 {page}`);
 }
 

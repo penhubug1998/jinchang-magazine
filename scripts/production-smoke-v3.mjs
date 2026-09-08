@@ -24,6 +24,8 @@ for (const file of ['lib-v3-production.mjs','new-issue-v3.mjs','sync-assets-v3.m
   await cp(path.join(root, 'scripts', file), path.join(sandbox, 'scripts', file));
 }
 await cp(path.join(root, 'package.json'), path.join(sandbox, 'package.json'));
+await mkdir(path.join(sandbox,'src','studio'),{recursive:true});
+await cp(path.join(root,'src','studio','issue-templates.js'),path.join(sandbox,'src','studio','issue-templates.js'));
 
 try {
   run('new-issue-v3.mjs', ['--subtitle', 'Alpha4 production smoke']);

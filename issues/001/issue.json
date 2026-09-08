@@ -21,6 +21,7 @@
       "fallback": "speechSynthesis",
       "continuousDefault": false,
       "rate": 1,
+      "scope": "page",
       "sourceDigest": "57ee744b73de558349c3c48f764bb7c718a2aa5877c03c5e25aafd43ebdb53df",
       "pageDigests": [
         "297c56c60a7c76eea670",

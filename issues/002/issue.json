@@ -20,6 +20,7 @@
       "fallback": "speechSynthesis",
       "continuousDefault": false,
       "rate": 1,
+      "scope": "page",
       "sourceDigest": "acb99a625ea7cb0b81d61a2873665ffdf82ba939688736c7f01240180d63fbba",
       "pageDigests": [
         "eeee8150b2cd8b8939b6",

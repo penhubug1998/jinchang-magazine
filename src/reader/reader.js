@@ -719,7 +719,7 @@ function speechTextOfBlock(block = {}) {
     case "image": case "video":
       return block.caption || "";
     case "articleLink": {
-      const article = state.issue?.articles?.[block.articleId] || {};
+      const article = state.issue?.features?.narration?.scope === "page" ? {} : (state.issue?.articles?.[block.articleId] || {});
       return [block.title, article.title, article.subtitle, ...(article.paras || [])].filter(Boolean).join("。 ");
     }
     case "container":

@@ -76,7 +76,7 @@ assert(html.includes('contentEditorHint')&&studio.includes('data-empty-add-block
 const port=4231,child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{stdio:['ignore','pipe','pipe']});let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);
 try{
  let health;for(let i=0;i<120;i++){try{const r=await fetch(`http://127.0.0.1:${port}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(40)}
- assert(['3.1.0-alpha.21','3.1.0-alpha.22','3.1.0-alpha.22.1','3.1.0-alpha.23','3.1.0-alpha.24','3.1.0-alpha.25','3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2','3.1.0'].includes(health?.version),`health ${JSON.stringify(health)} ${logs}`);
+ assert((health?.version===pkg.version),`health ${JSON.stringify(health)} ${logs}`);
  const issue=await(await fetch(`http://127.0.0.1:${port}/api/issues/001`)).json();assert(issue.pages?.length===18,'legacy issue read failed');
  assert((await fetch(`http://127.0.0.1:${port}/workspace/?issue=001&page=1`)).ok,'workspace route failed');
  const readerHtml=await fetch(`http://127.0.0.1:${port}/live-preview/001/?studio=1&embed=1&page=4&v=cache-test`);assert(readerHtml.headers.get('cache-control')==='no-store','versioned Reader HTML must remain live');

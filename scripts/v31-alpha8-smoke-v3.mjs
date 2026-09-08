@@ -8,8 +8,8 @@ import path from 'node:path';
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha8 版本错误：${pkg.version}`);
-assert(['3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 alpha8 schema 版本错误：${pkg.v31SchemaVersion}`);
+assert(['3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19','3.1.0'].includes(pkg.version),`V3.1 alpha8 版本错误：${pkg.version}`);
+assert(['3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19','3.1-alpha24'].includes(pkg.v31SchemaVersion),`V3.1 alpha8 schema 版本错误：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schemaText=await readFile('baselines/v3-schema-3.1-alpha8.json','utf8'),schema=JSON.parse(schemaText),digest=crypto.createHash('sha256').update(schemaText).digest('hex').slice(0,16);
 assert(schema.internalReviewWorkspace?.storedOutsideIssueJson===true&&schema.internalReviewWorkspace?.readerRuntimeDependency===false,'Alpha8 内部校审必须与 issue.json / Reader 隔离');
@@ -22,8 +22,8 @@ assert(schema.evidenceBinding?.verifiedParentOverlaySha256==='110906fa3ef3360b93
 
 const [studio,html,css,server]=await Promise.all(['src/studio/studio.js','src/studio/index.html','src/studio/studio.css','scripts/studio-v3.mjs'].map(f=>readFile(f,'utf8')));
 for(const token of ['openReviewWorkspace','loadReviewWorkspace','saveReviewWorkspace','reviewWorkspaceAnalysis','importAuditReviewFinding','runReviewAudit','reviewAuditKey','locateReviewItem'])assert(studio.includes(token),`Studio Alpha8 缺少 ${token}`);
-for(const id of ['reviewWorkspaceBtn','reviewWorkspaceDialog','reviewWorkspaceMetrics','reviewAuditFindings','reviewWorkspaceList','reviewRunAudit','reviewAddManual','reviewSaveWorkspace'])assert(html.includes(`id="${id}"`),`Studio Alpha8 UI 缺少 ${id}`);
-assert(html.includes('V3.1 alpha8 · 内部校审 / 问题闭环')||(html.includes('V3.1 alpha9 · 校审轮次 / 交接签收')||html.includes('V3.1 alpha10 · 交接基线 / 复核差异')||html.includes('V3.1 alpha11 · 沉浸式工作区 / 双屏编辑')||html.includes('V3.1 alpha12 · 整期结构快速导入')||(html.includes('V3.1 alpha13 · 动态板块语义识别')||(html.includes('V3.1 alpha15 · 所见即所得工作区 / 制作中心瘦身')||(html.includes('V3.1 alpha16 · 媒体直编 / 多窗口同步 / 版面健康')||(html.includes('V3.1 alpha17 · Reader 最大化 / 页面控制台')||html.includes('V3.1 alpha18 · 交互修复 / 页面同步 / 移动增强')))))),'Studio Alpha8/Alpha9 标识缺失');
+for(const id of ['reviewWorkspaceFromAudit','reviewWorkspaceDialog','reviewWorkspaceMetrics','reviewAuditFindings','reviewWorkspaceList','reviewRunAudit','reviewAddManual','reviewSaveWorkspace'])assert(html.includes(`id="${id}"`),`Studio Alpha8 UI 缺少 ${id}`);
+assert(html.includes('id="studioVersionLabel"')&&html.includes('runtime version is resolved from /api/health'),'Studio runtime version marker missing');
 assert(css.includes('V3.1-alpha8 · internal editorial review workspace'),'Studio Alpha8 样式缺失');
 for(const token of ['review-workspace','.v3-review-workspaces','sanitizeReviewWorkspace','REVIEW_WORKSPACE_LIMIT','V3_REVIEW_WORKSPACE_DIR'])assert(server.includes(token),`Studio API Alpha8 缺少 ${token}`);
 
@@ -41,7 +41,7 @@ const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1'
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function wait(url){for(let i=0;i<120;i++){try{const r=await fetch(url);if(r.ok)return r}catch{}await sleep(50)}throw new Error(`Studio 未就绪：${logs.join('')}`)}
 try{
-  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&['3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version),`Alpha8 Studio health 异常：${JSON.stringify(health)}`);
+  const health=await (await wait(`http://127.0.0.1:${port}/api/health`)).json();assert(health.ok&&(health?.version===pkg.version),`Alpha8 Studio health 异常：${JSON.stringify(health)}`);
   const issueRaw=await readFile('issues/001/issue.json','utf8'),beforeHash=crypto.createHash('sha256').update(issueRaw).digest('hex'),before=JSON.parse(issueRaw),beforeStatus=before.status;
   let r=await fetch(`http://127.0.0.1:${port}/api/issues/001/review-workspace`),j=await r.json();assert(r.ok&&j.issueId==='001'&&Array.isArray(j.items)&&j.items.length===0,'Alpha8 内部校审初始状态异常');
   const valid={version:1,issueId:'001',items:[{id:'alpha8-audit',title:'图片替代文字待复核',category:'accessibility',severity:'important',status:'open',page:3,note:'来自自动审计，等待人工确认。',source:'audit',auditKey:'warning|IMAGE_ALT_MISSING|page|3|blocks',auditCode:'IMAGE_ALT_MISSING',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()},{id:'alpha8-manual',title:'标题措辞人工复核',category:'人工校审',severity:'normal',status:'reviewed',page:4,note:'已与原稿核对。',source:'manual',auditKey:'',auditCode:'',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()}]};

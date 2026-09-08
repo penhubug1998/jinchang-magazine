@@ -177,7 +177,12 @@ function deriveTitle(blocks,filename='') {
   const first=blocks.find(b=>b.text)?.text||''; if(first&&first.length<=80)return first.slice(0,MAX_TITLE);
   return path.basename(filename,path.extname(filename)).slice(0,MAX_TITLE)||'导入文章';
 }
-function finalizeDocument(doc) { doc.blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink').slice(0,500);doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length; doc.stats={characters:doc.blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:doc.blocks.length}; return doc; }
+function finalizeDocument(doc) {
+  const blocks=(doc.blocks||[]).filter(b=>b?.text||b?.title||b?.type==='cardline'||b?.type==='articleLink');
+  if(blocks.length>500)throw Object.assign(new Error(`本次识别到 ${blocks.length} 个内容段落，超过单次导入 500 段上限。请拆成多个文件后分别导入；当前期刊未被修改。`),{code:'IMPORT_BLOCK_LIMIT'});
+  doc.blocks=blocks;doc.articles=doc.articles&&typeof doc.articles==='object'?doc.articles:{};doc.linkCount=Object.keys(doc.articles).length;
+  doc.stats={characters:blocks.reduce((n,b)=>n+String(b.text||'').length+String(b.title||'').length+String(b.case||'').length+String(b.warning||'').length,0),blocks:blocks.length};return doc;
+}
 
 function parseDocxXml(xml,filename='',relationships={}) {
   const registry=createLinkRegistry(); const paras=[]; const re=/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g; let m;

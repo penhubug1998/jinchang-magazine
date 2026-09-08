@@ -138,13 +138,14 @@ function blockSpeechText(block = {}, articles = {}) {
   }
 }
 
-export function narrationPageText(page = {}, articles = {}) {
-  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, articles))]
+export function narrationPageText(page = {}, articles = {}, { scope = 'page-and-articles' } = {}) {
+  const spokenArticles = scope === 'page' ? {} : articles;
+  return [page.kicker, page.title, page.subtitle, ...(page.body || []), ...(page.blocks || []).map(block => blockSpeechText(block, spokenArticles))]
     .filter(Boolean).join('。').replace(/\s+/g, ' ').trim();
 }
 
 export function narrationPageDigests(issue = {}) {
-  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {})).digest('hex').slice(0, 20));
+  return (issue.pages || []).map(page => crypto.createHash('sha256').update(narrationPageText(page, issue.articles || {}, { scope: issue.features?.narration?.scope })).digest('hex').slice(0, 20));
 }
 
 export function narrationSourceDigest(issue = {}) {
