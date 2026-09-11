@@ -3,103 +3,187 @@
   "label": "第三期",
   "publication": "中国人民银行金昌市分行离退休干部电子期刊",
   "publisher": "中国人民银行金昌市分行",
-  "subtitle": "银发初心映秋色 清风正气润晚晴",
+  "subtitle": "金秋送爽守初心 · 银发聚力谱新篇",
   "engine": "v3",
   "status": "published",
   "assetSource": "issues/003/assets",
   "theme": "classic-red",
-  "createdAt": "2026-08-23T09:07:19.000Z",
+  "createdAt": "2026-09-09T02:37:32.641Z",
   "features": {
     "flipAnimation": true,
     "fullscreen": true,
     "music": {
       "src": "assets/music/bgm.mp3",
-      "defaultOn": false
+      "defaultOn": true
     },
     "narration": {
-      "pattern": "assets/tts/page-{page}.wav",
+      "pattern": "assets/tts/page-{page}.mp3",
       "fallback": "speechSynthesis",
       "continuousDefault": false,
       "rate": 1,
-      "generator": "server",
-      "generatedAt": "2026-08-25T14:49:23.959Z",
-      "sourceDigest": "ff93ba9fbfd5c148a841036b9919faecd9c14505600669f8ef4b6778c5c3fc09",
+      "scope": "page",
+      "generator": "edge-neural",
+      "voice": "zh-CN-XiaoxiaoNeural",
+      "generatedAt": "2026-09-11T09:11:56.244Z",
+      "sourceDigest": "7a1ee07e9561ae351f9339f901177760a1786396dd5ea01d0ddff2cee23f4cba",
       "pageDigests": [
-        "28d024d74038a66642ab",
+        "4dccd20e4c8524a32595",
+        "755657562aff05b3f50f",
         "dbed8dbb2cd7fa1d2287",
-        "1c741b67c4a4f8633973",
-        "aa2a4596f4a1b8f41ee1",
-        "81402e0919098d17a2d7",
-        "fecb392850c1524f75c9",
-        "a7121855dcd34974ee29",
-        "a2727270b14b562077c0",
-        "fbe91266ede2f52792bc",
-        "1b69406ba155bf9cd47d",
-        "c27521899d9a56a4a378",
-        "57db5c5f5ed735d2bbbd",
-        "8742907c6ecb5c5e3dc9",
-        "ba391a71bee4be056c1a",
-        "ab8ccee3a231739939ef",
-        "37187b3c8fd3859a9a10",
-        "b55ea6f3e328bd75c662",
-        "8448dce1d01165ed33e4",
-        "2d2eb7b55fbfdc3ea3cb",
-        "ea9c66a6ed899eaf0ea6",
-        "eed63ffcb3d9b84d18f6",
-        "7a10b2da4ce704d06701",
-        "57b5e97659698064557a",
-        "57b8b2cd90275aae54d8",
-        "e643ae45cabe4d9d014e",
-        "3a7879f7c49df45129d1",
-        "7777094493cf480f5b6a",
-        "cbf81f2853f6bfea09e5",
-        "cf2a9186e74809d86f81",
-        "b1397db692b3fcc2abd2",
-        "2f3617ad3468a39d187e",
-        "623bb1d6f57fba2ce0ff",
-        "62760e4ca85cc3f5bacc",
-        "003d473f4fc648ee6f81",
-        "0d59849caa98dcd91f48",
-        "b0e3c7da986d9712541a",
-        "ab7dc40897e7a96000f2",
-        "79ad4b8bb4960b368049",
-        "b7ef333cd3f417eab0e7",
-        "c5a1455c7ff61c90e3b7",
-        "a60c158af936edda292d"
+        "955aa1441aec0eb18bd0",
+        "e7ee9b97dd29b13aed03",
+        "6c3b5cb5e84a75bb07e8",
+        "ab8bb0c55aee6a831a51",
+        "da5df7c566663ab8010f",
+        "0f16483942f4ff5ca753",
+        "ee63863822ab3a8504b9",
+        "4e3bd832298e44413637",
+        "bac52c0ffefa6aaff9b8",
+        "974e074fd767feedc6e2",
+        "5b63acae2a5b7401c031",
+        "5cf6c7c507bfa422f675",
+        "f99415284beb506bd074",
+        "095c8f39d750847c744b",
+        "858f230676cd55ea815a",
+        "2354e3831e70fc981ccc",
+        "1eb04ab22d5364a36d2e",
+        "ce07e99d3ea7299c1d6f",
+        "dbe585c2ddd3d02f9305",
+        "c968e35cb4449de43443",
+        "050f05ff0d474ce324e0"
       ],
-      "baselinedAt": "2026-08-25T14:55:05.256Z"
+      "baselinedAt": "2026-09-11T09:11:56.245Z"
+    },
+    "turnAnimation": "smooth"
+  },
+  "articles": {
+    "news1": {
+      "title": "国家发展改革委召开两场重大项目工程协调推进会",
+      "subtitle": "2026年9月2日—3日",
+      "url": "https://mp.weixin.qq.com/s/T684MR3nJCEo7qu-OOog4w",
+      "paras": [
+        "9月2日，国家发展改革委召开“六张网”重大项目协调推进机制会，研究完善政银企协作机制和项目库建设；9月3日，召开“十五五”规划《纲要》重大工程建设推进会议，调度109项重大工程建设进展。"
+      ],
+      "sourceNote": "内容摘要依据期刊整理。"
+    },
+    "news2": {
+      "title": "中共中央政治局召开会议研究部署西藏日喀则市吉隆县泥石流灾害抢险救援工作",
+      "subtitle": "2026年8月28日",
+      "url": "https://mp.weixin.qq.com/s/Imi3SakYzN-5d51tfpqyQA",
+      "paras": [
+        "中共中央政治局8月28日召开会议，研究部署西藏日喀则市吉隆县泥石流灾害抢险救援工作。中共中央总书记习近平主持会议。"
+      ],
+      "sourceNote": "内容摘要依据期刊整理。"
+    },
+    "news3": {
+      "title": "中国人民银行相关工作动态",
+      "subtitle": "2026年9月4日",
+      "url": "https://mp.weixin.qq.com/s/ZeChETa5KlGUmuxxG4az-w",
+      "paras": [
+        "中国人民银行9月4日发布消息，为保持银行体系流动性充裕，将于9月7日开展5000亿元买断式逆回购操作，期限3个月，到期日为2026年12月5日。央行行长潘功胜表示，央行将持续推进货币政策框架转型，继续实施好适度宽松的货币政策。"
+      ],
+      "sourceNote": "内容摘要依据期刊整理。"
+    },
+    "news4": {
+      "title": "G20财长和央行行长会议",
+      "subtitle": "2026年8月31日—9月1日",
+      "url": "https://mp.weixin.qq.com/s/7e2TRBiTEIVREUxPeHODKw",
+      "paras": [
+        "8月31日至9月1日，二十国集团（G20）在美国阿什维尔召开今年第二次财长和央行行长会议。潘功胜行长在发言中强调，央行将为中国经济稳定增长和金融市场的平稳运行营造良好的货币金融环境。"
+      ],
+      "sourceNote": "内容摘要依据期刊整理。"
+    },
+    "theory1": {
+      "title": "学习《求是》杂志发表的重要文章《坚持落实管党治党政治责任》",
+      "subtitle": "2026年9月1日",
+      "url": "https://mp.weixin.qq.com/s/F3DjHpbtRhI_sOXMdXxUjA",
+      "paras": [
+        "9月1日出版的第17期《求是》杂志发表中共中央总书记、国家主席、中央军委主席习近平的重要文章《坚持落实管党治党政治责任》。这是习近平总书记2013年6月至2026年7月期间有关重要论述的节录。"
+      ],
+      "sourceNote": "弹窗为离线学习摘要，原网页入口仍予保留。"
+    },
+    "theory2": {
+      "title": "习近平在“上海合作组织+”会议上的讲话",
+      "subtitle": "2026年9月1日",
+      "url": "https://mp.weixin.qq.com/s/Zr2SMyXHdgQYu50FnWMUcA",
+      "paras": [
+        "9月1日下午，国家主席习近平在比什凯克出席“上海合作组织+”会议并发表题为《共同倡导平等有序的世界多极化实现更加公正合理的全球治理》的重要讲话。"
+      ],
+      "sourceNote": "弹窗为离线学习摘要，原网页入口仍予保留。"
     }
   },
-  "articles": {},
   "pages": [
     {
       "type": "cover",
       "navTitle": "封面",
-      "title": "银发初心映秋色 清风正气润晚晴",
+      "title": "金秋送爽守初心\n银发聚力谱新篇",
       "kicker": "中国人民银行金昌市分行",
+      "section": "",
       "blocks": [
         {
           "type": "coverMeta",
-          "text": "中国人民银行金昌市分行离退休干部电子期刊 · 第三期"
+          "text": "离退休干部电子期刊 · 第六期"
         },
         {
           "type": "coverSections",
           "items": [
             "时政要闻",
-            "理论学习",
-            "反诈防骗",
-            "警示教育",
-            "时令养生"
+            "政治理论学习",
+            "规范网络行为",
+            "健康养生",
+            "老干部风采展示"
           ]
         }
-      ],
-      "section": ""
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "卷首语",
+      "title": "金秋送爽守初心 · 银发聚力谱新篇",
+      "kicker": "卷首语 · 金秋送爽 初心如磐",
+      "section": "",
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "天气转凉，秋意渐深。在这天高云淡、丹桂飘香的美好时节，本期电子期刊如期与各位老同志见面了。本期电子期刊延续时政要闻、政治理论学习、规范网络行为、健康养生、老干部风采展示五大板块，推送最新时政资讯、理论学习要点、网络安全提醒及健康养生知识，力求内容丰富、贴近需求、务实管用。"
+        },
+        {
+          "type": "quote",
+          "text": "愿本期期刊陪伴各位老同志在常学常新中坚定信念，在修身自律中永葆本色，在健康生活中安享金秋。桑榆未晚，为霞满天。衷心祝愿各位老同志身体健康、阖家幸福、秋日安康！"
+        },
+        {
+          "type": "chips",
+          "items": [
+            {
+              "text": "时政要闻"
+            },
+            {
+              "text": "政治理论学习"
+            },
+            {
+              "text": "规范网络行为"
+            },
+            {
+              "text": "健康养生"
+            },
+            {
+              "text": "老干部风采展示"
+            }
+          ]
+        },
+        {
+          "type": "blessing",
+          "text": "金秋送爽守初心，银发聚力谱新篇。"
+        }
+      ]
     },
     {
       "type": "toc",
       "navTitle": "目录",
-      "kicker": "CONTENTS",
       "title": "本期导读",
+      "kicker": "CONTENTS",
+      "section": "",
       "blocks": [
         {
           "type": "paragraph",
@@ -112,1754 +196,794 @@
             {
               "number": "01",
               "title": "时政要闻",
-              "subtitle": "",
+              "subtitle": "常览国事 · 初心永驻",
               "page": 4
             },
             {
               "number": "02",
               "title": "政治理论学习",
-              "subtitle": "",
+              "subtitle": "坚守初心 · 永葆本色",
               "page": 7
             },
             {
               "number": "03",
-              "title": "安全防范",
-              "subtitle": "",
-              "page": 11
+              "title": "规范网络行为",
+              "subtitle": "清朗空间 · 共建共享",
+              "page": 9
             },
             {
               "number": "04",
-              "title": "警示教育",
-              "subtitle": "",
-              "page": 22
+              "title": "健康养生",
+              "subtitle": "白露过后 · 安享金秋",
+              "page": 13
             },
             {
               "number": "05",
-              "title": "时令养生",
-              "subtitle": "",
-              "page": 30
+              "title": "老干部风采展示",
+              "subtitle": "银发生辉 · 余热生辉",
+              "page": 19
             }
           ]
         }
       ]
     },
     {
-      "type": "article",
-      "navTitle": "卷首语",
-      "title": "银发初心映秋色 清风正气润晚晴",
-      "kicker": "卷首语",
-      "section": "",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "“离离暑云散，袅袅凉风起。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "2026年8月23日迎来处暑，9月7日将迎来白露。暑气渐消，秋意渐浓，金昌也将逐步进入天高气爽、昼夜温差加大的时节。在这夏秋转换、硕果初成的美好时光里，第三期老干部电子期刊再次与各位老同志见面。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "今年是中国共产党成立105周年，也是“十五五”开局之年。当前，全党全国各族人民正坚定信心、真抓实干，扎实推动高质量发展，不断把中国式现代化事业推向前进。广大离退休干部虽然离开了工作岗位，但政治本色不能褪、理想信念不能松、纪律规矩不能忘，仍然是党和国家事业发展的宝贵财富和重要力量。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "本期电子期刊继续设置时政要闻、政治理论学习、安全防范、警示教育、时令养生五大版块。我们将一起关注近期党和国家重要部署，学习领悟习近平党建思想，认识AI换脸、AI拟声等新型诈骗手段，重温退休党员干部必须严守的纪律红线，并围绕处暑、白露时节为大家送上秋季健康提醒。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "愿本期期刊陪伴各位老同志，在常学常新中坚定信仰，在慎独慎微中涵养清风，在识诈防骗中守护平安，在顺时调养中安享金秋。"
-        }
-      ]
-    },
-    {
       "type": "news",
-      "navTitle": "时政要闻｜习近平同厄瓜多尔总统诺沃亚举行会谈",
-      "title": "习近平同厄瓜多尔总统诺沃亚举行会谈",
+      "navTitle": "时政要闻｜发改委重大项目",
+      "title": "重大项目工程协调推进",
       "kicker": "时政要闻｜常览国事 初心永驻",
       "section": "时政要闻",
       "blocks": [
         {
           "type": "paragraph",
-          "style": "lead",
-          "text": "2026年8月18日下午，国家主席习近平在北京人民大会堂同来华进行国事访问的厄瓜多尔总统诺沃亚举行会谈。"
+          "style": "subhead",
+          "text": "2026年9月2日—3日｜国家发展改革委两场重大项目工程协调推进会"
         },
         {
           "type": "paragraph",
-          "style": "xsmall",
-          "text": "习近平指出，今年是中厄两国建立全面战略伙伴关系10周年。无论国际形势如何变化，中方始终从战略高度和长远角度看待中厄关系，愿同厄方一道努力，推动双边关系不断迈上新台阶，更好造福两国人民。"
+          "style": "small",
+          "text": "9月2日，国家发展改革委召开“六张网”重大项目协调推进机制会，研究完善政银企协作机制和项目库建设；9月3日，召开“十五五”规划《纲要》重大工程建设推进会议，调度109项重大工程建设进展。"
         },
         {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "习近平强调，中厄双方要巩固政治互信，加强发展战略对接，落实共建“一带一路”合作规划，实施好能源、矿产、基础设施建设、金融等合作项目，并积极探讨数字经济、绿色发展、新能源、人工智能等领域合作。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "会谈后，两国元首共同见证签署绿色产业、经贸合作、数字经济、民生等领域多项合作文件。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "今年恰逢中厄全面战略伙伴关系建立10周年，此次会谈进一步体现了我国坚持扩大高水平开放、深化国际合作、推动构建人类命运共同体的坚定立场。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "资料来源：新华社"
+          "type": "articleLink",
+          "articleId": "news1",
+          "title": "国家发展改革委召开两场重大项目工程协调推进会"
         }
       ]
     },
     {
       "type": "news",
-      "navTitle": "时政要闻｜李强主持召开国务院常务会议 部署新一代通信网建设等工作",
-      "title": "李强主持召开国务院常务会议 部署新一代通信网建设等工作",
+      "navTitle": "时政要闻｜政治局会议",
+      "title": "研究部署抢险救援工作",
       "kicker": "时政要闻｜常览国事 初心永驻",
       "section": "时政要闻",
       "blocks": [
         {
           "type": "paragraph",
-          "style": "lead",
-          "text": "8月21日，国务院总理李强主持召开国务院常务会议，听取新一代通信网建设情况汇报，部署进一步清理拖欠企业账款工作，研究持续改善空气质量有关工作，并审议有关条例草案。"
+          "style": "subhead",
+          "text": "2026年8月28日｜中共中央政治局召开会议"
         },
         {
           "type": "paragraph",
-          "style": "xsmall",
-          "text": "会议指出，要积极顺应新一轮科技革命和产业变革趋势，牢牢把握新一代通信网建设机遇，坚持应用牵引、适度超前，统筹推进基础网络、空间网络、国际网络、融合网络建设，进一步巩固提升我国信息通信业竞争优势。"
+          "style": "small",
+          "text": "中共中央政治局8月28日召开会议，研究部署西藏日喀则市吉隆县泥石流灾害抢险救援工作。中共中央总书记习近平主持会议。"
         },
         {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "会议还对清理拖欠企业账款、持续改善空气质量、电力安全事故应急处置等工作作出部署。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "从数字基础设施到企业发展环境，从生态文明建设到安全生产，一系列部署体现了党中央、国务院统筹发展和安全、统筹当前和长远，持续推动高质量发展的鲜明导向。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "资料来源：新华社"
+          "type": "articleLink",
+          "articleId": "news2",
+          "title": "中共中央政治局召开会议研究部署西藏日喀则市吉隆县泥石流灾害抢险救援工作"
         }
       ]
     },
     {
       "type": "news",
-      "navTitle": "时政要闻｜我国超大规模市场活力持续释放 前7个月进口保持较快增长",
-      "title": "我国超大规模市场活力持续释放 前7个月进口保持较快增长",
+      "navTitle": "时政要闻｜人民银行工作动态",
+      "title": "稳健货币政策 · 服务实体经济",
       "kicker": "时政要闻｜常览国事 初心永驻",
       "section": "时政要闻",
       "blocks": [
         {
           "type": "paragraph",
-          "style": "lead",
-          "text": "商务部8月20日在例行新闻发布会上介绍，今年前7个月，我国进口保持良好增长势头，自150多个贸易伙伴的进口实现正增长。"
+          "style": "subhead",
+          "text": "2026年9月4日｜中国人民银行相关工作动态"
         },
         {
           "type": "paragraph",
-          "style": "xsmall",
-          "text": "商务部表示，一方面，主动扩大进口政策成效持续显现；另一方面，“出口中国”等系列活动进一步发挥平台带动作用。截至目前，“出口中国”系列活动已在境内外举办超过40场，来自近百个国家的优质产品借助相关平台不断扩大在中国市场的影响力。"
+          "style": "small",
+          "text": "中国人民银行9月4日发布消息，为保持银行体系流动性充裕，将于9月7日开展5000亿元买断式逆回购操作，期限3个月，到期日为2026年12月5日。近期召开的G20财长和央行行长会议上，央行行长潘功胜表示，央行将持续推进货币政策框架转型，继续实施好适度宽松的货币政策。"
         },
         {
           "type": "paragraph",
-          "style": "xsmall",
-          "text": "下一步，我国将进一步强化相关促消费、扩进口活动联动，更好释放超大规模市场潜力，与世界共享中国发展机遇。"
+          "style": "subhead",
+          "text": "2026年8月31日—9月1日｜二十国集团（G20）财长和央行行长会议"
         },
         {
           "type": "paragraph",
-          "style": "xsmall",
-          "text": "与此同时，商务部等9部门近期印发意见，提出进一步激发下沉市场活力、活跃县域消费，为扩大内需、畅通国内大循环提供新的支撑。"
+          "style": "small",
+          "text": "8月31日至9月1日，二十国集团（G20）在美国阿什维尔召开今年第二次财长和央行行长会议。潘功胜行长在发言中强调，央行将为中国经济稳定增长和金融市场的平稳运行营造良好的货币金融环境。"
         },
         {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "资料来源：商务部、中国政府网"
+          "type": "articleLink",
+          "articleId": "news3",
+          "title": "中国人民银行相关工作动态"
+        },
+        {
+          "type": "articleLink",
+          "articleId": "news4",
+          "title": "G20财长和央行行长会议"
         }
       ]
     },
     {
       "type": "theory",
-      "navTitle": "政治理论学习｜学习领悟《习近平党建文选》——旗帜鲜明讲政治",
-      "title": "学习领悟《习近平党建文选》——旗帜鲜明讲政治",
-      "kicker": "政治理论学习｜深学细悟 永葆本色",
+      "navTitle": "理论学习｜落实管党治党政治责任",
+      "title": "坚持落实管党治党政治责任",
+      "kicker": "政治理论学习｜坚守初心 永葆本色",
       "section": "政治理论学习",
       "blocks": [
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "《习近平党建文选》第一卷、第二卷近期出版发行，为广大党员干部群众深入学习贯彻习近平党建思想提供了权威教材。"
+          "text": "一、学习《求是》杂志发表的重要文章《坚持落实管党治党政治责任》"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "8月20日刊发的“学习领悟《习近平党建文选》”系列文章指出，旗帜鲜明讲政治，是我们党作为马克思主义政党的根本要求。党的政治建设是党的根本性建设，决定党的建设方向和效果。"
+          "text": "9月1日出版的第17期《求是》杂志发表中共中央总书记、国家主席、中央军委主席习近平的重要文章《坚持落实管党治党政治责任》。这是习近平总书记2013年6月至2026年7月期间有关重要论述的节录。"
         },
         {
-          "type": "paragraph",
-          "style": "small",
-          "text": "广大离退休党员干部虽然离开工作岗位，但党员身份没有退休期，政治要求没有“休止符”。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "退休之后，怎样继续做到讲政治？"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "一要坚持理论学习不断线。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "离开岗位并不意味着学习任务结束。要坚持通过报刊、电视、网络平台以及党支部学习等方式，及时了解党中央重大决策部署，自觉用党的创新理论武装头脑。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "二要做到政治立场不动摇。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "在重大原则问题上头脑清醒、立场坚定，不听信政治谣言，不传播未经证实的信息，不发表与党员身份不相符的言论。"
+          "type": "articleLink",
+          "articleId": "theory1"
         }
       ]
     },
     {
       "type": "theory",
-      "navTitle": "政治理论学习｜旗帜鲜明讲政治（续1）",
-      "title": "旗帜鲜明讲政治（续1）",
-      "kicker": "政治理论学习｜深学细悟 永葆本色",
-      "section": "政治理论学习",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "三要做到党员意识不淡化。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "继续积极参加组织生活，主动接受党组织教育管理监督，在家庭、社区和社会生活中发挥党员先锋模范作用。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "四要做到优良传统不丢失。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "广大老干部经历丰富、阅历深厚，要积极发挥政治优势、经验优势和威望优势，多讲党的光荣传统，多讲改革发展的巨大成就，多向年轻干部传递正能量。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "学习习近平党建思想，就是要更加深刻认识到：政治上的坚定，源自理论上的清醒；退休可以离岗，党员永不离党。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "资料来源：人民日报、中国纪检监察报"
-        }
-      ]
-    },
-    {
-      "type": "theory",
-      "navTitle": "政治理论学习｜贯通学习《习近平谈治国理政》第一至五卷——完整准确全面贯彻新发展理念",
-      "title": "贯通学习《习近平谈治国理政》第一至五卷——完整准确全面贯彻新发展理念",
-      "kicker": "政治理论学习｜深学细悟 永葆本色",
+      "navTitle": "理论学习｜上合组织+会议讲话",
+      "title": "共同倡导平等有序的世界多极化",
+      "kicker": "政治理论学习｜坚守初心 永葆本色",
       "section": "政治理论学习",
       "blocks": [
         {
           "type": "paragraph",
           "style": "lead",
-          "text": "创新、协调、绿色、开放、共享的新发展理念，是习近平新时代中国特色社会主义思想的重要内容，也是贯穿《习近平谈治国理政》第一至五卷的一条鲜明主线。"
+          "text": "二、学习习近平在“上海合作组织+”会议上的讲话"
         },
         {
           "type": "paragraph",
           "style": "small",
-          "text": "习近平总书记深刻指出，新发展理念不是一个简单的发展口号，而是关系我国发展全局的一场深刻变革。"
+          "text": "9月1日下午，国家主席习近平在比什凯克出席“上海合作组织+”会议并发表题为《共同倡导平等有序的世界多极化实现更加公正合理的全球治理》的重要讲话。"
         },
         {
-          "type": "paragraph",
-          "style": "small",
-          "text": "近年来，我国经济社会发展不断向高质量迈进，新产业、新技术、新业态蓬勃发展，绿色转型深入推进，民生福祉持续改善。进入“十五五”时期，更需要完整、准确、全面贯彻新发展理念，把发展的质量和效益摆在更加突出的位置。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "对广大老同志而言，学习新发展理念，可以帮助我们更好认识新时代的发展变化，更加理性、客观地看待经济社会发展中的新情况新问题。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "五个关键词，一起学起来"
-        },
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "创新",
-          "text": "解决发展动力问题。科技创新不断催生新质生产力，人工智能、新能源、新材料等领域加快发展。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "协调",
-          "text": "解决发展不平衡问题。推动城乡之间、区域之间、经济社会各领域更加均衡协调发展。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "绿色",
-          "text": "解决人与自然和谐共生问题。绿水青山就是金山银山，绿色发展正在成为中国式现代化的重要底色。",
-          "tone": "default"
-        }
-      ]
-    },
-    {
-      "type": "theory",
-      "navTitle": "政治理论学习｜完整准确全面贯彻新发展理念（续1）",
-      "title": "完整准确全面贯彻新发展理念（续1）",
-      "kicker": "政治理论学习｜深学细悟 永葆本色",
-      "section": "政治理论学习",
-      "blocks": [
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "开放",
-          "text": "解决发展内外联动问题。中国坚持扩大高水平开放，与世界共享发展机遇。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "共享",
-          "text": "解决社会公平正义问题。发展的最终目的，是让发展成果更多更公平惠及全体人民。",
-          "tone": "default"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "新发展理念相互贯通、相互促进，是一个具有内在联系的整体。理解今天的中国，就要读懂新发展理念；展望未来的中国，更要坚定高质量发展的信心。"
-        },
-        {
-          "type": "paragraph",
-          "style": "xsmall",
-          "text": "资料来源：人民日报"
+          "type": "articleLink",
+          "articleId": "theory2"
         }
       ]
     },
     {
       "type": "safety",
-      "navTitle": "安全防范｜导读",
-      "title": "反诈微课堂·AI诈骗特别篇",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
+      "navTitle": "规范网络行为｜为什么要规范",
+      "title": "党员身份没有“退休”",
+      "kicker": "规范网络行为｜共建清朗网络空间",
+      "section": "规范网络行为",
       "blocks": [
         {
           "type": "paragraph",
-          "style": "lead",
-          "text": "随着人工智能技术快速发展，AI给生活带来便利的同时，也被部分不法分子利用。"
+          "style": "body",
+          "text": "9月是网络安全宣传月。随着互联网深度融入日常生活，规范离退休干部党员网络行为，既是纪律要求，也是对老同志的保护。本期重点聚焦离退休干部规范网络行为专题。"
+        },
+        {
+          "type": "sectionHeading",
+          "text": "一、为什么要规范离退休干部网络行为？"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "过去，我们常说“眼见为实、耳听为真”。如今，在AI换脸、声音克隆等技术面前，“看见本人”“听见声音”也未必等于身份真实。"
+          "text": "习近平总书记强调，党员干部无论退休与否，都应该严格遵守党规党纪。《中国共产党党员网络行为规定》明确要求全体党员规范网络言行。离退休干部虽然离开了工作岗位，但党员身份没有“退休”，在网络空间同样需要严守纪律红线。"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "本期“安全防范”版块开设："
+          "text": "近年来，部分退休干部因网络言行失范受到处分：有的妄议中央大政方针、发表不当言论；有的轻信转发网络谣言，造成不良社会影响；有的参与网络赌博、网络诈骗等违法活动，最终晚节不保。"
         }
       ]
     },
     {
       "type": "safety",
-      "navTitle": "安全防范｜AI换脸诈骗——视频里的“女儿”也可能是假的",
-      "title": "AI换脸诈骗——视频里的“女儿”也可能是假的",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
+      "navTitle": "规范网络行为｜五要",
+      "title": "应当积极践行",
+      "kicker": "规范网络行为｜共建清朗网络空间",
+      "section": "规范网络行为",
       "blocks": [
         {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "案例回放"
+          "type": "sectionHeading",
+          "text": "二、离退休干部网络行为“五要”“五不得”"
         },
         {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "王先生突然接到在国外留学的“女儿”发来的微信视频。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "视频中，“女儿”神情焦急，告诉父亲自己发生了交通事故，急需20万元缴纳保证金。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "视频中的面容、表情甚至说话方式，都与女儿十分相似。王先生非常着急，准备前往银行转账。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "银行工作人员在询问资金用途时发现异常，提醒王先生当前AI换脸诈骗较多，建议通过其他联系方式再次核实。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "王先生随即拨打女儿平时使用的电话号码，才发现女儿一切平安，视频中的“女儿”竟然是骗子利用AI技术伪造的。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "诈骗套路"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "骗子首先通过社交网络收集目标人物及其亲属的照片、视频、声音等信息，再利用AI换脸和声音合成技术制造“本人出镜”的假象。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "随后，以："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“出了交通事故”"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜视频里的女儿也可能是假的（续1）",
-      "title": "视频里的女儿也可能是假的（续1）",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“正在医院急需用钱”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“工作上临时周转”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“需要缴纳保证金”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "等紧急理由制造时间压力，让受害者没有时间仔细思考和核实。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "防骗提醒"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "视频不能代替核实",
-          "text": "即使对方通过视频露脸，也不要轻易相信。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "约定家庭“安全暗号”",
-          "text": "家庭成员可以提前约定只有彼此知道的问题或暗号。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "换一种渠道确认",
-          "text": "挂断当前电话，通过原有号码重新拨打，或联系其他家人核实。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "越催越要慢",
-          "text": "凡是强调“马上转”“千万别告诉别人”的情况，更要提高警惕。",
-          "tone": "default"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜AI拟声诈骗——电话里熟悉的声音也可能被“克隆”",
-      "title": "AI拟声诈骗——电话里熟悉的声音也可能被“克隆”",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "过去骗子冒充熟人，最容易露馅的地方就是声音不像。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "如今，不法分子可能通过短视频、语音聊天等公开或泄露的信息获取声音样本，再通过AI技术模拟本人声音。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "于是，一通听起来十分熟悉的电话就可能出现："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“爸，我手机坏了，用朋友电话打给你。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“妈，我出了点事，你先给我转点钱。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“这件事比较急，别跟其他人说。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "如何识别？"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "如果亲属突然通过陌生号码联系并要求转账："
+          "type": "sectionHeading",
+          "text": "【五要——应当积极践行】"
         },
         {
           "type": "cardline",
           "badge": "1",
-          "title": "第一步",
-          "text": "不急着答应。",
+          "title": "要坚定政治立场",
+          "text": "在网络空间始终同党中央保持高度一致，把对习近平总书记的深厚爱戴之情转化为坚定拥护“两个确立”、坚决做到“两个维护”的政治自觉。",
           "tone": "default"
         },
         {
           "type": "cardline",
           "badge": "2",
-          "title": "第二步",
-          "text": "挂断电话。",
-          "tone": "default"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜电话里熟悉的声音也可能被克隆（续1）",
-      "title": "电话里熟悉的声音也可能被克隆（续1）",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "cardline",
-          "badge": "3",
-          "title": "第三步",
-          "text": "拨打本人原来的电话号码。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "4",
-          "title": "第四步",
-          "text": "再联系其他亲属共同核实。",
-          "tone": "default"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "只要多一道核实，很多骗局就会当场露馅。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "相关网络安全宣传材料已经提醒，诈骗分子可能将AI换脸与AI拟声技术组合使用，通过视频、语音等方式制造“身份已经核实”的假象。"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜个人信息泄露诈骗——为什么骗子对我的情况知道得这么清楚？",
-      "title": "个人信息泄露诈骗——为什么骗子对我的情况知道得这么清楚？",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "很多老同志遇到诈骗电话时，会有一个疑问："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“他连我买了什么东西都知道，怎么可能是骗子？”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "事实上，知道您的姓名、电话、购物记录，并不代表对方就是工作人员。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "骗子可能通过非法渠道获取快递、网购等个人信息，再以："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“商品质量有问题”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“快递丢失需要退款”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“会员自动扣费需要关闭”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“保险服务即将收费”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "等理由联系受害者。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "掌握的信息越准确，骗局越容易让人放松警惕。"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜为什么骗子对我的情况知道得这么清楚？（续1）",
-      "title": "为什么骗子对我的情况知道得这么清楚？（续1）",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "防骗提醒"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "不随意扫描陌生二维码",
-          "text": "不随意扫描陌生二维码。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "不点击短信中的陌生退款、理赔链接",
-          "text": "不点击短信中的陌生退款、理赔链接。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "不安装陌生人要求安装的手机APP",
-          "text": "不安装陌生人要求安装的手机APP。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "不开启手机“屏幕共享”“远程协助”功能",
-          "text": "不开启手机“屏幕共享”“远程协助”功能。",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "银行卡密码、支付密码、短信验证码任何时候都不能告诉别人",
-          "text": "银行卡密码、支付密码、短信验证码任何时候都不能告诉别人。",
-          "tone": "default"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜“养老投资”诈骗——披着养老外衣的非法集资",
-      "title": "“养老投资”诈骗——披着养老外衣的非法集资",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "近年来，一些非法集资活动针对老年群体进行精准包装。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "骗子可能以："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“养老项目”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“旅居养老”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“康养基地”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“老年产业加盟”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“银发经济投资”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“高额养老返利”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "等名义吸引老年人投入资金。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "部分案件还通过短视频、社交平台进行精准“引流”，再转到线下培训会、说明会，通过赠送小礼品、组织免费旅游等方式建立信任。有关典型案例显示，一些犯罪分子甚至以“银发经济网络达人”等包装吸引老年人加盟投资。"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜披着养老外衣的非法集资（续1）",
-      "title": "披着养老外衣的非法集资（续1）",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "请记住："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "养老服务是服务，不能等同于高收益投资。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "凡是同时具备以下几个特点，都应高度警惕："
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "承诺明显高于正常水平的收益",
-          "text": "承诺明显高于正常水平的收益；",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "宣称“国家扶持”“内部项目”却拿不出正式文件",
-          "text": "宣称“国家扶持”“内部项目”却拿不出正式文件；",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "要求向个人账户转账",
-          "text": "要求向个人账户转账；",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "鼓励拉亲戚朋友一起投资",
-          "text": "鼓励拉亲戚朋友一起投资；",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "前期按时返利，后期不断要求追加资金",
-          "text": "前期按时返利，后期不断要求追加资金；",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "强调“名额有限”“今天不交钱就没有机会”",
-          "text": "强调“名额有限”“今天不交钱就没有机会”。",
-          "tone": "default"
-        }
-      ]
-    },
-    {
-      "type": "safety",
-      "navTitle": "安全防范｜AI时代反诈“五问法”",
-      "title": "AI时代反诈“五问法”",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "遇到陌生电话、视频和转账要求，先问自己五个问题："
-        },
-        {
-          "type": "cardline",
-          "badge": "1",
-          "title": "第一问",
-          "text": "这个人真的是本人吗？",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "2",
-          "title": "第二问",
-          "text": "为什么一定要现在马上转钱？",
+          "title": "要传播网络正能量",
+          "text": "讲好中国故事、央行故事，积极参与网络文明建设，转发权威信息，带动身边群众共同营造清朗网络空间。",
           "tone": "default"
         },
         {
           "type": "cardline",
           "badge": "3",
-          "title": "第三问",
-          "text": "为什么不让我告诉家人？",
+          "title": "要增强防范意识",
+          "text": "掌握基本网络防护技能，不随意点击不明链接、不轻易透露个人信息、不轻易转账汇款，守好养老“钱袋子”。",
           "tone": "default"
         },
         {
           "type": "cardline",
           "badge": "4",
-          "title": "第四问",
-          "text": "为什么要安装陌生软件或开启屏幕共享？",
+          "title": "要合理安排上网时间",
+          "text": "避免沉迷网络，保持身心健康，积极参与线下社交活动。",
           "tone": "default"
         },
         {
           "type": "cardline",
           "badge": "5",
-          "title": "第五问",
-          "text": "我能不能通过另一个电话重新核实？",
-          "tone": "default"
-        },
-        {
-          "type": "cardline",
-          "badge": "•",
-          "title": "只要有一个问题解释不清",
-          "text": "—",
+          "title": "要健康上网适应数字生活",
+          "text": "主动学习网络新知识、新技能，学会使用线上挂号、移动支付等常用功能。",
           "tone": "default"
         }
       ]
     },
     {
       "type": "safety",
-      "navTitle": "安全防范｜AI时代反诈五问法（续1）",
-      "title": "AI时代反诈五问法（续1）",
-      "kicker": "安全防范｜智识新诈 守护“钱袋子”",
-      "section": "安全防范",
+      "navTitle": "规范网络行为｜五不得",
+      "title": "严禁触碰红线",
+      "kicker": "规范网络行为｜共建清朗网络空间",
+      "section": "规范网络行为",
       "blocks": [
         {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "先不转账！"
+          "type": "sectionHeading",
+          "text": "【五不得——严禁触碰红线】"
         },
         {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "先不操作！"
+          "type": "cardline",
+          "badge": "1",
+          "title": "不得妄议中央大政方针",
+          "text": "不在网络空间发表与党中央精神相违背的言论，不诋毁党和国家形象。",
+          "tone": "default"
         },
         {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "先找家人核实！"
+          "type": "cardline",
+          "badge": "2",
+          "title": "不得制造传播谣言",
+          "text": "不制造、不发布虚假有害信息，不信谣、不传谣、不造谣。",
+          "tone": "default"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "技术会变，骗局会变，但防骗原则不会变："
+          "type": "cardline",
+          "badge": "3",
+          "title": "不得参与网络违法活动",
+          "text": "不参与网络赌博、网络诈骗、网上非法组织等违法活动。",
+          "tone": "default"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "不轻信、不转账、不泄密、多核实。"
+          "type": "cardline",
+          "badge": "4",
+          "title": "不得侵犯他人权益",
+          "text": "不侵犯他人隐私，拒绝网络暴力和人身攻击。",
+          "tone": "default"
+        },
+        {
+          "type": "cardline",
+          "badge": "5",
+          "title": "不得在网络空间“失范”",
+          "text": "自觉遵守社会公德和网络道德，不发布低俗信息，不参与网络骂战。",
+          "tone": "default"
         }
       ]
     },
     {
-      "type": "discipline",
-      "navTitle": "警示教育｜导读",
-      "title": "退休不褪色 纪律不松弦",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
+      "type": "safety",
+      "navTitle": "规范网络行为｜常见风险提醒",
+      "title": "守好养老“钱袋子”",
+      "kicker": "规范网络行为｜共建清朗网络空间",
+      "section": "规范网络行为",
       "blocks": [
         {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "退休意味着工作岗位发生变化，却不意味着党员身份发生变化，更不意味着纪律约束自动解除。"
+          "type": "sectionHeading",
+          "text": "三、常见网络风险提醒"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "近年来，纪检监察机关查处的一些案件表明，个别党员干部产生“退休就安全了”“离岗就没人管了”的错误认识，最终付出了沉重代价。"
+          "type": "cardline",
+          "badge": "•",
+          "title": "【微信群使用规范】",
+          "text": "不在微信群转发未经官方核实的信息、视频；不参与微信群内的非法集资、传销、刷单等违法活动；不点击来源不明的链接和文件。",
+          "tone": "default"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "本期我们围绕近期公开通报和纪法解读，再次梳理几条退休党员干部必须警惕的纪律红线。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜“退而不休”型——离岗之后仍利用原职权影响敛财",
-      "title": "“退而不休”型——离岗之后仍利用原职权影响敛财",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "casePair",
-          "case": "2026年7月，中央纪委国家监委网站发布甘肃省纪委监委通报：\n甘肃省高级人民法院原党组成员、副院长陈天雄严重违纪违法，被开除党籍，并按规定取消其享受的退休待遇。\n通报指出，其长期破纪违法，存在违规收受礼金、接受旅游安排、借用管理服务对象钱款、干预和插手司法活动等问题；在退休后仍“退而不休，弄权敛财”，利用职务便利或职权影响为他人在项目承揽、案件诉讼等方面谋取利益，并收受巨额贿赂。涉嫌犯罪问题被移送检察机关依法审查起诉。",
-          "warning": "职务可以退休，纪律不能退休。\n过去形成的职务影响、人脉关系、工作资源，都不能成为退休后谋取私人利益的工具。\n退休不是“安全着陆”，更不能把曾经的公权力变成日后的私人资本。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜违规营利型——认为“退休了就可以随便经商”是误区",
-      "title": "违规营利型——认为“退休了就可以随便经商”是误区",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "中央纪委国家监委网站2026年4月专门刊文，对党政机关干部在职及退休后经商办企业问题进行纪法分析。"
+          "type": "cardline",
+          "badge": "•",
+          "title": "【个人信息保护】",
+          "text": "不在不明网站填写个人身份信息、银行卡号、验证码；不轻信“免费体检”“高回报投资”“中奖通知”等网络信息；遇到以“公检法”“银行”“社保”名义要求转账的信息，一律视为诈骗，第一时间核实。",
+          "tone": "default"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "文章明确指出，部分人员认为，只要退休后就可以不受约束自主从业，这种认识并不正确。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "退休党员干部特别是原党员领导干部，在从事经营活动、企业任职等事项时，仍应认真了解并严格遵守有关党纪法规以及离职、退休后从业限制规定，不得利用原职权或职务影响为经营活动谋利。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "2026年7月通报的重庆市丰都县人大常委会原副厅级干部秦俊仕案件中，就存在“退休后违规从事营利活动”“离职后仍利用原职务上的影响收钱敛财”等问题，最终受到开除党籍、取消退休待遇等严肃处理。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜认为退休了就可以随便经商是误区（续1）",
-      "title": "认为退休了就可以随便经商是误区（续1）",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "警示"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "退休后想发挥专业特长、服务社会，本身并无不妥。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "但必须弄清楚："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "什么可以干？"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "什么需要报告审批？"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "哪些企业不能去？"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "哪些利益不能拿？"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "越是熟悉的行业、熟悉的企业、熟悉的老关系，越要保持距离、守住边界。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜违规吃喝型——退休后接受原管理服务对象宴请仍可能违纪",
-      "title": "违规吃喝型——退休后接受原管理服务对象宴请仍可能违纪",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "有人认为："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“我都退休了，老朋友请吃个饭有什么关系？”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "实际上并非如此。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "中央纪委国家监委发布的执纪执法指导性案例明确指出，中央八项规定精神是长期有效的铁规矩，党员领导干部无论退休与否，都应严格遵守党规党纪和中央八项规定精神。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "特别是退休党员领导干部接受其在职期间管理和服务对象安排的宴请，更应高度警惕其中可能存在的利益关系。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "警示"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "一顿饭看似是“小事”，背后却可能连着人情、请托和利益。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "退休之后交朋友、叙旧情无可厚非，但必须分清："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "正常人情往来和利益输送不是一回事。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "真正的老朋友，不会让您违反纪律。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜违规收礼型——退休后礼品礼金同样不是“随便收”",
-      "title": "违规收礼型——退休后礼品礼金同样不是“随便收”",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "中央纪委国家监委有关纪法解读明确指出，对党员领导干部退休后违规收受礼品礼金的问题，可以根据具体情形依规依纪处理，并收缴违纪所得。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "尤其需要注意的是，有的礼品礼金表面上打着："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“感谢老领导”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“多年老朋友”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“过年过节看看您”"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜退休后礼品礼金同样不是随便收（续1）",
-      "title": "退休后礼品礼金同样不是随便收（续1）",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "等旗号，实质上却与过去的职务影响、管理服务关系密切。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "这种“延迟送礼”“退休后兑现人情”的方式，更具有隐蔽性。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "警示"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "不能认为："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "“退休前不能收，退休后就能收。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "更不能把过去工作中形成的权力影响力，在退休后变成收受利益的“长期收益”。"
-        }
-      ]
-    },
-    {
-      "type": "discipline",
-      "navTitle": "警示教育｜给老同志的“四个始终”",
-      "title": "给老同志的“四个始终”",
-      "kicker": "警示教育｜退休不褪色 纪律不松弦",
-      "section": "警示教育",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "始终牢记党员身份"
-        },
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "组织上退休，思想上不能退休；岗位上离开，政治上不能离开。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "始终保持纪法敬畏"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "经常学习党章党规党纪，及时了解退休干部从业、兼职、社会交往等方面规定。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "始终净化生活圈朋友圈"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "少一点不必要的应酬，多一点健康生活；对过去管理服务对象的宴请、礼品和请托尤其保持警惕。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "始终管好家人与身边人"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "既约束自己，也教育好配偶、子女和亲属，不允许他人利用自己的老关系、老资源谋取利益。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "退休是人生的新阶段，也是党性修养的新考场。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "清清白白一辈子，安安心心度晚年，才是最宝贵的人生财富。"
+          "type": "cardline",
+          "badge": "•",
+          "title": "【网上“熟人”要核实】",
+          "text": "亲属通过微信、QQ等提出转账要求的，务必电话核实，勿轻信文字消息。",
+          "tone": "default"
         }
       ]
     },
     {
       "type": "health",
-      "navTitle": "时令养生｜导读",
-      "title": "处暑白露 润燥安秋",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
+      "navTitle": "健康养生｜白露养生总纲",
+      "title": "白露过后 安享金秋",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
       "blocks": [
         {
           "type": "paragraph",
-          "style": "lead",
-          "text": "2026年8月23日交处暑，9月7日交白露。"
-        },
-        {
-          "type": "paragraph",
           "style": "small",
-          "text": "处暑之后，暑气逐渐消退；进入白露，昼夜温差进一步加大，空气也开始变得更加干燥。对于身体调节能力相对减弱的老年人来说，这一阶段既要防残暑，也要防秋凉、秋燥。"
+          "text": "白露过后，天气转凉，秋燥渐显。白露节气最大的特点是昼夜温差大，民间有“白露秋分夜，一夜凉一夜”之说。此时养生应以养阴防燥、润肺益胃为纲，顺应秋季“收”的特点。"
         },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "当前权威健康科普提示，老年人秋季调养应注意温差变化、清淡饮食、适当补水和适度运动，并关注呼吸系统、心脑血管疾病以及跌倒风险。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜处暑之后——暑未尽，凉渐生",
-      "title": "处暑之后——暑未尽，凉渐生",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "“处”有止息之意，处暑意味着暑热逐渐结束，但并不意味着天气会立即转凉。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "金昌地区秋季昼夜温差较大，常常出现："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "中午仍热，早晚已经明显转凉。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "因此，老同志在这一阶段不要急于完全换上厚衣服，也不要继续按照盛夏习惯长时间吹空调、吹冷风。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "注意三件事："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "早晚添一件。清晨、夜间外出时可适当增加薄外套。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "睡觉护好腹部。夜间气温下降后注意腹部、肩颈和腰背保暖。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "出汗及时更衣。散步、锻炼后如果衣物潮湿，应及时更换，避免吹风受凉。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "国家卫生健康委有关处暑健康科普也提示，处暑阶段应注意夏秋转换带来的脾胃和呼吸道不适。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜白露将至——昼夜温差扩大，注意呼吸道健康",
-      "title": "白露将至——昼夜温差扩大，注意呼吸道健康",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "俗话说："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "“白露秋分夜，一夜凉一夜。”"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "进入白露后，北方空气湿度逐渐下降，昼夜温差明显扩大。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "一些老同志容易出现："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "口干、咽干、鼻腔干燥、皮肤干燥等不适。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "有慢性呼吸系统疾病的老年人，更应注意天气变化。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "建议："
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "根据天气变化及时增减衣物",
-          "text": "根据天气变化及时增减衣物。",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "室内适度通风，但避免长时间迎风直吹",
-          "text": "室内适度通风，但避免长时间迎风直吹。",
-          "tone": "green"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜昼夜温差扩大，注意呼吸道健康（续1）",
-      "title": "昼夜温差扩大，注意呼吸道健康（续1）",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "外出归来及时洗手",
-          "text": "外出归来及时洗手。",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "尽量避免到空气污浊、过于拥挤的环境长时间停留",
-          "text": "尽量避免到空气污浊、过于拥挤的环境长时间停留。",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "出现持续咳嗽、胸闷、气短、发热等明显不适，应及时就医，不要自行长期服药。",
-          "tone": "green"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜秋季饮食——清淡温润，少辛少腻",
-      "title": "秋季饮食——清淡温润，少辛少腻",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "经过一个夏季的暑热和冷饮刺激后，进入初秋，饮食不宜突然“大补”。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "国家卫生健康委有关处暑科普建议，这一阶段饮食仍应以清淡为主，并注意保护脾胃；进入秋燥明显阶段，可以根据自身情况适当选择百合、银耳、莲子、梨等食物。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "推荐食材"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "润燥类：梨、银耳、百合、莲藕。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "健脾类：山药、莲子、小米、南瓜。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "秋季水果：苹果、葡萄等。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "少吃什么？"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "少吃过度辛辣、煎炸和油腻食物。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "冰箱里刚取出的水果、冰镇饮料也应适量减少，特别是脾胃功能较弱的老同志，更不宜贪凉。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜秋季补水——不要等到口渴才喝",
-      "title": "秋季补水——不要等到口渴才喝",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "秋季虽然没有盛夏出汗多，但空气干燥，同样需要注意补水。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "老年人的口渴感觉可能不如年轻人敏感，因此不要完全等到明显口渴后才想到喝水。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "建议："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "少量、多次、温饮。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "可以把温水放在随手可取的位置，养成主动喝水的习惯。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "国家卫生健康委对白露时节健康问题的科普提出，补水应结合天气、活动量以及个人疾病情况进行调整；心、肾功能不全等需要限制饮水的人群，应严格遵从医生建议，不能盲目增加饮水量。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜秋季运动——不求“大汗”，贵在坚持",
-      "title": "秋季运动——不求“大汗”，贵在坚持",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "秋高气爽，非常适合户外活动。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "但老年人锻炼的目的不是追求强度，而是维持身体活动能力。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "推荐："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "散步太极拳八段锦健身操适度快走"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "运动过程中以身体微微发热、感觉舒适为宜。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "如果出现明显胸闷、头晕、心慌或呼吸困难，应立即停止活动。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "中国疾控中心在老年健康科普中还特别提醒，适度运动有助于预防跌倒，老年人可以结合自身情况加强肌肉力量和平衡能力锻炼。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜防跌倒——秋天容易忽视的一件“小事”",
-      "title": "防跌倒——秋天容易忽视的一件“小事”",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "天气逐渐转凉后，衣物增加、天黑时间提前，部分老年人的行动灵活性也会受到影响。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "因此，除了“养生”，秋季还要特别做好居家防跌倒。"
-        },
-        {
-          "type": "paragraph",
-          "style": "subhead",
-          "text": "家里检查一下："
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "卫生间地面是否容易打滑？",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "夜间起床的通道是否有灯？",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "床边是否堆放杂物？",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "浴室是否安装扶手？",
-          "tone": "green"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜秋天容易忽视的一件小事（续1）",
-      "title": "秋天容易忽视的一件小事（续1）",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "常走的地面是否有卷边的地毯？",
-          "tone": "green"
-        },
-        {
-          "type": "cardline",
-          "badge": "★",
-          "title": "重点提示",
-          "text": "穿的鞋底是否防滑？",
-          "tone": "green"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "中国疾控中心建议，可通过增加小夜灯和扶手、保持地面干燥平整等适老化措施降低跌倒风险。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "一次小小的环境调整，可能避免一次严重的跌倒。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜情志调养——秋日宜静，更要常乐",
-      "title": "情志调养——秋日宜静，更要常乐",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
-        {
-          "type": "paragraph",
-          "style": "lead",
-          "text": "秋季万物由繁盛走向收敛，一些老同志容易产生思念、孤独或者情绪低落。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "这时候，更应该让生活充实起来。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "可以："
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "读一本喜欢的书；"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "写写字、练练书法；"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "和老同事聊聊天；"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "陪家人散散步；"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "养花、听音乐；"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "参加老干部党支部或社区集体活动。"
-        },
-        {
-          "type": "paragraph",
-          "style": "small",
-          "text": "保持稳定的作息、积极的社交和良好的情绪，同样是健康的重要组成部分。中国疾控中心也倡导老年人保持积极心态，与家人朋友保持沟通，积极参与社会活动。"
-        }
-      ]
-    },
-    {
-      "type": "health",
-      "navTitle": "时令养生｜秋季健康口诀",
-      "title": "秋季健康口诀",
-      "kicker": "时令养生｜处暑白露 润燥安秋",
-      "section": "时令养生",
-      "blocks": [
         {
           "type": "chips",
           "items": [
             {
-              "text": "早晚添衣不受凉",
-              "tone": "green"
+              "text": "养阴防燥"
             },
             {
-              "text": "清淡温润护脾胃",
-              "tone": "green"
+              "text": "润肺益胃"
             },
             {
-              "text": "少量多次勤饮水",
-              "tone": "green"
+              "text": "早卧早起"
             },
             {
-              "text": "舒缓运动防跌倒",
-              "tone": "green"
-            },
-            {
-              "text": "开窗通风护呼吸",
-              "tone": "green"
-            },
-            {
-              "text": "心宽常乐享金秋",
-              "tone": "green"
+              "text": "微汗为度"
             }
           ]
+        },
+        {
+          "type": "sectionHeading",
+          "text": "白露节气特点"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "昼夜温差大",
+          "text": "白露是二十四节气中的第十五个节气、秋季第三个节气，通常在公历9月7日至9日交节。此时暑热渐退而凉意渐生，白天尚热、早晚已凉，昼夜温差可达10℃以上；“白露”之名，正来自夜间水汽在草木上凝结成露。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "秋燥渐显",
+          "text": "夏季的湿热转为秋季的干燥，空气湿度下降，人体容易出现口干咽干、鼻燥唇裂、皮肤干痒、大便干结等“秋燥”表现，故此时重在滋阴润燥。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "3",
+          "title": "白露三候",
+          "text": "一候鸿雁来，二候玄鸟归，三候群鸟养羞——鸿雁南飞避寒，燕子归去，群鸟开始储藏食物以备过冬，万物皆随阳气收敛而转入“收”的状态。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "4",
+          "title": "养生总纲",
+          "text": "顺应秋季“收”的特点：饮食上滋阴润肺、健脾养胃；起居上早卧早起、早晚添衣；运动上舒缓为宜、微汗为度；情志上收敛神气、保持平和。",
+          "tone": "green"
+        }
+      ]
+    },
+    {
+      "type": "health",
+      "navTitle": "健康养生｜饮食调养",
+      "title": "健脾润燥 滋阴养肺",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "一、饮食调养——健脾润燥，滋阴养肺"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "滋阴润肺",
+          "text": "梨、银耳、百合、莲藕、蜂蜜——炖汤或蒸食，不宜生吃。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "健脾养胃",
+          "text": "山药、莲子、红薯、南瓜——煮粥、蒸食。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "3",
+          "title": "补充水分",
+          "text": "雪梨、柚子、苹果、香蕉——饭后适量食用。",
+          "tone": "green"
+        }
+      ]
+    },
+    {
+      "type": "health",
+      "navTitle": "健康养生｜饮食禁忌",
+      "title": "少生冷 少辛辣",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "饮食禁忌"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "少吃生冷寒凉",
+          "text": "西瓜、冰饮等容易损伤脾胃阳气。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "少吃辛辣油腻",
+          "text": "辣椒、生姜、腌制食品，易加重秋燥。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "3",
+          "title": "进食不宜过饱",
+          "text": "以免增加肠胃负担。",
+          "tone": "green"
+        },
+        {
+          "type": "sectionHeading",
+          "text": "润肺推荐——银耳雪梨羹"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "银耳泡发撕小朵，雪梨去核切块，加入冰糖、枸杞，大火煮开转小火慢炖40分钟至银耳出胶，温食即可。此羹润肺止咳、滋阴清燥，特别适合秋季常食。"
+        }
+      ]
+    },
+    {
+      "type": "health",
+      "navTitle": "健康养生｜起居调养",
+      "title": "早晚添衣 早睡早起",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "二、起居调养——早晚添衣，早睡早起"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "白露后天气转凉，不宜再赤膊露体，早晚要适时增添衣物，尤其注意腹部、肩颈和关节保暖。"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "早卧早起",
+          "text": "顺应秋季阳气收敛之势，晚上10点前入睡，早晨6点左右起床。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "午休适度",
+          "text": "中午小憩20～30分钟，缓解“秋乏”。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "3",
+          "title": "注意通风",
+          "text": "白天适当开窗通风，夜间关窗防寒。",
+          "tone": "green"
+        }
+      ]
+    },
+    {
+      "type": "health",
+      "navTitle": "健康养生｜运动锻炼",
+      "title": "舒缓为主 微汗为度",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "三、运动锻炼——舒缓为主，微汗为度"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "秋季运动应遵循“收”的原则，避免大汗淋漓耗伤津液。"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "推荐运动",
+          "text": "散步、八段锦、太极拳。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "运动强度",
+          "text": "避免大汗淋漓，以身体微微发热为宜。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "3",
+          "title": "运动时间",
+          "text": "选择早晨或傍晚气温适宜时段。",
+          "tone": "green"
+        }
+      ]
+    },
+    {
+      "type": "health",
+      "navTitle": "健康养生｜重点疾病预防",
+      "title": "防呼吸道 护心脑血管",
+      "kicker": "健康养生｜白露过后 安享金秋",
+      "section": "健康养生",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "四、重点疾病预防"
+        },
+        {
+          "type": "cardline",
+          "badge": "1",
+          "title": "呼吸道疾病防护",
+          "text": "秋季干燥、温差大，是上呼吸道感染高发期。老年人应注意及时增减衣物，保持室内湿度。",
+          "tone": "green"
+        },
+        {
+          "type": "cardline",
+          "badge": "2",
+          "title": "心脑血管疾病防护",
+          "text": "早晚温差增大易诱发血压波动。有高血压、冠心病史的老年人应每日监测血压，严格遵医嘱服药。",
+          "tone": "green"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "风采展示｜王吉中",
+      "title": "琴声悠扬映初心",
+      "kicker": "老干部风采展示｜银发生辉 余热生辉",
+      "section": "老干部风采展示",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "风采展示一：琴声悠扬映初心"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "记退休干部王吉中的手风琴艺术人生"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "在职工作时，他是严谨务实的领导干部；退休之后，他是指尖流淌旋律的“艺术行者”。王吉中同志用一架手风琴，拉出了退休生活的崭新乐章。"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "在职期间，王吉中同志就是系统内有名的“文艺骨干”。繁忙的工作之余，手风琴是他最好的伙伴。单位联欢会上，他是雷打不动的“压轴嘉宾”。同事们常说：“王主任的琴声一响，再紧张的神经都能松弛下来。”他的琴声不仅丰富了干部职工的精神生活，更彰显了老一辈干部多才多艺、热爱生活的人文情怀。"
+        },
+        {
+          "type": "video",
+          "src": "assets/video/wangjizhong.mp4",
+          "poster": "",
+          "caption": "王吉中同志手风琴演奏"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "风采展示｜马静娟",
+      "title": "乐享银龄正当时",
+      "kicker": "老干部风采展示｜银发生辉 余热生辉",
+      "section": "老干部风采展示",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "风采展示二：乐享银龄正当时"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "记退休干部马静娟的多彩“潮”生活"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "谁说退休生活只能是含饴弄孙、深居简出？马静娟同志用实际行动给出了响亮回答：退休，是精彩人生的另一个起点！她以饱满的热情投身于老年文娱活动，将晚年生活过得热气腾腾、有滋有味。"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "退休后的马静娟，日程表排得比上班时还满。周一老年大学钢琴课，周二民族舞排练，周三烘焙小组“新品研发”，周四社区合唱团练声，周末还要研究小红书上的新菜谱。她笑称自己是“退而不休”的“斜杠老年”。在她身上，我们看到了新时代老年人积极主动、乐观向上的养老观——不仅要“老有所养”，更要“老有所学、老有所乐、老有所为”。"
+        },
+        {
+          "type": "image",
+          "src": "assets/image/majingjuan.webp",
+          "alt": "马静娟同志文娱活动照片",
+          "caption": "马静娟同志参加老年文娱活动",
+          "frameRatio": "auto",
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "风采展示｜贾得花",
+      "title": "翰墨飘香养浩气",
+      "kicker": "老干部风采展示｜银发生辉 余热生辉",
+      "section": "老干部风采展示",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "风采展示三：翰墨飘香养浩气"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "记退休干部贾得花的书法修心之路"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "一管柔毫，一砚清墨，在宣纸的方寸之间，贾得花同志寻得了退休生活的精神归宿。她将对传统文化的敬畏与对人生况味的感悟，沉淀于笔端，书写出宁静致远的晚年境界。"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "贾得花同志在工作岗位时便写得一手好字，但苦于公务繁忙，难以尽兴。退休之后，她重拾旧爱，将书法从“余事”变成了“主业”。她说：“书法是纸上的太极拳，练的是字，修的是心。提按顿挫之间，浮躁之气尽褪，唯有宁静致远。”她用笔墨证明：退休生活可以是一首诗，更可以是一幅气韵生动的书法长卷。"
+        },
+        {
+          "type": "image",
+          "src": "assets/image/jiadehua.webp",
+          "alt": "贾得花同志书法照片",
+          "caption": "贾得花同志书法作品",
+          "frameRatio": "auto",
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "风采展示｜李宏仁",
+      "title": "诗心不老咏芳华",
+      "kicker": "老干部风采展示｜银发生辉 余热生辉",
+      "section": "老干部风采展示",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "风采展示四：诗心不老咏芳华"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "记退休干部李宏仁的诗歌日记人生"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "生活不止眼前的柴米油盐，还有笔下的诗与远方。李宏仁同志退休后，以诗为伴、以笔为友，将寻常日子里的点点滴滴酿成了动人的诗句，不追求宏大叙事，而是专注于记录退休生活的日常点滴。"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "晨起浇花、老友相聚、节气更替、旅途见闻……凡入眼者，皆可入诗，李老用一颗永远年轻的诗心，书写着晚晴岁月的从容与丰盈。这些诗句或许没有惊世骇俗的辞藻，却因真挚朴素而格外动人。他说：“我不是在‘创作’，只是在用最简练的语言，替平凡的日子留个影。老去的只是年龄，不老的是对生活永远敏感、永远热爱的诗意灵魂。”"
+        },
+        {
+          "type": "image",
+          "src": "assets/image/lihongren.webp",
+          "alt": "李宏仁同志照片",
+          "caption": "李宏仁同志诗歌日记手稿",
+          "frameRatio": "auto",
+          "fit": "contain"
+        }
+      ]
+    },
+    {
+      "type": "article",
+      "navTitle": "风采展示｜戴莉亚",
+      "title": "笔底斑斓绘晚晴",
+      "kicker": "老干部风采展示｜银发生辉 余热生辉",
+      "section": "老干部风采展示",
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "风采展示五：笔底斑斓绘晚晴"
+        },
+        {
+          "type": "paragraph",
+          "style": "small",
+          "text": "记退休干部戴莉亚的绘画时光"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "在职时，她是干练利落的业务骨干；工作之余，她最享受的时光就是拿起画笔，在色彩和线条的世界里放松自己。下班回家铺开画纸涂几笔，就是她一天中最放松的时刻。只是工作任务重，能静下心来画一幅完整作品的时间实在不多，许多半成品和草图只能收在画夹里，等“以后有空了”再完成。退休后，这份爱好终于从“挤时间”变成了“沉浸式”。"
+        },
+        {
+          "type": "paragraph",
+          "style": "body",
+          "text": "她的画风随性而多元——喜欢油画那厚重的质感，也迷恋中国画的写意韵味。她不拘泥于某一画种，全凭心情和兴趣：“画画就是个乐子，想用什么材料就用什么，想画什么就画什么，自己高兴最重要。”她不追求参展获奖，更不图什么名头，纯粹是为了记录生活中的美好瞬间。她的画作让我们看到，也许只消一支笔、几管颜料、一方画纸，便足以让退休生活有滋有味、活色生香。"
+        },
+        {
+          "type": "image",
+          "src": "assets/image/dailiya.webp",
+          "alt": "戴莉亚同志绘画照片",
+          "caption": "戴莉亚同志绘画作品",
+          "frameRatio": "auto",
+          "fit": "contain"
         }
       ]
     },
     {
       "type": "closing",
       "navTitle": "尾刊寄语",
-      "kicker": "尾刊寄语",
-      "title": "暑云渐散，秋露将凝",
+      "title": "金秋九月 · 安享金秋",
+      "kicker": "编后寄语",
       "section": "",
       "blocks": [
         {
           "type": "paragraph",
           "style": "body",
-          "text": "从盛夏走向金秋，是自然的节律，也是岁月给予我们的从容与丰盈。"
+          "text": "金秋九月，天高云淡，正是读书学习、修身养性的好时节。希望各位离退休老干部常览国事、深学理论，坚定信念、永葆本色；在网络空间中严守纪律底线，做清朗网络空间的守护者；在秋日里科学养生，守护好身心健康。"
         },
         {
           "type": "paragraph",
           "style": "body",
-          "text": "希望各位离退休老干部始终保持“活到老、学到老”的精神状态，常读时政、常学理论，在时代发展中坚定信心；始终牢记共产党员身份，知敬畏、守底线，在退休生活中永葆清廉本色；主动学习新的安全知识，识破AI时代不断翻新的诈骗套路，守护好自己和家人的财产安全；顺应季节变化科学调养，让健康成为幸福晚年最坚实的基础。"
+          "text": "同时，欢迎各位老同志积极参与单位组织的各项活动，继续关心支持金昌市分行发展，多提宝贵意见和建议。您的参与和关注，就是我们不断改进工作的最大动力。"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "莫道桑榆晚，为霞尚满天。"
+          "type": "quote",
+          "text": "特别提醒：白露过后早晚温差大，请各位老同志注意添衣保暖，预防感冒；饮食以健脾润燥为主，少吃生冷辛辣之物，保重身体。"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "退休不是奋斗的终点，而是一段从容、充实而精彩的新旅程。"
+          "type": "blessing",
+          "text": "衷心祝愿全体老干部身体健康、阖家幸福、金秋安康！"
         },
         {
-          "type": "paragraph",
-          "style": "body",
-          "text": "愿各位老同志："
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "心中有信仰，岁月有芬芳；身边有温暖，生活有安康；银发映初心，清风伴晚晴。"
-        },
-        {
-          "type": "paragraph",
-          "style": "body",
-          "text": "下一步，我们将继续围绕老同志关心关注的时政理论、党纪法规、金融反诈、健康生活等内容，持续丰富电子期刊形式和内容，用心用情做好离退休干部服务保障工作，让老同志政治上有荣誉感、组织上有归属感、生活上有幸福感。"
+          "type": "producer",
+          "text": "中国人民银行金昌市分行人事科制作"
         }
       ]
     }
   ],
-  "publishedAt": "2026-08-27T14:30:28.906Z"
+  "publishedAt": "2026-09-11T09:26:42.258Z",
+  "revision": {
+    "pending": false,
+    "updatedAt": "2026-09-11T09:09:47.000Z",
+    "basePublishedAt": "2026-09-10T08:33:20.084Z",
+    "source": "studio",
+    "publishedAt": "2026-09-11T09:12:50.298Z",
+    "releaseSnapshot": "20260911T091250Z-pre-publish"
+  }
 }
