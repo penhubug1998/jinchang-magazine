@@ -1360,7 +1360,6 @@ async function loadIssue() {
   applyIssueDesign(issue);
   if (studioEmbed) {
     document.body.classList.add("studio-embed");
-    $("homeLink")?.addEventListener("click", (event) => event.preventDefault(), { once:true });
   }
   $("brandTitle").textContent = issue.publication || "离退休干部电子期刊";
   $("brandMeta").textContent = [issue.label, issue.subtitle].filter(Boolean).join(" · ");
