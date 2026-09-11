@@ -2,7 +2,7 @@ import { issueTemplateCatalog } from '../src/studio/issue-templates.js';
 import http from 'node:http';
 import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
-import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
 import os from 'node:os';
@@ -91,7 +91,7 @@ const mime = {
 };
 const uploadRules = {
   image: { max:8*MiB, exts:new Set(['.jpg','.jpeg','.png','.webp','.gif']) },
-  video: { max:80*MiB, exts:new Set(['.mp4','.webm','.mov']) },
+  video: { max:200*MiB, exts:new Set(['.mp4','.webm','.mov']) },
   music: { max:20*MiB, exts:new Set(['.mp3','.m4a','.wav']) },
   tts: { max:8*MiB, exts:new Set(['.mp3','.m4a','.wav']) }
 };
@@ -320,6 +320,7 @@ async function binaryBody(req,max) {
   for await (const c of req) { total+=c.length; if (total>max) throw Object.assign(new Error(`文件超过上传上限 ${humanBytes(max)}`),{statusCode:413}); chunks.push(c); }
   return Buffer.concat(chunks,total);
 }
+function isStorageFullError(error){const text=String(error?.message||error?.output||error||'');return error?.code==='ENOSPC'||error?.errno==='ENOSPC'||/no space left on device|ENOSPC/i.test(text);}
 function requestIp(req){return String(req.headers['x-forwarded-for']||req.socket?.remoteAddress||'unknown').split(',')[0].trim().slice(0,120)||'unknown';}
 function loginRate(ip){
   const now=Date.now(),current=loginAttempts.get(ip);
@@ -784,9 +785,18 @@ async function readPublicationAudit(id,{refresh=true,strict=false}={}){
   let report=null;try{report=await readJson(reportFile)}catch{}
   return {run:runResult,report,audit:report?.issues?.[0]||null};
 }
+const STORAGE_WARNING_BYTES=512*MiB;
+const STORAGE_CRITICAL_BYTES=64*MiB;
+async function publicationStorageStatus(){
+  try{
+    const info=await statfs(root),freeBytes=Number(info.bavail)*Number(info.bsize),totalBytes=Number(info.blocks)*Number(info.bsize),status=freeBytes<STORAGE_CRITICAL_BYTES?'critical':freeBytes<STORAGE_WARNING_BYTES?'warning':'ready';
+    const free=humanBytes(freeBytes),total=humanBytes(totalBytes);
+    return {status,ok:status!=='critical',freeBytes,totalBytes,free,total,label:status==='critical'?`不足 · ${free}`:status==='warning'?`偏低 · ${free}`:`充足 · ${free}`,advice:status==='critical'?`服务器可用空间仅 ${free}，低于硬性安全线 ${humanBytes(STORAGE_CRITICAL_BYTES)}；请先清理旧发布包或扩容后再发布。`:status==='warning'?`服务器可用空间为 ${free}，低于建议线 ${humanBytes(STORAGE_WARNING_BYTES)}；建议先清理旧发布包，避免媒体上传或发布包生成失败。`:`服务器可用空间 ${free} / ${total}，满足当前发布前检查。`};
+  }catch(error){return {status:'unknown',ok:true,freeBytes:null,totalBytes:null,free:'未知',total:'未知',label:'未读取',advice:'无法读取服务器剩余空间，本项仅作提示，不阻断发布。',error:String(error?.message||error)}}
+}
 async function publicationStatus(id,{refreshAudit=true}={}){
-  const issue=await readJson(path.join(root,'issues',id,'issue.json'));const {audit,run}=await readPublicationAudit(id,{refresh:true,strict:true});const evidence=await readPublicationEvidence(id);const status=buildPublicationStatus(issue,audit,evidence);
-  return {...status,auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:evidence.publicDeployment||null};
+  const issue=await readJson(path.join(root,'issues',id,'issue.json'));const {audit,run}=await readPublicationAudit(id,{refresh:true,strict:true});const evidence=await readPublicationEvidence(id);const status=buildPublicationStatus(issue,audit,evidence);const storage=await publicationStorageStatus();
+  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:evidence.publicDeployment||null};
 }
 function publicIssuePath(id){const raw=String(id||'').trim();const n=Number(raw);return Number.isInteger(n)&&n>0?String(n).padStart(2,'0'):raw;}
 function publicIssueUrl(id){return publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null;}
@@ -1185,7 +1195,7 @@ const server=http.createServer(async(req,res)=>{try{
       let name; try{name=safeUploadName(req.headers['x-file-name']||u.searchParams.get('filename')||'')}catch(e){return send(res,400,{error:e.message,code:'VALIDATION_ERROR'})}
       const ext=path.extname(name).toLowerCase(); if(!rule.exts.has(ext))return send(res,415,{error:`${kind} 不支持 ${ext||'(无扩展名)'} 文件`,code:'UNSUPPORTED_MEDIA_TYPE'});
       const data=await binaryBody(req,rule.max); if(!data.length)return send(res,400,{error:'上传文件为空',code:'VALIDATION_ERROR'}); try{validateUploadSignature(data,ext)}catch(e){return send(res,415,{error:e.message,code:'INVALID_MEDIA_SIGNATURE'})}
-      const dir=path.join(managedAssetRoot(id),kind); await mkdir(dir,{recursive:true}); const stored=await uniqueFile(dir,name); await writeFile(path.join(dir,stored),data); await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);
+      const dir=path.join(managedAssetRoot(id),kind); await mkdir(dir,{recursive:true}); const stored=await uniqueFile(dir,name); const target=path.join(dir,stored); try{await writeFile(target,data);await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);}catch(e){await rm(target,{force:true}).catch(()=>{});if(isStorageFullError(e))return send(res,507,{error:'服务器存储空间不足，暂时无法保存该资源。请清理服务器空间后重试。',code:'STORAGE_FULL'});throw e;}
       return send(res,201,{path:`assets/${kind}/${stored}`,kind,name:stored,bytes:data.length,size:humanBytes(data.length),renamed:stored!==name});
     }
   }
@@ -1225,7 +1235,7 @@ const server=http.createServer(async(req,res)=>{try{
 
 async function runPublicationPreflight(id,report=()=>{}){
   const steps=[];const exec=async(label,script,args=[])=>{report({stage:label,percent:Math.min(95,10+steps.length*20)});const result=await runScriptAsync(script,args);steps.push({label,ok:result.ok,output:result.output});return result};
-  const check=await exec('数据校验','check-v3.mjs',['--issue',id]);const build=check.ok?await exec('构建','build-v3.mjs',['--issue',id]):{ok:false};const smoke=build.ok?await exec('静态 Smoke','smoke-v3.mjs',['--issue',id]):{ok:false};steps.push({label:'设备回归（提示项）',ok:true,skipped:true,advisory:true,output:'设备兼容性回归属于提示项，不阻断正式发布'});const audit=await exec('发布审计（硬性门禁 + 提示项）','audit-v3.mjs',['--issue',id,'--quiet','--strict']);const hardOk=Boolean(check.ok&&build.ok&&smoke.ok&&audit.ok);const previous=await readPublicationEvidence(id);const evidence=await writePublicationEvidence(id,{devices:{mobile:previous.devices?.mobile||'pending',desktop:previous.devices?.desktop||'pending',checkedAt:previous.devices?.checkedAt||null,policy:'advisory'},lastPreflight:{ok:hardOk,strict:true,at:new Date().toISOString(),steps:steps.map(item=>({label:item.label,ok:item.ok,skipped:Boolean(item.skipped),advisory:Boolean(item.advisory)}))}});return {ok:hardOk,steps,evidence,status:await publicationStatus(id,{refreshAudit:false})};
+  const check=await exec('数据校验','check-v3.mjs',['--issue',id]);const build=check.ok?await exec('构建','build-v3.mjs',['--issue',id]):{ok:false};const smoke=build.ok?await exec('静态 Smoke','smoke-v3.mjs',['--issue',id]):{ok:false};const storage=await publicationStorageStatus();steps.push({label:'服务器存储空间',ok:storage.ok,advisory:storage.status!=='critical',output:storage.advice});steps.push({label:'设备回归（提示项）',ok:true,skipped:true,advisory:true,output:'设备兼容性回归属于提示项，不阻断正式发布'});const audit=await exec('发布审计（硬性门禁 + 提示项）','audit-v3.mjs',['--issue',id,'--quiet','--strict']);const hardOk=Boolean(check.ok&&build.ok&&smoke.ok&&audit.ok&&storage.ok);const previous=await readPublicationEvidence(id);const evidence=await writePublicationEvidence(id,{devices:{mobile:previous.devices?.mobile||'pending',desktop:previous.devices?.desktop||'pending',checkedAt:previous.devices?.checkedAt||null,policy:'advisory'},lastPreflight:{ok:hardOk,strict:true,at:new Date().toISOString(),steps:steps.map(item=>({label:item.label,ok:item.ok,skipped:Boolean(item.skipped),advisory:Boolean(item.advisory)}))}});return {ok:hardOk,steps,evidence,status:await publicationStatus(id,{refreshAudit:false})};
 }
 if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','login.css','login.js','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
 server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Promotion 实机验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});

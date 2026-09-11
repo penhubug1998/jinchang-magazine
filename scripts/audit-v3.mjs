@@ -44,12 +44,14 @@ const catalog = {
   PAGE_NAV_LONG:['导航标题偏长','layout','缩短导航标题，详细说明可放在页内主标题。'],
   PAGE_KICKER_LONG:['页内眉题偏长','layout','眉题尽量保持短句，避免移动端换行占用过多高度。'],
   EMPTY_BLOCKS:['页面没有内容块','content','至少增加一个正文、图片、卡片或其他有效内容块。'],
+  PAGE_EFFECTIVELY_EMPTY:['页面没有有效内容','content','检查是否误留了空内容块；如确实需要留白页，请使用封面、目录或尾页类型并补充页面说明。'],
   PLACEHOLDER_CONTENT:['发现占位内容','content','将“请填写 / TODO / 待补充”等占位文字替换为正式内容。'],
   PARAGRAPH_TOO_LONG:['单个文本块过长','layout','拆分为 2–3 个段落或卡片，降低手机页内长滚动负担。'],
   IMAGE_ALT_MISSING:['图片缺少替代说明','accessibility','为图片填写 alt，便于无障碍阅读和资源识别。'],
   VIDEO_CAPTION_MISSING:['视频缺少说明','accessibility','为视频填写 caption，说明视频主题。'],
   VIDEO_POSTER_MISSING:['视频缺少封面图','media','在媒体工作台为视频自动生成 poster，或从图片库选择一张封面。'],
   ARTICLE_REFERENCE_MISSING:['文章链接引用不存在','content','修正 articleLink 的 articleId，或在 articles 中补充对应文章。'],
+  ARTICLE_NOT_PLACED:['文章尚未纳入页面','content','将该文章添加为“文章链接”内容块，并在发布前确认页码与显示标题。'],
   TOC_PAGE_INVALID:['目录跳转页码无效','structure','将目录项 page 修正为 1 到本期总页数之间的数字。'],
   DUPLICATE_NAV_TITLE:['存在重复导航标题','content','必要时为重复页面增加区分词，方便目录定位。'],
   EXTERNAL_LINK_INSECURE:['文章链接不是 HTTPS','security','优先使用 HTTPS 原文链接。'],
@@ -75,6 +77,25 @@ function textValues(value, prefix='') {
   else if(Array.isArray(value)) value.forEach((v,i)=>rows.push(...textValues(v,`${prefix}[${i}]`)));
   else if(value&&typeof value==='object') for(const [k,v] of Object.entries(value)) rows.push(...textValues(v,prefix?`${prefix}.${k}`:k));
   return rows;
+}
+const meaningfulTextKeys=new Set(['text','body','title','label','caption','summary','content','quote','kicker','name','value']);
+function hasMeaningfulBlockContent(block){
+  if(!block||typeof block!=='object')return false;
+  const type=String(block.type||'');
+  if(type==='container')return (block.columns||[]).some(col=>(col?.blocks||[]).some(hasMeaningfulBlockContent));
+  if(['image','video'].includes(type))return Boolean(String(block.src||'').trim());
+  if(type==='articleLink')return Boolean(String(block.articleId||block.article||block.id||block.title||'').trim());
+  if(type==='toc')return Array.isArray(block.items)&&block.items.some(item=>String(item?.title||'').trim());
+  return textValues(block).some(({path,text})=>{
+    const key=String(path||'').split('.').at(-1)?.replace(/\[\d+\]$/,'');
+    return meaningfulTextKeys.has(key)&&String(text||'').trim().length>0;
+  });
+}
+function walkBlocks(blocks, visitor, path=[]){
+  for(const [index,block] of (Array.isArray(blocks)?blocks:[]).entries()){
+    const next=[...path,index]; visitor(block,next);
+    if(block?.type==='container')for(const [columnIndex,column] of (block.columns||[]).entries())walkBlocks(column?.blocks||[],visitor,[...next,'columns',columnIndex,'blocks']);
+  }
 }
 function calcScore(blockers,warnings){return Math.max(0,Math.min(100,100-blockers.length*20-warnings.length*4))}
 function categoriesFor(audit){const out={};for(const x of [...audit.blockers,...audit.warnings,...audit.notes]){out[x.category] ||= {blockers:0,warnings:0,notes:0};out[x.category][x.severity==='blocker'?'blockers':x.severity==='warning'?'warnings':'notes']++}return out}
@@ -111,6 +132,7 @@ async function auditOne(dirName) {
   if(!closings.length)add(warnings,'warning','CLOSING_MISSING','本期没有 type=closing 的尾页',{location:{kind:'page',page:pageCount||1,field:'type'}});
   if(closings.length&&closings.at(-1)!==pageCount)add(warnings,'warning','CLOSING_NOT_LAST',`尾页当前位于第 ${closings.at(-1)} 页，总页数 ${pageCount}`,{location:{kind:'page',page:closings.at(-1),field:'type'}});
   const navSeen=new Map();
+  const referencedArticleIds=new Set();
   for(const [i,p] of (issue.pages||[]).entries()){
     const n=i+1;const loc=(field)=>({location:{kind:'page',page:n,field}});
     const title=String(p.title||'').trim(),nav=String(p.navTitle||'').trim(),kicker=String(p.kicker||'').trim();
@@ -126,8 +148,9 @@ async function auditOne(dirName) {
     const pageDesign=p.design||{};if(Number(pageDesign.contentWidth)>0&&Number(pageDesign.contentWidth)<70)add(warnings,'warning','DESIGN_CONTENT_NARROW',`第 ${n} 页内容宽度仅 ${pageDesign.contentWidth}% ，移动端可能过窄`,{...loc('blocks'),fix:'建议内容宽度保持在 75%–100%，手机端优先使用 100%。'});if(Number(pageDesign.padding)>=0&&Number(pageDesign.padding)<2)add(warnings,'warning','DESIGN_PAGE_PADDING_LOW',`第 ${n} 页页内留白偏小`,{...loc('blocks'),fix:'建议至少保留约 3%–5% 页内留白。'});
     const blocks=Array.isArray(p.blocks)?p.blocks:[];
     if(!blocks.length)add(warnings,'warning','EMPTY_BLOCKS',`第 ${n} 页没有内容块`,loc('blocks'));
+    else if(!blocks.some(hasMeaningfulBlockContent)&&!['cover','toc','closing'].includes(p.type))add(warnings,'warning','PAGE_EFFECTIVELY_EMPTY',`第 ${n} 页有 ${blocks.length} 个内容块，但没有检测到有效文字、图片、视频或链接内容`,loc('blocks'));
     if(blocks.length>80)add(blockers,'blocker','BLOCK_LIMIT_EXCEEDED',`第 ${n} 页有 ${blocks.length} 个内容块，超过制作中心上限 80 个`,loc('blocks'));
-    else if(blocks.length>12)add(warnings,'warning','BLOCK_DENSITY_HIGH',`第 ${n} 页有 ${blocks.length} 个内容块，编辑和移动端阅读密度可能偏高`,{...loc('blocks'),fix:'建议拆分为两页或合并同类信息，单页优先控制在 4–10 个内容块。'});
+    else if(blocks.length>12){const splitAfter=Math.max(1,Math.ceil(blocks.length/2));add(warnings,'warning','BLOCK_DENSITY_HIGH',`第 ${n} 页有 ${blocks.length} 个内容块，编辑和移动端阅读密度可能偏高；建议在第 ${splitAfter} 个内容块后拆到续页`,{...loc('blocks'),suggestedSplitAfter:splitAfter,fix:`建议在第 ${splitAfter} 个内容块后拆分到续页，或合并同类信息；单页优先控制在 4–10 个内容块。`});}
     for(const [bi,b] of blocks.entries()){
       if(!b||typeof b!=='object'){add(blockers,'blocker','BLOCK_INVALID',`第 ${n} 页第 ${bi+1} 个内容块不是有效对象`,{...loc('blocks'),blockIndex:bi});continue}
       const knownBlocks=new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
@@ -149,13 +172,19 @@ async function auditOne(dirName) {
       if(b.type==='image'&&!String(b.alt||'').trim())add(warnings,'warning','IMAGE_ALT_MISSING',`第 ${n} 页图片 ${b.src||''} 缺少 alt`,{...loc('blocks'),blockIndex:bi});
       if(b.type==='video'&&!String(b.caption||'').trim())add(warnings,'warning','VIDEO_CAPTION_MISSING',`第 ${n} 页视频缺少 caption`,{...loc('blocks'),blockIndex:bi});
       if(b.type==='video'&&String(b.src||'').trim()&&!String(b.poster||'').trim())add(notes,'note','VIDEO_POSTER_MISSING',`第 ${n} 页视频尚未设置 poster 封面`,{...loc('blocks'),blockIndex:bi});
-      if(b.type==='articleLink'){
-        const id=b.articleId||b.article||b.id; if(!id||!issue.articles?.[id])add(blockers,'blocker','ARTICLE_REFERENCE_MISSING',`第 ${n} 页 articleLink 引用 ${id||'(空)'}，但 articles 中不存在`,{...loc('blocks'),blockIndex:bi});
-      }
       if(b.type==='toc')for(const item of b.items||[]){const dest=Number(item.page);if(!Number.isInteger(dest)||dest<1||dest>pageCount)add(blockers,'blocker','TOC_PAGE_INVALID',`第 ${n} 页目录项“${item.title||''}”跳转到无效页码 ${item.page}`,{...loc('blocks'),blockIndex:bi})}
     }
+    walkBlocks(blocks,(b,path)=>{
+      if(b?.type!=='articleLink')return;
+      const id=String(b.articleId||b.article||b.id||'').trim();
+      if(id)referencedArticleIds.add(id);
+      if(!id||!issue.articles?.[id])add(blockers,'blocker','ARTICLE_REFERENCE_MISSING',`第 ${n} 页 articleLink 引用 ${id||'(空)'}，但 articles 中不存在`,{...loc('blocks'),blockIndex:path[0],blockPath:path.join('.')});
+    });
   }
-  for(const [id,a] of Object.entries(issue.articles||{})){if(a?.url&&/^http:\/\//i.test(a.url))add(warnings,'warning','EXTERNAL_LINK_INSECURE',`文章 ${id} 使用 HTTP 链接：${a.url}`,{location:{kind:'metadata',field:'articles'}})}
+  for(const [id,a] of Object.entries(issue.articles||{})){
+    if(!referencedArticleIds.has(id))add(warnings,'warning','ARTICLE_NOT_PLACED',`文章“${a?.title||id}”（${id}）已在文章库中定义，但没有找到对应的文章链接内容块`,{location:{kind:'metadata',field:'articles',articleId:id}});
+    if(a?.url&&/^http:\/\//i.test(a.url))add(warnings,'warning','EXTERNAL_LINK_INSECURE',`文章 ${id} 使用 HTTP 链接：${a.url}`,{location:{kind:'metadata',field:'articles'}})
+  }
 
   const refs=collectReferencedAssets(issue);
   const sourceCheck=safeSourceDir(issue.assetSource||'');const sourceDir=sourceCheck.dir;
