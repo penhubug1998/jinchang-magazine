@@ -24,10 +24,10 @@
       "scope": "page",
       "generator": "edge-neural",
       "voice": "zh-CN-XiaoxiaoNeural",
-      "generatedAt": "2026-09-11T09:11:56.244Z",
-      "sourceDigest": "7a1ee07e9561ae351f9339f901177760a1786396dd5ea01d0ddff2cee23f4cba",
+      "generatedAt": "2026-09-11T09:42:29.849Z",
+      "sourceDigest": "7ae132e6c49f57a1d8ca676a3e19fb407738940782e2b34d9183013034468e25",
       "pageDigests": [
-        "4dccd20e4c8524a32595",
+        "2cfaebdef28c8d9fd50c",
         "755657562aff05b3f50f",
         "dbed8dbb2cd7fa1d2287",
         "955aa1441aec0eb18bd0",
@@ -52,7 +52,7 @@
         "c968e35cb4449de43443",
         "050f05ff0d474ce324e0"
       ],
-      "baselinedAt": "2026-09-11T09:11:56.245Z"
+      "baselinedAt": "2026-09-11T09:42:29.850Z"
     },
     "turnAnimation": "smooth"
   },
@@ -122,7 +122,7 @@
       "blocks": [
         {
           "type": "coverMeta",
-          "text": "离退休干部电子期刊 · 第六期"
+          "text": "离退休干部电子期刊 · 第三期"
         },
         {
           "type": "coverSections",
@@ -977,7 +977,7 @@
       ]
     }
   ],
-  "publishedAt": "2026-09-11T09:26:42.258Z",
+  "publishedAt": "2026-09-11T09:42:31.041Z",
   "revision": {
     "pending": false,
     "updatedAt": "2026-09-11T09:09:47.000Z",

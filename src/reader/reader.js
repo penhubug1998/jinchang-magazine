@@ -175,7 +175,7 @@ function renderBlockContent(block,ctx={}) {
       const px = Math.max(0, Math.min(100, Number(block.positionX ?? 50)));
       const py = Math.max(0, Math.min(100, Number(block.positionY ?? 50)));
       const ratioStyle = ratio === "auto" ? "" : `aspect-ratio:${ratio.replace(":", " / ")};`;
-      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="eager" decoding="async" style="object-fit:${fit};object-position:${px}% ${py}%"></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
+      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="eager" decoding="async" role="button" tabindex="0" title="点击查看大图" data-zoom-src="${escapeHtml(block.src || "")}" data-zoom-caption="${escapeHtml(block.caption || "")}" style="object-fit:${fit};object-position:${px}% ${py}%"></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
     }
     case "coverMeta":
       return `<div class="cover-meta"${studioTextAttrs("text")}>${escapeHtml(block.text || "")}</div>`;
@@ -382,6 +382,13 @@ function bindPageActions() {
   }));
   document.querySelectorAll("[data-article-id]").forEach((button) => button.addEventListener("click", (event) => { if (studioEmbed) { event.preventDefault(); return; } openArticle(button.dataset.articleId); }));
   document.querySelectorAll("[data-video-full]").forEach((button) => button.addEventListener("click", () => openVideoFullscreen(button)));
+  document.querySelectorAll("img[data-zoom-src]").forEach((img) => {
+    const open = () => openImageLightbox(img.dataset.zoomSrc, img.dataset.zoomCaption || "", img.alt || "");
+    img.addEventListener("click", open);
+    img.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); open(); }
+    });
+  });
   document.querySelectorAll("video").forEach((video) => {
     if (video.dataset.v3PlayerBound === "1") return;
     video.dataset.v3PlayerBound = "1";
@@ -559,6 +566,58 @@ function warmMediaAround(index) {
     document.head.appendChild(link);
   }
 }
+/* ---------------------------------------------------------------------------
+   Image lightbox.
+
+   Photos are printed small inside the book page; a click (or Enter/Space on the
+   focused image) opens the original file full-screen so 风采 photos and
+   calligraphy can actually be read. The overlay is created on first use so the
+   reader keeps working unmodified in the studio's embedded preview.
+--------------------------------------------------------------------------- */
+let imageLightboxCleanup=null;
+function ensureImageLightbox(){
+  let box=$("imageLightbox");
+  if(box)return box;
+  box=document.createElement("div");
+  box.id="imageLightbox";
+  box.className="image-lightbox";
+  box.hidden=true;
+  box.setAttribute("role","dialog");
+  box.setAttribute("aria-modal","true");
+  box.innerHTML='<button class="image-lightbox-close" type="button" aria-label="关闭大图">✕</button><figure><img alt=""><figcaption></figcaption></figure>';
+  box.addEventListener("click",(event)=>{
+    if(event.target===box||event.target.closest(".image-lightbox-close"))closeImageLightbox();
+  });
+  document.body.appendChild(box);
+  return box;
+}
+function openImageLightbox(src,caption,alt){
+  if(!src)return;
+  const box=ensureImageLightbox();
+  const img=box.querySelector("img");
+  const cap=box.querySelector("figcaption");
+  img.src=src;
+  img.alt=alt||caption||"";
+  cap.textContent=caption||"";
+  cap.hidden=!caption;
+  box.hidden=false;
+  requestAnimationFrame(()=>box.classList.add("is-open"));
+  document.body.classList.add("image-lightbox-open");
+  const onKey=(event)=>{if(event.key==="Escape")closeImageLightbox();};
+  document.addEventListener("keydown",onKey);
+  imageLightboxCleanup=()=>document.removeEventListener("keydown",onKey);
+}
+function closeImageLightbox(){
+  const box=$("imageLightbox");
+  if(!box||box.hidden)return;
+  imageLightboxCleanup?.();
+  imageLightboxCleanup=null;
+  box.classList.remove("is-open");
+  document.body.classList.remove("image-lightbox-open");
+  const finish=()=>{box.hidden=true;const img=box.querySelector("img");if(img)img.removeAttribute("src");};
+  if(matchMedia("(prefers-reduced-motion: reduce)").matches)finish();
+  else setTimeout(finish,220);
+}
 function render({ preserveScroll=false } = {}) {
   if (state.videoSession) void closeVideoFullscreen();
   if(!state.issue){$("stage").innerHTML="";return;}
@@ -728,14 +787,43 @@ function toggleReadShortcut() {
 let aiSummaryEndpointPromise=null;
 async function aiSummaryEndpoint(){const configured=state.issue?.features?.aiSummary?.publicEndpoint||state.issue?.aiSummaryEndpoint;if(configured)return String(configured);if(!aiSummaryEndpointPromise)aiSummaryEndpointPromise=fetch("/new-jc-magazine/api/public/ai/config",{headers:{Accept:"application/json"}}).then(async response=>{if(!response.ok)throw new Error("AI 配置接口不可用");const data=await response.json();return String(data?.publicEndpoint||"");}).catch(()=>"");const endpoint=await aiSummaryEndpointPromise;return endpoint||"/new-jc-magazine/api/public/ai/summarize";}
 async function requestArticleAiSummary(article,id){const response=await fetch(await aiSummaryEndpoint(),{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:article?.url||"",articleId:id})});let data={};try{data=await response.json();}catch{}if(!response.ok)throw new Error(data?.error||"AI 总结失败，请稍后再试");return data;}
+let stopAiTyping=null;
+function stopAiSummaryTyping(){if(stopAiTyping){try{stopAiTyping();}catch{}stopAiTyping=null;}}
+/**
+ * Reveal an AI summary progressively so it reads as "the model is writing"
+ * instead of dumping a wall of text. Pacing targets a roughly constant total
+ * duration, and users who ask for reduced motion get the text immediately.
+ */
+function typeAiSummary(target,text,{onDone}={}){
+  stopAiSummaryTyping();
+  if(!target)return;
+  const chars=Array.from(String(text==null?"":text));
+  if(!chars.length||matchMedia("(prefers-reduced-motion: reduce)").matches){target.textContent=chars.join("");onDone?.();return;}
+  const tickMs=Math.max(8,Math.min(26,Math.round(2400/Math.max(1,chars.length))));
+  // Chinese reads denser than Latin, so reveal a few characters per tick.
+  const perTick=chars.length>420?3:chars.length>180?2:1;
+  let index=0,stopped=false,timer=null;
+  target.textContent="";
+  target.classList.add("is-typing");
+  const step=()=>{
+    if(stopped)return;
+    index=Math.min(chars.length,index+perTick);
+    target.textContent=chars.slice(0,index).join("");
+    if(index<chars.length)timer=setTimeout(step,tickMs);
+    else{stopAiTyping=null;target.classList.remove("is-typing");onDone?.();}
+  };
+  stopAiTyping=()=>{stopped=true;if(timer)clearTimeout(timer);target.classList.remove("is-typing");};
+  timer=setTimeout(step,90);
+}
 function renderArticleDialog(article,id){
+  stopAiSummaryTyping();
   const summary=String(article?.aiSummary||"").trim();
   const editorialParas=Array.isArray(article?.paras)?article.paras.map((p)=>String(p||"").trim()).filter(Boolean):[];
   $("articleTitle").textContent=article?.title||"链接内容";
   const editorialMarkup=editorialParas.length?editorialParas.map((p)=>`<p>${escapeHtml(p)}</p>`).join(""):'<div class="article-editorial-summary-empty">后台尚未填写编辑摘要</div>';
-  $("articleBody").innerHTML=`${article?.subtitle?`<div class="meta">${escapeHtml(article.subtitle)}</div>`:""}${article?.url?`<div class="article-ai-summary"><div class="article-ai-summary-head"><strong>AI 摘要</strong><button id="articleAiSummaryBtn" type="button">${summary?"重新总结":"一键 AI 总结"}</button></div><div id="articleAiSummaryText" class="article-ai-summary-text">${summary?escapeHtml(summary):"点击按钮后，服务端会读取原文并生成摘要。相同链接会复用缓存结果。"}</div></div><div class="article-editorial-summary"><div class="article-editorial-summary-label">编辑摘要</div>${editorialMarkup}</div>`:""}${article?.sourceNote?`<div class="source-note">${escapeHtml(article.sourceNote)}</div>`:""}${article?.url?`<a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a>`:""}`;
+  $("articleBody").innerHTML=`${article?.subtitle?`<div class="meta">${escapeHtml(article.subtitle)}</div>`:""}${article?.url?`<div class="article-ai-summary"><div class="article-ai-summary-head"><strong>AI 摘要</strong><button id="articleAiSummaryBtn" type="button">${summary?"重新总结":"一键 AI 总结"}</button></div><div id="articleAiSummaryText" class="article-ai-summary-text">${summary?escapeHtml(summary):"点击按钮后，服务端会读取原文并生成摘要。"}</div></div><div class="article-editorial-summary"><div class="article-editorial-summary-label">编辑摘要</div>${editorialMarkup}</div>`:""}${article?.sourceNote?`<div class="source-note">${escapeHtml(article.sourceNote)}</div>`:""}${article?.url?`<a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">打开原文 ↗</a>`:""}`;
   const button=$("articleAiSummaryBtn"),target=$("articleAiSummaryText");
-  if(button)button.onclick=async()=>{button.disabled=true;button.textContent="总结中…";try{const result=await requestArticleAiSummary(article,id);target.textContent=String(result.summary||"");button.textContent=result.cached?"已使用缓存 · 重新总结":"重新总结";}catch(error){target.textContent=error.message||"AI 总结失败";button.textContent="重试总结";}finally{button.disabled=false;}};
+  if(button)button.onclick=async()=>{stopAiSummaryTyping();button.disabled=true;button.textContent="总结中…";target.classList.remove("is-typing");target.textContent="正在读取原文并生成摘要…";try{const result=await requestArticleAiSummary(article,id);typeAiSummary(target,String(result.summary||""),{onDone:()=>{button.disabled=false;button.textContent="重新总结";}});}catch(error){target.textContent=error.message||"AI 总结失败";button.disabled=false;button.textContent="重试总结";}};
 }
 function openArticle(id) {const article=state.issue.articles?.[id];if(!article)return toast("链接内容未配置");renderArticleDialog(article,id);$("articleDialog").showModal();}
 

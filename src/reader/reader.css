@@ -182,3 +182,19 @@ html[data-v3-texture="plain"] .texture{display:none}
 .page .cardline:not(.green) .badge{background:var(--page-design-accent,#8e1c1c)}
 .page.closing h2{color:var(--page-design-color,#ffe3a2)}
 .page.closing .eyebrow{color:var(--page-design-color,#f1cb7e)}
+
+/* --- reader enhancements: image lightbox + AI summary typing --- */
+.media.image-media img[data-zoom-src]{cursor:zoom-in;transition:filter .18s ease}
+.media.image-media img[data-zoom-src]:hover{filter:brightness(1.04)}
+.media.image-media img[data-zoom-src]:focus-visible{outline:2px solid #b4452f;outline-offset:2px}
+.image-lightbox{position:fixed;inset:0;z-index:220;display:flex;align-items:center;justify-content:center;padding:3vmin;background:rgba(18,12,9,.93);opacity:0;transition:opacity .22s ease}
+.image-lightbox[hidden]{display:none}
+.image-lightbox.is-open{opacity:1}
+.image-lightbox figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:10px;max-width:100%;max-height:100%}
+.image-lightbox img{max-width:100%;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 20px 60px rgba(0,0,0,.55);background:#fff}
+.image-lightbox figcaption{max-width:78ch;color:#f4e8d8;font-size:14px;line-height:1.6;text-align:center}
+.image-lightbox-close{position:absolute;top:14px;right:16px;width:44px;height:44px;border:0;border-radius:50%;background:rgba(255,255,255,.16);color:#fff;font-size:18px;line-height:1;cursor:pointer}
+.image-lightbox-close:hover{background:rgba(255,255,255,.3)}
+body.image-lightbox-open{overflow:hidden}
+.article-ai-summary-text.is-typing::after{content:"\258D";margin-left:2px;color:#b4452f;animation:aiCaret 1s steps(1,end) infinite}
+@keyframes aiCaret{0%,49%{opacity:1}50%,100%{opacity:0}}
