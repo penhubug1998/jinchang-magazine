@@ -1,4 +1,5 @@
 import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { buildArchiveHtml, catalogHref } from "./lib-v3-catalog.mjs";
@@ -8,7 +9,18 @@ const root = process.cwd();
 const args = parseArgs();
 const output = path.join(root, "dist-v3");
 const readerSource = path.join(root, "src", "reader");
-const readerAssetTag = `${V3_VERSION}-production-20260908-1`;
+// The asset tag has to change whenever the Reader bundle changes. nginx serves
+// reader.js / reader.css with "max-age=3600, must-revalidate", so an unchanged
+// URL keeps the previous file in the browser cache for a full hour without even
+// asking the server — a deploy looks like it did nothing. Deriving the tag from
+// the bundle contents makes the URL change exactly when the code does, which
+// also lets the long max-age stay (it is correct for immutable URLs).
+const readerTagHash = createHash("sha256");
+for (const file of ["reader.js", "reader.css", "rich-text.js", "layout-engine.js"]) {
+  try { readerTagHash.update(await readFile(path.join(readerSource, file))); }
+  catch { readerTagHash.update(file); }
+}
+const readerAssetTag = `${V3_VERSION}-${readerTagHash.digest("hex").slice(0, 12)}`;
 const selectedIssue = String(args.issue || "").trim() ? normalizeIssueId(args.issue) : "";
 const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 
@@ -44,7 +56,7 @@ async function emitV3Issue(issueDir, targetName){
     .replace(/\.\/reader\.js(?:\?[^"']*)?/,`./reader.js?v=${readerAssetTag}`);
   await writeFile(readerIndex,stamped,"utf8");
   const readerJs=path.join(target,'reader.js');
-  await writeFile(readerJs,(await readFile(readerJs,'utf8')).replace("'./rich-text.js'",`'./rich-text.js?v=${V3_VERSION}'`).replace("'./layout-engine.js'",`'./layout-engine.js?v=${V3_VERSION}'`),'utf8');
+  await writeFile(readerJs,(await readFile(readerJs,'utf8')).replace("'./rich-text.js'",`'./rich-text.js?v=${readerAssetTag}'`).replace("'./layout-engine.js'",`'./layout-engine.js?v=${readerAssetTag}'`),'utf8');
   await writeFile(path.join(target, "issue.json"), `${JSON.stringify(issue, null, 2)}\n`, "utf8");
 
   if (issue.assetSource) {
