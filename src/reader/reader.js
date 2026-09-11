@@ -168,14 +168,14 @@ function renderBlockContent(block,ctx={}) {
       return `<button class="article-link" type="button" data-article-id="${escapeHtml(block.articleId || "")}"><span class="article-link-label"${studioTextAttrs("title")}>${escapeHtml(label)}</span> <span aria-hidden="true">↗</span></button>`;
     }
     case "video":
-      return `<div class="media video-media"><div class="video-frame"><video src="${escapeHtml(block.src || "")}"${block.poster ? ` poster="${escapeHtml(block.poster)}"` : ""} controls playsinline webkit-playsinline preload="metadata" controlsList="nodownload"></video><button class="video-full-button" type="button" data-video-full title="全屏观看" aria-label="全屏观看视频">⛶</button></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
+      return `<div class="media video-media"><div class="video-frame"><video src="${escapeHtml(block.src || "")}"${block.poster ? ` poster="${escapeHtml(block.poster)}"` : ""} controls playsinline webkit-playsinline preload="auto" controlsList="nodownload"></video><button class="video-full-button" type="button" data-video-full title="全屏观看" aria-label="全屏观看视频">⛶</button></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
     case "image": {
       const ratio = ["16:9","4:3","3:2","1:1"].includes(block.frameRatio) ? block.frameRatio : "auto";
       const fit = block.fit === "cover" ? "cover" : "contain";
       const px = Math.max(0, Math.min(100, Number(block.positionX ?? 50)));
       const py = Math.max(0, Math.min(100, Number(block.positionY ?? 50)));
       const ratioStyle = ratio === "auto" ? "" : `aspect-ratio:${ratio.replace(":", " / ")};`;
-      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="lazy" style="object-fit:${fit};object-position:${px}% ${py}%"></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
+      return `<div class="media image-media"><div class="image-frame ${ratio === "auto" ? "auto" : "framed"}" style="${ratioStyle}"><img src="${escapeHtml(block.src || "")}" alt="${escapeHtml(block.alt || "")}" loading="eager" decoding="async" style="object-fit:${fit};object-position:${px}% ${py}%"></div>${block.caption ? `<div class="media-caption">${block.publishing?.captionLabel?`<b class="media-caption-label">${escapeHtml(block.publishing.captionLabel)}</b> `:""}${escapeHtml(block.caption)}</div>` : ""}</div>`;
     }
     case "coverMeta":
       return `<div class="cover-meta"${studioTextAttrs("text")}>${escapeHtml(block.text || "")}</div>`;
@@ -498,6 +498,67 @@ function schedulePostRender(savedScroll=null){
     reportStudioVisualMetrics();
   });
 }
+/* ---------------------------------------------------------------------------
+   Media warm-up ("instant" page turns).
+
+   The reader renders only the visible spread, so without help a page turn
+   starts fetching its photos and video from a cold cache. As soon as a spread
+   is on screen we warm the media of the neighbouring spreads (plus the
+   background music) into the HTTP cache, so the next turn paints immediately
+   instead of waiting on the network. Entries are de-duplicated for the session
+   and images are decoded off the main thread.
+--------------------------------------------------------------------------- */
+const warmedMedia = new Set();
+function collectPageMedia(index, out) {
+  const page = state.issue?.pages?.[index];
+  const walk = (block) => {
+    if (!block || typeof block !== "object") return;
+    if (block.type === "image") {
+      if (block.src) out.push({ src: String(block.src), as: "image" });
+    } else if (block.type === "video") {
+      if (block.poster) out.push({ src: String(block.poster), as: "image" });
+      if (block.src) out.push({ src: String(block.src), as: "video" });
+    } else if (block.type === "container") {
+      for (const column of block.columns || []) for (const child of column.blocks || []) walk(child);
+    }
+  };
+  for (const block of page?.blocks || []) walk(block);
+  return out;
+}
+function warmMediaAround(index) {
+  if (!state.issue) return;
+  const total = state.issue.pages?.length || 0;
+  const queue = [];
+  for (const offset of [1, -1, 2, -2]) {
+    const target = index + offset;
+    if (target >= 0 && target < total) collectPageMedia(target, queue);
+  }
+  const music = state.issue.features?.music?.src;
+  if (music) queue.push({ src: String(music), as: "audio" });
+  // Pre-generated narration is fetched only when 朗读 is pressed, which is why
+  // it used to sit on "正在加载…". Warm the current and next page's audio too.
+  for (const offset of [0, 1]) {
+    const target = index + offset;
+    if (target < 0 || target >= total) continue;
+    const tts = narrationPath(target);
+    if (tts) queue.push({ src: String(tts), as: "audio" });
+  }
+  for (const item of queue) {
+    if (!item.src || warmedMedia.has(item.src)) continue;
+    warmedMedia.add(item.src);
+    if (item.as === "image") {
+      const img = new Image();
+      img.decoding = "async";
+      img.src = item.src;
+      continue;
+    }
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = item.as;
+    link.href = item.src;
+    document.head.appendChild(link);
+  }
+}
 function render({ preserveScroll=false } = {}) {
   if (state.videoSession) void closeVideoFullscreen();
   if(!state.issue){$("stage").innerHTML="";return;}
@@ -506,6 +567,7 @@ function render({ preserveScroll=false } = {}) {
   $("stage").innerHTML = spreadHtml(state.pageIndex);
   bindPageActions();
   updateUi();
+  warmMediaAround(state.pageIndex);
   schedulePostRender(savedScroll);
 }
 

@@ -220,18 +220,27 @@ function extractAiSummary(data){
   return '';
 }
 async function callAiSummary(text,config){
-  const prompt=`请用简体中文总结下面网页正文，输出 3–5 条要点和一段不超过 120 字的概述。不要编造原文没有的信息，不要输出 Markdown 标题，不要提及你是 AI。\n\n网页正文：\n${String(text).slice(0,30000)}`;
-  const payload={model:config.model,messages:[{role:'system',content:'你是严谨的中文新闻编辑。'},{role:'user',content:prompt}],temperature:0.2,max_tokens:500};
+  // Reasoning-style providers (deepseek-flash / deepseek-v4-pro) spend the
+  // completion budget on `reasoning_content` before writing any `content`, so a
+  // small max_tokens returns HTTP 200 with an EMPTY content field and surfaced
+  // as a bogus "AI 没有生成摘要". Give reasoning room to finish, cap the source
+  // text so the reasoning load stays bounded, and escalate the budget once the
+  // provider reports it ran out (finish_reason=length).
+  const source=String(text).slice(0,16000);
+  const prompt=`请用简体中文总结下面网页正文，输出 3–5 条要点和一段不超过 120 字的概述。不要编造原文没有的信息，不要输出 Markdown 标题，不要提及你是 AI。\n\n网页正文：\n${source}`;
   let lastError=null;
-  for(let attempt=0;attempt<2;attempt++){
+  let maxTokens=4000;
+  for(let attempt=0;attempt<3;attempt++){
+    const payload={model:config.model,messages:[{role:'system',content:'你是严谨的中文新闻编辑。'},{role:'user',content:prompt}],temperature:0.2,max_tokens:maxTokens};
     let response;
-    try{response=await fetch(aiEndpoint(config.baseUrl),{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:AbortSignal.timeout(35000)});}catch(error){lastError=error;if(attempt===0)continue;throw Object.assign(new Error('AI 服务暂时不可用，请稍后重试'),{statusCode:502,code:'AI_PROVIDER_FAILED',cause:error});}
+    try{response=await fetch(aiEndpoint(config.baseUrl),{method:'POST',headers:{'content-type':'application/json','authorization':`Bearer ${config.apiKey}`},body:JSON.stringify(payload),signal:AbortSignal.timeout(90000)});}catch(error){lastError=error;if(attempt<2)continue;throw Object.assign(new Error('AI 服务暂时不可用，请稍后重试'),{statusCode:502,code:'AI_PROVIDER_FAILED',cause:error});}
     let data={},raw='',parsed=false;try{raw=await response.text();if(raw){data=JSON.parse(raw);parsed=true;}}catch{}
-    if(!response.ok){const error=Object.assign(new Error(data?.error?.message||`AI 服务调用失败（HTTP ${response.status}）`),{statusCode:502,code:'AI_PROVIDER_FAILED'});if(response.status>=500&&attempt===0){lastError=error;continue;}throw error;}
+    if(!response.ok){const error=Object.assign(new Error(data?.error?.message||`AI 服务调用失败（HTTP ${response.status}）`),{statusCode:502,code:'AI_PROVIDER_FAILED'});if(response.status>=500&&attempt<2){lastError=error;continue;}throw error;}
     const fallback=!parsed&&raw.trim()&&!/^\s*</.test(raw)?raw.trim():'';
     const summary=(extractAiSummary(data)||fallback).trim();
     if(summary)return summary.slice(0,5000);
-    if(attempt===0)continue;
+    lastError=Object.assign(new Error('AI 返回了空摘要'),{code:'AI_EMPTY_RESULT'});
+    if(String(data?.choices?.[0]?.finish_reason||'')==='length')maxTokens=Math.min(maxTokens*2,16000);
   }
   throw Object.assign(new Error('AI 服务暂时没有生成摘要，请稍后重试'),{statusCode:502,code:'AI_EMPTY_RESULT',cause:lastError||undefined});
 }
