@@ -224,7 +224,7 @@ function renderSourceStatus(){
 }
 async function refreshSourceStatus({quiet=false,adoptBaseline=false}={}){
   const id=state.issue?.id;if(!id)return null;
-  try{const source=await api(`/api/issues/${encodeURIComponent(id)}/source-status`);if(state.issue?.id!==id)return null;state.sourceStatus=source;state.sourceObservedFingerprint=String(source?.fingerprint||'');if(adoptBaseline&&!state.dirty&&!state.sourceConflict)state.sourceFingerprint=state.sourceObservedFingerprint;renderSourceStatus();return source;}
+  try{const source=await api(`/api/issues/${encodeURIComponent(id)}/source-status`);if(state.issue?.id!==id)return null;state.sourceStatus=source;state.sourceObservedFingerprint=String(source?.fingerprint||'');const observed=state.sourceObservedFingerprint;if(adoptBaseline&&!state.dirty&&!state.sourceConflict)state.sourceFingerprint=observed;state.sourceConflict=Boolean(state.sourceFingerprint&&observed&&state.sourceFingerprint!==observed);renderSourceStatus();return source;}
   catch(error){if(!quiet)toast(`读取服务器制作源失败：${error.message}`,3000);return null;}
 }
 function setMetaExpanded(expanded,{remember=true}={}) {
@@ -1407,6 +1407,34 @@ function mediaKindLabel(kind){return ({image:'图片',video:'视频',music:'音�
 function formatDuration(seconds){const n=Number(seconds);if(!Number.isFinite(n)||n<=0)return '—';const m=Math.floor(n/60),s=Math.round(n%60);return m?`${m}:${String(s).padStart(2,'0')}`:`${s} 秒`;}
 function renderMediaSummary(){const d=state.mediaAssets||{};const s=d.summary||{},pending=mediaNeeds();$('#mediaSummary').innerHTML=`<div><span>资源总数</span><b>${s.total??(d.items||[]).length}</b></div><div><span>已引用</span><b>${s.used??0}</b></div><div><span>未引用</span><b>${s.unused??0}</b></div><div><span>媒体总量</span><b>${escText(s.size||'0 B')}</b></div><div><span>精选素材</span><b>${CURATED_STOCK_ASSETS.length}</b></div><div class="media-summary-pending"><span>待补素材</span><b>${pending.length}</b></div>`;}
 function renderTtsStatus(){const scopeNote=$('#ttsScopeNote');if(scopeNote)scopeNote.textContent=state.issue?.features?.narration?.scope==='page'?'本期朗读：页面正文（弹出文章可单独阅读）':'本期朗读：页面正文及关联文章全文';const tts=state.mediaAssets?.tts,box=$('#ttsStatus');if(!tts||!tts.expected){box.className='tts-status';box.innerHTML='<div class="tts-copy"><b>未配置预生成朗读</b><span>当前期刊没有 narration.pattern，将使用浏览器语音回退；可在下方一键生成。</span></div>';return;}const complete=tts.found===tts.expected;box.className=`tts-status ${tts.stale?'stale':complete?'good':''}`;const stateText=!complete?`缺失 ${tts.expected-tts.found} 页${tts.missingPages?.length?`：${tts.missingPages.join('、')}`:''}`:tts.stale?'音频文件齐全，但页面正文/顺序已改变':'音频文件与当前页面基线一致';box.innerHTML=`<div class="tts-copy"><b>TTS ${tts.found}/${tts.expected}${tts.stale?' · 需要重新生成':''}</b><span>${escText(stateText)}${tts.baselinedAt?` · 基线 ${escText(fmtTime(tts.baselinedAt))}`:''}</span></div><button type="button" id="ttsBaselineBtn" ${!complete||state.dirty?'disabled':''}>确认朗读已重新生成</button>`;$('#ttsBaselineBtn')?.addEventListener('click',confirmTtsBaseline);}
+const EDGE_TTS_VOICE_OPTIONS=[
+  ['zh-CN-XiaoxiaoNeural','晓晓 · 女声（默认）'],
+  ['zh-CN-YunxiNeural','云希 · 男声'],
+  ['zh-CN-YunjianNeural','云健 · 男声'],
+  ['zh-CN-XiaoyiNeural','晓伊 · 女声'],
+  ['zh-CN-XiaohanNeural','晓涵 · 女声'],
+  ['zh-CN-XiaomengNeural','晓梦 · 女声']
+];
+function openTtsSettingsDialog(){
+  if(!state.issue)return toast('请先选择一期期刊');
+  const narration=state.issue.features?.narration||{},voice=String(narration.voice||'zh-CN-XiaoxiaoNeural'),rate=Number(narration.rate)||1;
+  const voiceInput=$('#ttsVoiceInput'),rateInput=$('#ttsRateInput');
+  if(voiceInput){if(![...voiceInput.options].some(option=>option.value===voice))voiceInput.add(new Option(`${voice}（当前声音）`,voice));voiceInput.value=voice;}
+  if(rateInput){const value=String(Math.max(.5,Math.min(2,rate)));if(![...rateInput.options].some(option=>option.value===value))rateInput.add(new Option(`${value}×（当前语速）`,value));rateInput.value=value;}
+  $('#ttsSettingsDialog')?.showModal();
+}
+async function saveTtsSettings(){
+  if(!state.issue)return;
+  const voice=String($('#ttsVoiceInput')?.value||'zh-CN-XiaoxiaoNeural');
+  const rate=Math.max(.5,Math.min(2,Number($('#ttsRateInput')?.value)||1));
+  state.issue.features ||= {};state.issue.features.narration ||= {};
+  const narration=state.issue.features.narration,oldVoice=String(narration.voice||'zh-CN-XiaoxiaoNeural'),oldRate=Number(narration.rate)||1;
+  if((oldVoice!==voice||oldRate!==rate)&&(!Array.isArray(narration.generationDigests)||narration.generationDigests.length!==(state.issue.pages||[]).length))narration.generationConfigChanged=true;
+  state.issue.features.narration.voice=voice;state.issue.features.narration.rate=rate;
+  markDirty({preview:false,historyGroup:'tts-settings',forceHistory:true});
+  const button=$('#ttsSettingsSave');if(button){button.disabled=true;button.textContent='保存中…';}
+  try{if(await saveIssue({silent:true})){$('#ttsSettingsDialog')?.close('saved');renderMediaList();toast(`Edge TTS 设置已保存：${voice} · ${rate}×`);}}finally{if(button){button.disabled=false;button.textContent='保存设置';}}
+}
 function ensureTtsSettingsUi(){
   const scope=$('#ttsGenerateScope');if(scope&&!scope.querySelector('option[value="changed"]'))scope.add(new Option('仅更新变更 / 缺失页','changed'),0);
   const bar=$('#ttsGenerateBar');
@@ -1478,7 +1506,7 @@ $('#cleanupMediaBtn').onclick=cleanupUnusedMedia;
 async function generatePosterFromAsset(pathValue){try{toast('正在生成视频封面…',3000);const x=await api(`/api/issues/${state.issue.id}/assets/poster`,{method:'POST',body:JSON.stringify({path:pathValue})});toast('视频封面已生成');await loadMediaAssets();state.mediaSelected=x.path;renderMediaList();return x;}catch(e){toast(e.message,3600);return null;}}
 async function generatePosterForBlock(index){const block=currentPage()?.blocks?.[index];if(!block?.src)return toast('请先绑定视频资源');const x=await generatePosterFromAsset(block.src);if(!x)return;block.poster=x.path;mutateBlocks();toast('视频封面已生成并绑定');}
 async function confirmTtsBaseline(){if(state.dirty)return toast('请先保存当前修改，再确认 TTS 基线',3000);if(!confirm('仅当 page-XX.mp3 已按当前页面正文和顺序重新生成后，才应确认同步。继续吗？'))return;try{const x=await api(`/api/issues/${state.issue.id}/tts/baseline`,{method:'POST',body:'{}'});state.issue.features ||= {};state.issue.features.narration=x.narration;state.originalIssue=cloneData(state.issue);state.sourceStatus=x.source||state.sourceStatus;state.sourceFingerprint=String(x.source?.fingerprint||state.sourceFingerprint||'');state.sourceObservedFingerprint=state.sourceFingerprint;state.sourceConflict=null;renderSourceStatus();resetHistory();await loadMediaAssets();toast('TTS 已标记为与当前页面同步');}catch(e){toast(e.message,3200);}}
-function narrationBlockText(block={}){switch(block.type){case'paragraph':case'heading':case'textFlow':case'sectionHeading':return block.text||block.title||'';case'pullQuote':return [block.label,block.text,block.attribution].filter(Boolean).join('。');case'sidebar':case'quote':case'cardline':return [block.title,block.text].filter(Boolean).join('。');case'chips':return (block.items||[]).map(x=>x?.text||'').filter(Boolean).join('，');case'casePair':return [block.case,block.warning].filter(Boolean).join('。');case'video':case'image':return block.caption||'';case'table':return [block.caption,...(block.rows||[]).flat()].filter(Boolean).join('。');case'coverMeta':case'blessing':case'producer':return block.text||'';case'coverSections':return (block.items||[]).filter(Boolean).join('，');case'cards':return (block.items||[]).flatMap(x=>[x?.title,x?.text,x?.body]).filter(Boolean).join('。');case'articleLink':{const article=state.issue?.articles?.[block.articleId]||{};return [block.title,article.title,article.subtitle,...(article.paras||[])].filter(Boolean).join('。');}case'container':return (block.columns||[]).flatMap(column=>(column.blocks||[]).map(narrationBlockText)).filter(Boolean).join('。');default:return '';}}
+function narrationBlockText(block={}){switch(block.type){case'articleLink':{const article=state.issue?.features?.narration?.scope==='page'?{}:(state.issue?.articles?.[block.articleId]||{});return [block.title,article.title,article.subtitle,...(article.paras||[])].filter(Boolean).join('。');}case'paragraph':case'heading':case'textFlow':case'sectionHeading':return block.text||block.title||'';case'pullQuote':return [block.label,block.text,block.attribution].filter(Boolean).join('。');case'sidebar':case'quote':case'cardline':return [block.title,block.text].filter(Boolean).join('。');case'chips':return (block.items||[]).map(x=>x?.text||'').filter(Boolean).join('，');case'casePair':return [block.case,block.warning].filter(Boolean).join('。');case'video':case'image':return block.caption||'';case'table':return [block.caption,...(block.rows||[]).flat()].filter(Boolean).join('。');case'coverMeta':case'blessing':case'producer':return block.text||'';case'coverSections':return (block.items||[]).filter(Boolean).join('，');case'cards':return (block.items||[]).flatMap(x=>[x?.title,x?.text,x?.body]).filter(Boolean).join('。');case'container':return (block.columns||[]).flatMap(column=>(column.blocks||[]).map(narrationBlockText)).filter(Boolean).join('。');default:return '';}}
 function narrationPageText(page={}){return [page.kicker,page.title,page.subtitle,...(page.body||[]),...(page.blocks||[]).map(narrationBlockText)].filter(Boolean).join('。').replace(/\s+/g,' ').trim();}
 async function generateTtsForStudio(){
   if(!state.issue||state.ttsGenerating)return;
@@ -1696,6 +1724,7 @@ async function saveIssue({ silent=false }={}) {
     if(!editedMeanwhile){state.issue=res.issue;state.historyCurrent=cloneData(res.issue);state.redoStack=[];}
     state.dirty=editedMeanwhile;if(state.audit)state.auditStale=true;
     renderSourceStatus();updateStateBadges();
+    if(state.dirty)scheduleDraftSave();
     broadcastPeer('saved',{issue:res.issue,snapshotId:res.snapshot?.id||''});
     if(editedMeanwhile){toast('上一版已保存；保存期间的新修改已保留，请再次保存。',4200);return false;}
     renderPages();renderPage();
@@ -2193,6 +2222,15 @@ function publicationFindingRow(f,kind,findings){
   return `<li class="publication-check-${kind}"><b>${kind==='hard'?'需处理':'提示'} · ${escText(f.title||f.code||'检查项')}</b><span>${escText(f.message||'')}</span>${f.fix?`<small>建议：${escText(f.fix)}</small>`:''}${splitHint}${canLocate?`<button type="button" class="publication-check-locate" data-publication-finding="${index}">去修改${f.location.page?' · 第 '+Number(f.location.page)+' 页':''}</button>`:''}</li>`;
 }
 
+async function markPublicationReady(){
+  if(!state.issue||state.publicationBusy||state.saving||isReleaseableIssueStatus(state.issue.status)||!commitPage())return;
+  syncMeta();const previousStatus=state.issue.status;state.issue.status='ready';$('#metaStatus').value='ready';markDirty({historyGroup:'confirm-editorial-review',preview:false});updateMetaSummary();
+  if(!await saveIssue({silent:true})){if(state.originalIssue?.status!=='ready'&&state.issue.status==='ready'){state.issue.status=previousStatus;$('#metaStatus').value=previousStatus;markDirty({historyGroup:'confirm-editorial-review',preview:false});updateMetaSummary();}renderPublicationCenter();return;}
+  toast('已设为待发布，请继续运行发布前检查');
+  try{await loadPublicationStatus({refresh:true});}catch(e){toast(`已保存待发布状态，检查状态读取失败：${e.message}`,3600);}
+}
+$('#publicationMarkReadyBtn')?.addEventListener('click',markPublicationReady);
+$('#publicationBlockers')?.addEventListener('click',e=>{const b=e.target.closest('[data-publication-finding]');if(!b)return;const f=state.publicationStatus?.audit?.findings?.[Number(b.dataset.publicationFinding)];if(!f)return;$('#publicationCenterDialog').close();locateFinding(f);});
 async function loadPublicationWorkflow({refresh=true}={}){
   if(!state.issue)return null;
   const id=String(state.issue.id);
@@ -2393,36 +2431,10 @@ for(const id of ['mediaDialog','designDialog','publicationCenterDialog']){
 }
 bindClickFeedback();
 bindPeerReadOnlyGuard();
-function renderIssueTemplateChoices(templates = []) {
-  const standard = '<label class="issue-template-standard"><input type="radio" name="issueTemplate" value="" checked><span><b>标准栏目骨架</b><small>沿用原有模板，自行编排</small></span></label>';
-  $('#issueTemplatePalette').innerHTML = standard + templates.map(t => `<label class="issue-template-choice" style="--template-accent:${/^#[0-9a-f]{6}$/i.test(t.accent)?t.accent:'#365c83'};--template-paper:${/^#[0-9a-f]{6}$/i.test(t.paper)?t.paper:'#ffffff'}"><input type="radio" name="issueTemplate" value="${escText(t.id)}"><span class="issue-template-cover issue-template-motif-${escText(t.motif)}" aria-hidden="true"><span class="issue-template-cover-meta">JOURNAL / ${t.pageCount} PAGES</span><strong>${escText(t.name.split(' · ')[0])}</strong><span class="issue-template-cover-line"></span><span class="issue-template-cover-caption">${escText(t.tagline)}</span></span><span class="issue-template-copy"><b>${escText(t.name)}</b><span>${escText(t.description)}</span><small>封面 · 目录 · ${t.sections.map(escText).join(' · ')} · 封底</small></span></label>`).join('');
-}
-async function loadIssueTemplateChoices() {
-  renderIssueTemplateChoices();
-  $('#issueTemplateStatus').textContent='正在加载整刊模板…';
-  try {
-    const result=await api('/api/issue-templates');
-    renderIssueTemplateChoices(Array.isArray(result.templates)?result.templates:[]);
-    $('#issueTemplateStatus').textContent='模板含可替换的示例文字与本地装饰插画；发布前请填写真实内容。';
-  } catch {
-    $('#issueTemplateStatus').textContent='整刊模板暂时无法加载，可继续使用标准栏目骨架，或关闭后重试。';
-  }
-}
-$('#newCloneFrom').addEventListener('change',()=>{
-  $('#issueTemplateFieldset').disabled=Boolean($('#newCloneFrom').value);
-});
-$('#newIssue').onclick = () => { $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); $('#newCloneFrom').value=''; $('#issueTemplateFieldset').disabled=false; $('#newDialog').showModal(); void loadIssueTemplateChoices(); };
-$('#newForm').addEventListener('submit',async e => {
-  if (e.submitter?.value === 'cancel') return;
-  e.preventDefault(); const subtitle=$('#newSubtitle').value.trim();
-  if(!subtitle||$('#confirmNew').disabled)return;
-  const cloneFrom=$('#newCloneFrom').value||'';
-  const templateId=cloneFrom?'':($('#issueTemplatePalette input:checked')?.value||'');
-  $('#confirmNew').disabled=true; $('#confirmNew').textContent='创建中…';
-  try { const x=await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),cloneFrom,templateId})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id}`); await loadIssues(x.issue.id); }
-  catch(err){toast(err.message,2600);}
-  finally{$('#confirmNew').disabled=false;$('#confirmNew').textContent='创建';}
-});
+$('#newIssue').onclick = openNewIssueDialog;
+$('#studioBuildBtn')?.addEventListener('click',openNewIssueDialog);
+document.querySelectorAll('input[name="newStartMode"]').forEach(r=>r.addEventListener('change',syncNewStartModeUi));
+$('#newForm').addEventListener('submit',async e => { if (e.submitter?.value === 'cancel') return; e.preventDefault(); const subtitle = $('#newSubtitle').value.trim(); if (!subtitle) return; const startMode=selectedNewStartMode(); const cloneFrom=startMode==='clone'?($('#newCloneFrom').value||''):''; const templateId=startMode==='template'?($('#newWholeTemplate').value||'comprehensive'):''; if(startMode==='clone'&&!cloneFrom)return toast('请选择要复制的上一期',2600); try { const x = await api('/api/issues',{method:'POST',body:JSON.stringify({subtitle,label:$('#newLabel').value.trim(),startMode,cloneFrom,templateId})}); $('#newDialog').close(); toast(`已创建 ${x.issue.id} · ${startMode==='clone'?'复制上期':startMode==='import'?'导入稿件':'整刊模板'}`); await loadIssues(x.issue.id); if(startMode==='import')openImportDialog('file'); else if(startMode==='template')setStudioEntry('design'); else setStudioEntry('content'); } catch(err){ toast(err.message,2600); } });
 function selectedNewStartMode(){return document.querySelector('input[name="newStartMode"]:checked')?.value||'clone';}
 function syncNewStartModeUi(){const mode=selectedNewStartMode();$('#newCloneField')?.classList.toggle('hidden',mode!=='clone');$('#newTemplateField')?.classList.toggle('hidden',mode!=='template');$('#newImportField')?.classList.toggle('hidden',mode!=='import');}
 function openNewIssueDialog(){ $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); const radio=document.querySelector('input[name="newStartMode"][value="clone"]');if(radio)radio.checked=true;syncNewStartModeUi();$('#newDialog').showModal(); }

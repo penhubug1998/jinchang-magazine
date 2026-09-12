@@ -19,6 +19,7 @@ import { buildArchiveHtml } from './lib-v3-catalog.mjs';
 import { verifyIntegrity } from './lib-v3-deploy.mjs';
 import { normalizeRichText, renderRichText } from '../src/reader/rich-text.js';
 import { WHOLE_MAGAZINE_TEMPLATES, applyWholeMagazineTemplate } from '../src/studio/whole-magazine-templates.js';
+import { issueTemplateCatalog } from '../src/studio/issue-templates.js';
 import { buildPublishingPlan, flowFragmentFor, normalizePagePublishing, normalizeBlockPublishing } from '../src/reader/layout-engine.js';
 
 const args = parseArgs();
@@ -840,7 +841,8 @@ async function publicationStatus(id,{refreshAudit=true}={}){
   const issue=await readJson(path.join(root,'issues',id,'issue.json'));const {audit,run}=await readPublicationAudit(id,{refresh:true,strict:true});const evidence=await readPublicationEvidence(id);const status=buildPublicationStatus(issue,audit,evidence);const storage=await publicationStorageStatus();
   const savedFingerprint=issueSourceFingerprint(issue),deployment=evidence.publicDeployment||null;
   // A successful historical deployment is not proof that the edited source is online.
-  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:publicDeployment};
+  const publicDeployment=deployment?{...deployment,sourceMatchesCurrent:deployment.sourceFingerprint?deployment.sourceFingerprint===savedFingerprint:null}:null;
+  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},publicDeployment,exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:publicDeployment};
 }
 function publicIssuePath(id){const raw=String(id||'').trim();const n=Number(raw);return Number.isInteger(n)&&n>0?String(n).padStart(2,'0'):raw;}
 function publicIssueUrl(id){return publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null;}
@@ -1231,6 +1233,7 @@ const server=http.createServer(async(req,res)=>{try{
   if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
   if (u.pathname==='/api/issues'&&req.method==='GET') return send(res,200,await issueSummaries());
   if (u.pathname==='/api/whole-magazine-templates'&&req.method==='GET') return send(res,200,{templates:WHOLE_MAGAZINE_TEMPLATES});
+  if (u.pathname==='/api/issue-templates'&&req.method==='GET') return send(res,200,{templates:issueTemplateCatalog()});
   if (u.pathname==='/api/issues'&&req.method==='POST') {
     const data=await body(req);
     if(String(data.subtitle||'').length>120)return send(res,400,{error:'本期主题不能超过 120 个字符',code:'VALIDATION_ERROR'});
@@ -1238,15 +1241,24 @@ const server=http.createServer(async(req,res)=>{try{
     const allowedStartModes=new Set(['clone','import','template','blank']);
     const startMode=allowedStartModes.has(String(data.startMode||''))?String(data.startMode):(data.cloneFrom?'clone':data.templateId?'template':'blank');
     const templateId=String(data.templateId||'').trim();
-    if(startMode==='template'&&!WHOLE_MAGAZINE_TEMPLATES.some(x=>x.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
+    if(templateId&&data.cloneFrom)return send(res,400,{error:'整刊模板与复制旧刊只能选择一种',code:'VALIDATION_ERROR'});
+    const catalogTemplate=startMode==='template'&&issueTemplateCatalog().some(x=>x.id===templateId);
+    if(startMode==='template'&&!catalogTemplate&&!WHOLE_MAGAZINE_TEMPLATES.some(x=>x.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
     let cloneSource=null;
     if(startMode==='clone'){if(!data.cloneFrom)return send(res,400,{error:'复制上期需要选择来源期刊',code:'VALIDATION_ERROR'});const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
+    if(catalogTemplate)argv.push('--template',templateId);
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;
     } else if(startMode==='template') {
-      const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const templated=applyWholeMagazineTemplate(templateId,target); validateIssue(templated,created.id); await atomicWriteText(targetFile,`${JSON.stringify(templated,null,2)}\n`); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=templated.pages.length; created.wholeTemplate=templated.wholeTemplate;
+      const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile);
+      if(catalogTemplate){
+        // new-issue-v3.mjs already applied the default issue template: pages, design, features and its own assets.
+        created.pageCount=(target.pages||[]).length; created.issueTemplateId=templateId;
+      } else {
+        const templated=applyWholeMagazineTemplate(templateId,target); validateIssue(templated,created.id); await atomicWriteText(targetFile,`${JSON.stringify(templated,null,2)}\n`); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=templated.pages.length; created.wholeTemplate=templated.wholeTemplate;
+      }
     }
     const createdIssue=await readJson(path.join(root,'issues',created.id,'issue.json'));const source=await writeSourceReceipt(created.id,createdIssue,{reason:`issue-created:${startMode}`});
     return send(res,201,{issue:created,output:r.output,source,startMode,next:startMode==='import'?'import':startMode==='template'?'layout':'content'});
