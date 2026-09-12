@@ -41,6 +41,7 @@ jobs:
       # ---------------------------------------------------------------- required
       - run: npm run test:narration-scope
       - run: npm run test:import-safety
+      - run: npm run test:import-completeness
       - run: npm run test:publication-share
       - run: npm run test:publication-pdf
       - run: npm run test:production-preflight
