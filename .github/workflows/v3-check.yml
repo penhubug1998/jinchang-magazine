@@ -17,6 +17,9 @@ jobs:
   # tags not found", "reading 'openIssue'") - they reported drift in the
   # harness, not a defect in the product, and had never once passed in CI.
   # A suite that fails twice for a non-product reason is retired, not repaired.
+  # test:reader-capabilities asserts the built Reader bundle still carries the
+  # reader features (image lightbox, AI summary typing) after a 2026-09-12
+  # incident where a published issue shipped an older reader.js.
   # test:v31-canvas-marquee-browser was added on 2026-09-12: the canvas free-editing
   # layer (marquee select, drag readout) has no other browser-level coverage.
   # Retired suites keep their npm scripts; run one explicitly when touching its
@@ -45,6 +48,7 @@ jobs:
       - run: npm run test:import-safety
       - run: npm run test:import-completeness
       - run: npm run test:canvas-editing
+      - run: npm run test:reader-capabilities
       - run: npm run test:publication-share
       - run: npm run test:publication-pdf
       - run: npm run test:production-preflight
