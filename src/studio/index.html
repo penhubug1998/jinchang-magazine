@@ -43,12 +43,6 @@
 
     <section class="editor hidden" id="editor">
       <section id="sourceConflictBanner" class="source-conflict-banner hidden" role="alert"><div><strong>服务器上已有更新版本</strong><p>你的修改仍保留在当前窗口。先下载当前修改备份，再重新打开本期，核对并合并内容。</p></div><button type="button" id="downloadConflictDraft">下载当前修改</button><button type="button" id="reloadConflictIssue">备份并加载最新版本</button></section>
-      <section class="production-guide card" id="productionGuide" aria-label="期刊制作步骤">
-        <div class="production-guide-heading"><strong>本期制作</strong><span id="productionGuideState">从填入稿件开始</span></div>
-        <div class="production-guide-steps"><button type="button" id="guideImport"><b>01 · 填入稿件</b><span>粘贴文字或导入文档</span></button><button type="button" id="guideEdit"><b>02 · 编辑版面</b><span>替换模板文字与配图</span></button><button type="button" id="guideCheck"><b>03 · 检查全刊</b><span>检查内容、图片与排版</span></button><button type="button" id="guidePublish"><b>04 · 发布分享</b><span>确认内容，检查后发布</span></button></div>
-        <p>编辑时自动保存恢复草稿；点击“保存”更新制作稿。发布前请替换模板中的占位文字与配图。</p>
-      </section>
-
       <section class="card audit-center hidden" id="auditCard" aria-live="polite">
         <div class="section-head audit-head"><div><span class="eyebrow">AUDIT CENTER</span><h2>发布审计中心</h2></div><div class="audit-actions"><button id="auditAgain">重新审计</button><button id="reviewWorkspaceFromAudit">内部校审</button><a id="auditReportLink" class="button-link" href="#" target="_blank" rel="noopener">完整报告</a><button id="closeAudit">收起</button></div></div>
         <div class="audit-hero" id="auditHero"><div><strong id="auditState">尚未审计</strong><p id="auditMessage">修改内容后运行审计，可获得可定位的修复建议。</p></div><div class="audit-score"><span>可发布度</span><b id="auditScore">--</b></div></div>

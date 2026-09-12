@@ -306,7 +306,6 @@ function scheduleWorkspaceAuditRefresh(){
   state.workspaceAuditFrame=requestAnimationFrame(refresh);
 }
 function updateStateBadges() {
-  const guide=$('#productionGuideState');if(guide&&state.issue)guide.textContent=`${statusLabel(state.issue.status)} · ${state.issue.pages.length} 页${state.dirty?' · 有未保存修改':''}`;
   const dirty = $('#dirtyBadge'); const publishedBase=state.originalIssue?.status==='published'; const revisionPending=Boolean(state.issue?.revision?.pending);
   if(state.dirty){dirty.textContent=publishedBase?'已发布稿 · 有未保存修订':'有未保存修改';dirty.className=`state-badge ${publishedBase?'revision':'dirty'}`;}
   else if(revisionPending){dirty.textContent='已保存 · 未发布修订';dirty.className='state-badge revision';}
@@ -352,7 +351,6 @@ function redoHistory(){ if(!state.redoStack.length)return; const current=cloneDa
 function updateWorkspaceToolbar(){
   updateTocNotice();
   document.body.classList.toggle('workspace-mode',WORKSPACE_MODE);
-  $('#productionGuide')?.classList.toggle('hidden',WORKSPACE_MODE);
   const p=currentPage(),total=state.issue?.pages?.length||0;
   if($('#workspacePageLabel'))$('#workspacePageLabel').textContent=state.issue?`第 ${state.page+1} / ${total} 页`:'未选择页面';
   if($('#workspacePageTitle'))$('#workspacePageTitle').textContent=p?.navTitle||p?.title||'页面';
@@ -1720,10 +1718,6 @@ $('#saveBtn').onclick = saveFromToolbar;
 $('#downloadConflictDraft')?.addEventListener('click',downloadCurrentDraft);
 $('#reloadConflictIssue')?.addEventListener('click',reloadLatestSource);
 $('#welcomeNewIssue')?.addEventListener('click',()=>$('#newIssue').click());
-$('#guideImport')?.addEventListener('click',()=>openImportDialog('paste'));
-$('#guideEdit')?.addEventListener('click',enterWorkspaceFromManager);
-$('#guideCheck')?.addEventListener('click',()=>runAudit(true));
-$('#guidePublish')?.addEventListener('click',openPublicationCenter);
 $('#adminLogoutBtn')?.addEventListener('click',logoutAdmin);
 $('#confirmSaveDiff').onclick = async e => { e.preventDefault(); const ok=await saveIssue(); if(ok)$('#saveDiffDialog').close(); };
 $('#undoBtn').onclick = undoHistory;
