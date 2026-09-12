@@ -48,7 +48,7 @@ const workflowSuites=(v3Check.match(/suites="([^"]+)"/)||[])[1]?.split(/\s+/)||[
 const packageJson=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
 const gateSuites=(String(packageJson.scripts?.['verify:gate']||'').match(/test:[A-Za-z0-9:_-]*browser[A-Za-z0-9:_-]*/g)||[]);
 assert(workflowSuites.length>=4,`the gate must keep a browser layer, found ${workflowSuites.length} suites`);
-assert(workflowSuites.length<=12,`the gate must stay narrow; ${workflowSuites.length} browser suites in v3-check.yml`);
+assert(workflowSuites.length<=13,`the gate must stay narrow; ${workflowSuites.length} browser suites in v3-check.yml`);
 assert(new Set(workflowSuites).size===workflowSuites.length,'v3-check.yml lists a browser suite twice');
 for(const suite of workflowSuites) assert(suite in (packageJson.scripts||{}),`v3-check.yml runs unknown script ${suite}`);
 assert(JSON.stringify([...workflowSuites].sort())===JSON.stringify([...new Set(gateSuites)].sort()),

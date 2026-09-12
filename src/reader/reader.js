@@ -66,7 +66,7 @@ const state = {
   speechChunks: [],
   speechChunkIndex: 0,
   mobileImmersive: false,
-  canvasMode: false,
+  canvasMode: window.__V3_CANVAS_MODE__ === true || urlParams.get("canvas") === "1",
   mobileStudioMode: false,
   canvasSelectedBlocks: new Set(),
   canvasSelectedBlockIds: new Set(),
