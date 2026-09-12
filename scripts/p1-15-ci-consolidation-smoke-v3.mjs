@@ -39,4 +39,19 @@ for(const token of [
   "['media','edge-desktop','mac-safari','iphone-safari','android-wechat','production-https']"
 ]) assert(finalCi.includes(token),`v31-final-ci missing required contract: ${token}`);
 
-console.log(`P1-15 CI consolidation smoke PASS · workflows=${files.join(', ')} · read-only · Actions v7`);
+// Browser-suite policy guard (see RETIRED-BROWSER-SUITES.md).
+// The gate is deliberately narrow. Keep its suite list identical to
+// `verify:gate` so the definition cannot drift between the two places, and
+// keep it small so a new suite has to be argued for rather than added.
+const v3Check=await readFile(path.join(workflowDir,'v3-check.yml'),'utf8');
+const workflowSuites=(v3Check.match(/suites="([^"]+)"/)||[])[1]?.split(/\s+/)||[];
+const packageJson=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
+const gateSuites=(String(packageJson.scripts?.['verify:gate']||'').match(/test:[A-Za-z0-9:_-]*browser[A-Za-z0-9:_-]*/g)||[]);
+assert(workflowSuites.length>=4,`the gate must keep a browser layer, found ${workflowSuites.length} suites`);
+assert(workflowSuites.length<=12,`the gate must stay narrow; ${workflowSuites.length} browser suites in v3-check.yml`);
+assert(new Set(workflowSuites).size===workflowSuites.length,'v3-check.yml lists a browser suite twice');
+for(const suite of workflowSuites) assert(suite in (packageJson.scripts||{}),`v3-check.yml runs unknown script ${suite}`);
+assert(JSON.stringify([...workflowSuites].sort())===JSON.stringify([...new Set(gateSuites)].sort()),
+  `v3-check.yml browser suites drifted from verify:gate:\n  workflow: ${[...workflowSuites].sort().join(' ')}\n  verify:gate: ${[...new Set(gateSuites)].sort().join(' ')}`);
+
+console.log(`P1-15 CI consolidation smoke PASS · workflows=${files.join(', ')} · read-only · Actions v7 · gate suites=${workflowSuites.length}`);
