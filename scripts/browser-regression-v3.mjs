@@ -342,7 +342,11 @@ try {
 
     if (videoPage >= 0) {
       await setPage(videoPage + 1);
-      assert(await evaluate("document.querySelector('video')?.preload === 'metadata'"), `${viewport.name}: video preload is not metadata`);
+      // b53005f 把视频从 preload="metadata" 改成 "auto"（配合 warmMediaAround() 预热相邻跨页），
+      // 目的是让当前跨页的视频立刻开始缓冲。这里断言新契约：视频页上的 video 必须急加载，
+      // 且必须以属性形式写出，否则浏览器会用默认值把急加载降级掉。
+      assert(await evaluate("document.querySelector('video')?.preload === 'auto'"), `${viewport.name}: video preload is not auto`);
+      assert(await evaluate("document.querySelector('video')?.getAttribute('preload') === 'auto'"), `${viewport.name}: video preload attribute missing`);
       assert(await evaluate("Boolean(document.querySelector('[data-video-full]'))"), `${viewport.name}: custom video fullscreen button missing`);
       await evaluate("document.querySelector('[data-video-full]').click()");
       await sleep(40);
