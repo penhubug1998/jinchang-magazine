@@ -1,5 +1,6 @@
 import { V3_VERSION } from './lib-v3-production.mjs';
-import { assetTagPattern, importPattern } from './lib-v3-browser-page.mjs';
+import { assetTagPattern, buildReaderModule, importPattern } from './lib-v3-browser-page.mjs';
+const readerModule = await buildReaderModule();
 import { spawn } from 'node:child_process';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -30,7 +31,7 @@ try{
   const mock=`<script>history.replaceState=()=>{};window.__V3_APP_BASE_OVERRIDE__='/';window.confirm=()=>true;window.prompt=()=>"manual";window.__MOCK_DRAFT__=null;const ISSUE=${safeIssue};window.fetch=async(input,opts={})=>{const raw=String(input),p=raw.startsWith('/')?raw:(()=>{try{return new URL(raw,'http://studio.test').pathname}catch{return raw}})();const body=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json'}});if(p==='/api/issues'&&(!opts.method||opts.method==='GET'))return body([{id:'001',label:ISSUE.label,subtitle:ISSUE.subtitle,status:ISSUE.status,engine:'v3',pageCount:ISSUE.pages.length,revisionPending:false}]);if(p==='/api/issues/001'&&(!opts.method||opts.method==='GET'))return body(structuredClone(ISSUE));if(p==='/api/issues/001/draft'&&(!opts.method||opts.method==='GET'))return body(window.__MOCK_DRAFT__||{exists:false});if(p==='/api/issues/001/draft'&&opts.method==='PUT'){const x=JSON.parse(opts.body);window.__MOCK_DRAFT__={exists:true,savedAt:new Date().toISOString(),issue:structuredClone(x.issue)};return body(window.__MOCK_DRAFT__);}if(p==='/api/issues/001/draft'&&opts.method==='DELETE'){window.__MOCK_DRAFT__=null;return body({ok:true});}if(p==='/api/issues/001/snapshots')return body([]);if(p==='/api/issues/001/live-preview'&&opts.method==='POST')return body({ok:true,preview:'/live-preview/001/',pages:JSON.parse(opts.body).pages.length});if(p==='/api/issues/001'&&opts.method==='PUT'){const putReq=JSON.parse(opts.body);return body({issue:putReq.issue,snapshot:{id:'browser-alpha3'},source:{fingerprint:putReq.sourceFingerprint||''}});}if(p==='/api/templates')return body({templates:[]});return body({error:'mock not found '+p},404)};</script>`;
   const injected=html.replace(assetTagPattern('link','studio.css'),`<style>${css}</style>`).replace(assetTagPattern('script','studio.js'),`${mock}<script type="module">${studioInline}</script>`);
   const readerMock=`<script>window.__V3_STUDIO_EMBED__=true;const ISSUE=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(ISSUE),{status:200,headers:{'Content-Type':'application/json'}});</script>`;
-  const readerDoc=readerHtml.replace(assetTagPattern('link','reader.css'),`<style>${readerCss}</style>`).replace(assetTagPattern('script','reader.js'),`${readerMock}<script type="module">${readerJs}</script>`);
+  const readerDoc=readerHtml.replace(assetTagPattern('link','reader.css'),`<style>${readerCss}</style>`).replace(assetTagPattern('script','reader.js'),`${readerMock}<script type="module">${readerModule}</script>`);
 
   userDataDir=await mkdtemp(path.join(os.tmpdir(),'jinchang-v31a3-chrome-'));const debugPort=9860+Math.floor(Math.random()*80);
   chrome=spawn('xvfb-run',['-a',chromium,'--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--hide-scrollbars','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','--no-default-browser-check','about:blank'],{stdio:'ignore',detached:true});
@@ -41,8 +42,15 @@ try{
   await ev("window.__V3_STUDIO__.openIssue('001')");for(let i=0;i<80;i++){if(await ev("window.__V3_STUDIO__.state.issue?.id==='001'").catch(()=>false))break;await sleep(40)}assert(await ev('window.__V3_STUDIO__.state.issue.pages.length===18'),'第一期 18 页未加载');
   await ev("document.querySelector('.page-item[data-page-index=\"3\"]')?.click()");await sleep(60);assert(await ev('window.__V3_STUDIO__.state.page===3'),'未切到双 paragraph 测试页');
 
-  await ev("document.getElementById('designBtn').click()");await sleep(50);assert(await ev("document.querySelectorAll('#designPresetList [data-design-preset]').length>=6"),'主题预设未渲染');
-  await ev("document.querySelector('[data-design-preset=\"ink-green\"]').click()");await sleep(60);assert(await ev("window.__V3_STUDIO__.state.issue.design.tokens.accent==='#315f4a'"),'主题预设应用失败');
+  await ev("document.getElementById('designBtn').click()");await sleep(50);
+  // ea40d02 起“设计”按上下文打开：选中 1 个块 → block，有当前页 → page，否则 theme。
+  // 预设列表只在 theme scope 渲染，所以先显式切到 theme 再断言。
+  await ev("document.querySelector('[data-design-scope=\"theme\"]')?.click()");await sleep(60);
+  assert(await ev("document.querySelectorAll('#designPresetList [data-design-preset]').length>=6"),'主题预设未渲染');
+  await ev("document.querySelector('[data-design-preset=\"ink-green\"]').click()");await sleep(60);
+  // 预设改为两步：点卡片只是预览，必须再点“应用此主题”才写入 issue.design.tokens。
+  await ev("document.querySelector('[data-apply-design-preset]')?.click()");await sleep(60);
+  assert(await ev("window.__V3_STUDIO__.state.issue.design.tokens.accent==='#315f4a'"),'主题预设应用失败');
   await ev("document.getElementById('designUndoBtn').click()");await sleep(40);assert(await ev("window.__V3_STUDIO__.state.issue.design?.tokens?.accent!=='#315f4a'"),'设计撤销失败');await ev("document.getElementById('designRedoBtn').click()");await sleep(40);assert(await ev("window.__V3_STUDIO__.state.issue.design.tokens.accent==='#315f4a'"),'设计重做失败');
   let shot=await cdp.send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false,fromSurface:true});await writeFile(path.join(outDir,'desktop-theme-presets.png'),Buffer.from(shot.data,'base64'));
 
