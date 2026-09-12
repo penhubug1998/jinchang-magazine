@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
 import net from 'node:net';
@@ -9,7 +9,8 @@ const sleep=(ms)=>new Promise(r=>setTimeout(r,ms));
 async function freePort(){return await new Promise((resolve,reject)=>{const s=net.createServer();s.on('error',reject);s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p))})})}
 function run(script,args=[]){const r=spawnSync(process.execPath,[path.join(sandbox,'scripts',script),...args],{cwd:sandbox,encoding:'utf8'});if(r.status!==0)throw new Error(`${script} failed\n${r.stdout}\n${r.stderr}`);return r.stdout}
 await rm(sandbox,{recursive:true,force:true});await mkdir(path.join(sandbox,'scripts'),{recursive:true});await mkdir(path.join(sandbox,'src'),{recursive:true});await mkdir(path.join(sandbox,'issues','001'),{recursive:true});await mkdir(path.join(sandbox,'issues','002'),{recursive:true});
-for(const f of ['lib-v3-deploy.mjs','lib-v3-production.mjs','lib-v3-history.mjs','lib-v3-import.mjs','lib-v3-catalog.mjs','lib-v3-publication.mjs','new-issue-v3.mjs','sync-assets-v3.mjs','audit-v3.mjs','studio-v3.mjs','catalog-v3.mjs'])await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
+const studioSupport=(await readdir(path.join(root,'scripts'))).filter(f=>/^lib-v3-.*\.mjs$/.test(f));
+for(const f of [...new Set([...studioSupport,'new-issue-v3.mjs','sync-assets-v3.mjs','audit-v3.mjs','studio-v3.mjs','catalog-v3.mjs'])])await cp(path.join(root,'scripts',f),path.join(sandbox,'scripts',f));
 await cp(path.join(root,'src','studio'),path.join(sandbox,'src','studio'),{recursive:true});
 await cp(path.join(root,'src','reader'),path.join(sandbox,'src','reader'),{recursive:true});
 await cp(path.join(root,'package.json'),path.join(sandbox,'package.json'));

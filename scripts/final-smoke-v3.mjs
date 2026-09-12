@@ -16,8 +16,10 @@ if(!(studio.includes('V3.1 自由创作期刊制作中心')||studio.includes('V3
 const packageScripts=pkg.scripts||{};
 for(const name of ['final:status','final:release','final:seal','verify:final','test:final'])if(!packageScripts[name])throw new Error(`缺少正式版脚本 ${name}`);
 if(packageScripts['verify:v3']!=='npm run verify:final')throw new Error('verify:v3 未切换到正式版门禁');
-for(const f of ['scripts/final-readiness-v3.mjs','scripts/final-release-v3.mjs','docs/V3_FINAL_RELEASE.md','baselines/v3-schema-3.0.json'])await readFile(f,'utf8');
+for(const f of ['scripts/final-readiness-v3.mjs','scripts/final-release-v3.mjs','scripts/final-release-v30-v3.mjs','docs/V3_FINAL_RELEASE.md','baselines/v3-schema-3.0.json'])await readFile(f,'utf8');
 const digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);
-const rel=await readFile('scripts/final-release-v3.mjs','utf8');
-if(!rel.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!rel.includes("status:'RELEASED'"))throw new Error('正式版两阶段发布锁缺失');
-console.log(`V3.0 稳定发布锁 smoke 通过：3.0.0 冻结 schema 与两阶段发布锁继续保留；当前开发版本=${pkg.version}。schema=${digest}`);
+const guard=await readFile('scripts/final-release-v3.mjs','utf8');
+if(!guard.includes('[P1-16]')||!guard.includes('final:v31')||!guard.includes('process.exit(64)'))throw new Error('V3.1 无版本号 final:release/final:seal 退役保护缺失');
+const legacy=await readFile('scripts/final-release-v30-v3.mjs','utf8');
+if(!legacy.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!legacy.includes("status:'RELEASED'"))throw new Error('V3.0 历史两阶段发布锁缺失');
+console.log(`V3.0 稳定发布锁 smoke 通过：3.0.0 冻结 schema 与版本化两阶段发布锁继续保留；V3.1 通用 final 入口 fail-closed；当前开发版本=${pkg.version}。schema=${digest}`);

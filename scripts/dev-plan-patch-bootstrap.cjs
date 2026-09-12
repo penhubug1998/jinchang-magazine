@@ -1,0 +1,13 @@
+const fs=require('node:fs');
+const file='scripts/dev-plan-current-patch.cjs';
+let src=fs.readFileSync(file,'utf8');
+const oldParallel="  assert(statuses[0]===200&&statuses[1]===409,`parallel save should serialize to one success and one conflict: ${JSON.stringify(statuses)}`);\\n";
+const newParallel="  assert(statuses[0]===200&&statuses[1]===409,'parallel save should serialize to one success and one conflict: '+JSON.stringify(statuses));\\n";
+if(!src.includes(oldParallel))throw new Error('parallel assertion bootstrap anchor drifted');
+src=src.replace(oldParallel,newParallel);
+const oldFormal="assert(code!==0&&out.includes('STUDIO_ADMIN_PASSWORD'),`formal direct server must refuse unauthenticated boot: ${'${'}code} ${'${'}out}`);\\n";
+const newFormal="assert(code!==0&&out.includes('STUDIO_ADMIN_PASSWORD'),'formal direct server must refuse unauthenticated boot: '+code+' '+out);\\n";
+if(!src.includes(oldFormal))throw new Error('formal assertion bootstrap anchor drifted');
+src=src.replace(oldFormal,newFormal);
+fs.writeFileSync(file,src);
+console.log('Development-plan patch bootstrap applied.');

@@ -1,10 +1,13 @@
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { V3_VERSION, V31_SCHEMA_VERSION, exists, normalizeIssueId, parseArgs, root } from './lib-v3-production.mjs';
+import { evidenceSha256 } from './lib-final-evidence-integrity-v3.mjs';
 
 const args=parseArgs();
 const id=normalizeIssueId(args.issue||args.id||args._[0]||'001');
 const assert=(c,m)=>{if(!c)throw new Error(m)};
+const sourceSha=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}),sourceAt=spawnSync('git',['show','-s','--format=%cI','HEAD'],{cwd:root,encoding:'utf8'});const currentSourceCommit=String(sourceSha.stdout||'').trim(),currentSourceCommittedAt=String(sourceAt.stdout||'').trim();assert(sourceSha.status===0&&/^[0-9a-f]{40}$/i.test(currentSourceCommit),'current source commit unavailable');assert(sourceAt.status===0&&Number.isFinite(Date.parse(currentSourceCommittedAt)),'current source commit time unavailable');
 const read=async rel=>JSON.parse(await readFile(path.join(root,rel),'utf8'));
 const deployFile=`reports/v3-rc1-deployment-${id}.json`;
 const rollbackFile=`reports/v3-rc1-rollback-${id}.json`;
@@ -35,12 +38,13 @@ assert(Date.parse(first.deployedAt)<rollbackAt,'首次部署必须早于 rollbac
 assert(first.targetRoot===deploy.targetRoot,'首次部署与重新部署 targetRoot 不一致');
 assert(first.remotePath===deploy.remotePath,'首次部署与重新部署 remotePath 不一致');
 const report={
-  version:V3_VERSION,schema:V31_SCHEMA_VERSION,issue:id,generatedAt:new Date().toISOString(),status:'passed',
+  version:V3_VERSION,schema:V31_SCHEMA_VERSION,issue:id,generatedAt:new Date().toISOString(),sourceCommit:currentSourceCommit,sourceCommittedAt:currentSourceCommittedAt,status:'passed',
   base:online.base,targetRoot:deploy.targetRoot,remotePath:deploy.remotePath,treeSha256:deploy.treeSha256,
   sequence:{firstDeployAt:first.deployedAt,rollbackAt:rollback.rolledBackAt,redeployAt:deploy.deployedAt,onlineCheckedAt:online.checkedAt},
   rollbackVerified:true,redeployVerified:true,httpsVerified:true,
   evidence:{firstDeployReceipt:rollback.receipt,rollbackReport:rollbackFile,finalDeployReport:deployFile,onlineReport:onlineFile}
 };
+report.evidenceSha256=evidenceSha256(report);
 await mkdir(path.join(root,'reports'),{recursive:true});
 await writeFile(path.join(root,'reports/v31-final-production-receipt.json'),JSON.stringify(report,null,2)+'\n');
-console.log(`V3.1 Final 正式环境 receipt PASS：${online.base} · rollback → redeploy → online strict`);
+console.log(`V3.1 Final 正式环境 receipt PASS：${online.base} · rollback → redeploy → online strict · evidenceSha256=${report.evidenceSha256.slice(0,12)}…`);

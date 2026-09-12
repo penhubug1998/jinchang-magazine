@@ -1,0 +1,188 @@
+{
+  "issue": "004",
+  "assetSource": "issues/004/assets",
+  "generatedAt": "2026-09-08T13:38:34.997Z",
+  "expected": [
+    {
+      "path": "music/bgm.mp3",
+      "kind": "music",
+      "source": "features.music.src",
+      "references": [
+        {
+          "page": null,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.music.src"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-01.mp3",
+      "kind": "tts",
+      "page": 1,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 1,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-02.mp3",
+      "kind": "tts",
+      "page": 2,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 2,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-03.mp3",
+      "kind": "tts",
+      "page": 3,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 3,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-04.mp3",
+      "kind": "tts",
+      "page": 4,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 4,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-05.mp3",
+      "kind": "tts",
+      "page": 5,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 5,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-06.mp3",
+      "kind": "tts",
+      "page": 6,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 6,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-07.mp3",
+      "kind": "tts",
+      "page": 7,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 7,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-08.mp3",
+      "kind": "tts",
+      "page": 8,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 8,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-09.mp3",
+      "kind": "tts",
+      "page": 9,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 9,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-10.mp3",
+      "kind": "tts",
+      "page": 10,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 10,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-11.mp3",
+      "kind": "tts",
+      "page": 11,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 11,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    },
+    {
+      "path": "tts/page-12.mp3",
+      "kind": "tts",
+      "page": 12,
+      "source": "features.narration.pattern",
+      "references": [
+        {
+          "page": 12,
+          "blockIndex": null,
+          "field": null,
+          "source": "features.narration.pattern"
+        }
+      ]
+    }
+  ]
+}

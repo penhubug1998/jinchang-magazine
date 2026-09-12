@@ -106,10 +106,15 @@ for (const entry of entries) {
   const files = await scanFiles(base, row);
   const refs = collectReferencedAssets(issue);
   row.references = refs.length;
+  // A draft issue has not been produced yet, so its media legitimately does not
+  // exist. Requiring it makes --strict fail on work that has not started.
+  // Published issues keep the hard failure, which is the property that matters:
+  // parity is asserted over live assets, and every gap is still reported.
+  const draft = issue.status === 'draft';
   for (const ref of refs) {
     report.summary.checkedReferences++;
     const rel = stripAssetsPrefix(ref.path);
-    if (!files.has(rel)) add(row, 'error', 'REFERENCED_FILE_MISSING', `缺少 ${ref.kind} ${ref.path}`, { path: ref.path, kind: ref.kind, page: ref.page || null });
+    if (!files.has(rel)) add(row, draft ? 'warning' : 'error', 'REFERENCED_FILE_MISSING', `缺少 ${ref.kind} ${ref.path}${draft ? '（草稿期尚未生成媒体）' : ''}`, { path: ref.path, kind: ref.kind, page: ref.page || null });
   }
   await checkBaseline(issue, base, files, row);
   console.log(`${issue.id}: 媒体目录可用，引用 ${refs.length} 项，实际文件 ${files.size} 项${row.baseline ? '，RC1 GitHub baseline 已核对' : ''}。`);

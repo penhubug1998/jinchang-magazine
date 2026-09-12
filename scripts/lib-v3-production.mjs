@@ -20,6 +20,17 @@ export const V3_VERSION = PACKAGE_META.version;
 export const V3_STABLE_VERSION = PACKAGE_META.v3StableVersion || V3_VERSION;
 export const V31_SCHEMA_VERSION = PACKAGE_META.v31SchemaVersion || null;
 export const MiB = 1024 * 1024;
+// Publication Center policy: release is direct by default. Keep the helper
+// name for compatibility with the existing release code and receipts, but do
+// not make normal publishing depend on an environment switch.
+// Direct release is the product's current default: publishing skips the
+// pre-release blocker gate and only reports it. Keep that default, but make the
+// gate reachable so the strict path stays testable and operators can opt in.
+//   V3_STRICT_RELEASE=1  -> restore the blocking gate
+export function forceReleaseEnabled(){
+  if (String(process.env.V3_STRICT_RELEASE || '') === '1') return false;
+  return true;
+}
 export const exists = async (file) => { try { await access(file); return true; } catch { return false; } };
 export const posix = (file) => file.replaceAll('\\', '/');
 export const rel = (file) => posix(path.relative(root, file));
@@ -97,7 +108,7 @@ export function collectReferencedAssets(issue) {
     if (block.type === 'container') for (const [ci,column] of (block.columns || []).entries()) for (const [bi,child] of (column.blocks || []).entries()) walkBlockAssets(child,pageIndex,blockIndex,`columns.${ci}.blocks.${bi}`);
   };
   for (const [pageIndex, page] of (issue.pages || []).entries()) {
-    // A page background is a real asset dependency too.  Keep it in the same
+    // A page background is a real asset dependency too. Keep it in the same
     // reference graph as normal image blocks so cleanup and publishing never
     // silently remove it.
     add(page?.design?.backgroundImage, 'image', { page: pageIndex + 1, field: 'design.backgroundImage', source: 'page.design.backgroundImage' });
@@ -127,6 +138,7 @@ function blockSpeechText(block = {}, articles = {}) {
     case 'casePair': return [block.case, block.warning].filter(Boolean).join('。');
     case 'video': return block.caption || '';
     case 'image': return block.caption || '';
+    case 'table': return [block.caption, ...(block.rows || []).flatMap(row => (row || []).map(cell => String(cell ?? '')))].filter(Boolean).join('。');
     case 'coverSections': return (block.items || []).filter(Boolean).join('，');
     case 'cards': return (block.items || []).flatMap(x => [x?.title, x?.text, x?.body]).filter(Boolean).join('。');
     case 'articleLink': {
@@ -150,6 +162,23 @@ export function narrationPageDigests(issue = {}) {
 
 export function narrationSourceDigest(issue = {}) {
   return crypto.createHash('sha256').update(narrationPageDigests(issue).join('|')).digest('hex');
+}
+export function ttsGenerationDigests(issue){
+  const n=issue.features?.narration||{};
+  return narrationPageDigests(issue).map(text=>crypto.createHash('sha256').update(JSON.stringify([text,n.voice||'zh-CN-XiaoxiaoNeural',Number(n.rate)||1])).digest('hex'));
+}
+export function changedTtsPages(issue){
+  const n=issue.features?.narration||{},current=ttsGenerationDigests(issue),pageDigests=narrationPageDigests(issue);
+  const generated=Array.isArray(n.generationDigests)?n.generationDigests:[];
+  const baseline=Array.isArray(n.pageDigests)?n.pageDigests:[];
+  if(n.generationConfigChanged)return current.map((_,i)=>i+1);
+  return current.flatMap((value,i)=>{
+    // Newer issues have a generation digest that includes the page text,
+    // voice and rate. Older issues only recorded page text; keep that legacy
+    // baseline usable instead of forcing a needless full-issue regeneration.
+    const same=generated[i]?generated[i]===value:baseline.length===pageDigests.length&&baseline[i]===pageDigests[i];
+    return same?[]:[i+1];
+  });
 }
 
 export async function listFilesRecursive(dir) {

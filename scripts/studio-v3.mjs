@@ -1,5 +1,6 @@
-import { issueTemplateCatalog } from '../src/studio/issue-templates.js';
 import http from 'node:http';
+import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
+import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
 import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
@@ -8,7 +9,7 @@ import { URL } from 'node:url';
 import os from 'node:os';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
-  V3_VERSION, MiB, collectReferencedAssets, exists, humanBytes, listFilesRecursive, narrationPageDigests, narrationSourceDigest, normalizeIssueId, parseArgs,
+  V3_VERSION, MiB, collectReferencedAssets, exists, forceReleaseEnabled, humanBytes, listFilesRecursive, narrationPageDigests, narrationSourceDigest, normalizeIssueId, parseArgs,
   posix, readJson, root, stripAssetsPrefix
 } from './lib-v3-production.mjs';
 import { listSnapshots, readSnapshotIssue, restoreSnapshot, snapshotIssue } from './lib-v3-history.mjs';
@@ -17,6 +18,7 @@ import { PUBLICATION_OUTPUT_ROOT, buildPublicationStatus, readPublicationEvidenc
 import { buildArchiveHtml } from './lib-v3-catalog.mjs';
 import { verifyIntegrity } from './lib-v3-deploy.mjs';
 import { normalizeRichText, renderRichText } from '../src/reader/rich-text.js';
+import { WHOLE_MAGAZINE_TEMPLATES, applyWholeMagazineTemplate } from '../src/studio/whole-magazine-templates.js';
 import { buildPublishingPlan, flowFragmentFor, normalizePagePublishing, normalizeBlockPublishing } from '../src/reader/layout-engine.js';
 
 const args = parseArgs();
@@ -31,6 +33,8 @@ const livePreviewIssues = new Map();
 const adminLoginUser = String(process.env.STUDIO_ADMIN_USER || 'admin').trim() || 'admin';
 const adminLoginPassword = String(process.env.STUDIO_ADMIN_PASSWORD || '');
 const adminLoginEnabled = adminLoginPassword.length > 0;
+const productionMode = process.env.NODE_ENV === 'production' || process.env.V3_FORMAL_MODE === '1' || process.env.STUDIO_PRODUCTION === '1';
+if(productionMode&&!acceptanceOnly&&!adminLoginEnabled)throw new Error('正式模式必须配置 STUDIO_ADMIN_PASSWORD；为避免未鉴权启动，服务已拒绝启动。');
 const ADMIN_SESSION_COOKIE = 'v3_studio_session';
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const adminSessions = new Map();
@@ -40,16 +44,19 @@ const aiSummaryCacheDir = path.join(root,'.v3-ai-cache');
 const aiSummaryInflight = new Map();
 const aiPublicRate = new Map();
 const backgroundJobs = new Map();
+const issueWriteLocks = new Map();
 const backgroundQueue = [];
 let backgroundJobRunning = false;
 const MAX_BACKGROUND_QUEUE = 8;
 const MAX_BACKGROUND_JOBS = 100;
+const backgroundJobFile=process.env.V3_BACKGROUND_JOB_FILE?path.resolve(process.env.V3_BACKGROUND_JOB_FILE):path.join(root,'.v3-background-jobs','jobs.json');
+let backgroundJobPersistChain=Promise.resolve();
 const publicMagazineRoot = process.env.V3_PUBLIC_MAGAZINE_ROOT
   ? path.resolve(process.env.V3_PUBLIC_MAGAZINE_ROOT)
   : '';
 const publicMagazineBaseUrl = String(process.env.V3_PUBLIC_MAGAZINE_BASE_URL || '').replace(/\/+$/, '');
 const sourceLedgerRoot = process.env.V3_SOURCE_LEDGER_ROOT ? path.resolve(process.env.V3_SOURCE_LEDGER_ROOT) : path.join(root,'.v3-source-ledger');
-const allowedBlockTypes = new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
+const allowedBlockTypes = new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','table','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
 const allowedContainerLayouts = new Set(['single','two-equal','two-40-60','two-60-40','three-equal','media-left','media-right']);
 const MAX_BLOCKS_PER_PAGE = 80;
 const stockAssetNames = new Map([
@@ -141,6 +148,8 @@ async function generateTtsFile(bin,target,text,{voice='',rate=1}={}){
   if(!result.ok)throw new Error(result.output||`TTS 进程退出 ${result.status}`);
 }
 
+async function atomicWriteText(file,text){const dir=path.dirname(file);await mkdir(dir,{recursive:true});const temp=path.join(dir,`.${path.basename(file)}.tmp-${process.pid}-${randomUUID()}`);try{await writeFile(temp,text,'utf8');await rename(temp,file);}catch(error){await rm(temp,{force:true}).catch(()=>{});throw error;}}
+async function withIssueWriteLock(issueId,task){const key=String(issueId);const previous=issueWriteLocks.get(key)||Promise.resolve();let release;const gate=new Promise(resolve=>{release=resolve});const tail=previous.catch(()=>{}).then(()=>gate);issueWriteLocks.set(key,tail);await previous.catch(()=>{});try{return await task();}finally{release();if(issueWriteLocks.get(key)===tail)issueWriteLocks.delete(key);}}
 function send(res,status,data,type='application/json; charset=utf-8',headers={}) {
   res.writeHead(status,{'Content-Type':type,'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','X-Frame-Options':'SAMEORIGIN','Permissions-Policy':'camera=(), geolocation=(), microphone=()','Strict-Transport-Security':'max-age=31536000; includeSubDomains',...headers});
   res.end(type.startsWith('application/json') ? JSON.stringify(data) : data);
@@ -338,24 +347,34 @@ function loginRate(ip){
 }
 function recordLoginFailure(ip){const current=loginRate(ip);current.count++;if(current.count>=5)current.lockedUntil=Date.now()+5*60*1000;loginAttempts.set(ip,current);return current;}
 function clearLoginFailures(ip){loginAttempts.delete(ip);}
-function jobView(job){return {id:job.id,kind:job.kind,issueId:job.issueId,status:job.status,progress:job.progress,createdAt:job.createdAt,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,statusUrl:`/api/jobs/${encodeURIComponent(job.id)}`,result:job.result||null,error:job.error||null,errorDetails:job.errorDetails||null};}
-function enqueueBackgroundJob({kind,issueId,task}){
+function jobView(job){return {id:job.id,kind:job.kind,issueId:job.issueId,status:job.status,progress:job.progress,createdAt:job.createdAt,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,statusUrl:`/api/jobs/${encodeURIComponent(job.id)}`,result:job.result||null,error:job.error||null,errorDetails:job.errorDetails||null,retryable:['failed','interrupted','cancelled'].includes(job.status),sourceFingerprint:job.sourceFingerprint||null};}
+function durableJobRecord(job){return {id:job.id,kind:job.kind,issueId:job.issueId,payload:job.payload||{},sourceFingerprint:job.sourceFingerprint||null,status:job.status,progress:job.progress,createdAt:job.createdAt,startedAt:job.startedAt||null,finishedAt:job.finishedAt||null,result:job.result||null,error:job.error||null,errorDetails:job.errorDetails||null};}
+function persistBackgroundJobs(){const data={version:1,updatedAt:new Date().toISOString(),jobs:[...backgroundJobs.values()].map(durableJobRecord)};backgroundJobPersistChain=backgroundJobPersistChain.catch(()=>{}).then(()=>atomicWriteText(backgroundJobFile,`${JSON.stringify(data,null,2)}\n`));return backgroundJobPersistChain;}
+function backgroundTaskFor(kind,id,payload={}){switch(kind){
+case 'publication-preflight':return report=>runPublicationPreflight(id,report);
+case 'publication-preview':return async report=>{report({stage:'构建当前期刊',percent:10});const output=await ensurePublicationWeb(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-pdf':return async report=>{report({stage:'生成 PDF',percent:10});const output=await generatePublicationPdf(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-archive':return async report=>{report({stage:'生成归档包',percent:10});const output=await generatePublicationArchive(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'publication-release':return async report=>{const output=await generateFormalRelease(id,report);const issueFile=path.join(root,'issues',id,'issue.json'),nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return {ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source};};
+case 'public-deploy':return async report=>{report({stage:'部署公开 Reader',percent:10});const deployment=await deployPublicIssue(id);report({stage:'在线校验',percent:90});return {ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})};};
+case 'audit':return async report=>{report({stage:'执行审计',percent:10});const argv=['--issue',id,'--quiet'];if(payload.strict)argv.push('--strict');const r=await runScriptAsync('audit-v3.mjs',argv),reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let auditReport=null;try{auditReport=await readJson(reportFile)}catch{}return {ok:r.ok,output:r.output,strict:Boolean(payload.strict),generatedAt:auditReport?.generatedAt||null,audit:auditReport?.issues?.[0]||null,htmlUrl:`/reports/v3-release-audit-${id}.html`};};
+case 'build':return async report=>{report({stage:'构建当前期刊',percent:10});const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return {ok:r.ok,output:r.output,preview:`/preview/${id}/`};};
+case 'tts-generate':return report=>{const bin=resolveTtsGenerator();if(!bin)throw Object.assign(new Error('服务器未配置 TTS 生成器'),{code:'TTS_GENERATOR_UNAVAILABLE'});return generateTtsForIssue(id,payload,bin,report);};
+default:throw Object.assign(new Error(`未知后台任务类型：${kind}`),{code:'JOB_KIND_UNKNOWN'});
+}}
+async function assertBackgroundJobSource(job){if(!job.sourceFingerprint||!job.issueId)return;const file=path.join(root,'issues',job.issueId,'issue.json');const current=issueSourceFingerprint(await readJson(file));if(current!==job.sourceFingerprint)throw Object.assign(new Error('任务排队后源稿已变化；为避免用错误版本生成发布结果，本任务已停止。请基于当前稿件重新发起。'),{code:'JOB_SOURCE_CHANGED'});}
+function enqueueBackgroundJob({kind,issueId,payload={},sourceFingerprint=null,task}){
   if(backgroundQueue.length>=MAX_BACKGROUND_QUEUE)throw Object.assign(new Error('后台任务队列已满，请稍后重试'),{statusCode:429,code:'JOB_QUEUE_FULL'});
-  const job={id:`job-${Date.now().toString(36)}-${randomUUID().slice(0,8)}`,kind,issueId,status:'queued',progress:{stage:'排队中',percent:0},createdAt:new Date().toISOString(),task};
-  backgroundJobs.set(job.id,job);backgroundQueue.push(job);void pumpBackgroundJobs();return job;
+  const job={id:`job-${Date.now().toString(36)}-${randomUUID().slice(0,8)}`,kind,issueId,payload,sourceFingerprint,status:'queued',progress:{stage:'排队中',percent:0},createdAt:new Date().toISOString(),task:task||backgroundTaskFor(kind,issueId,payload)};
+  backgroundJobs.set(job.id,job);backgroundQueue.push(job);void persistBackgroundJobs();void pumpBackgroundJobs();return job;
 }
+async function restoreBackgroundJobs(){let data=null;try{data=await readJson(backgroundJobFile)}catch{}for(const row of Array.isArray(data?.jobs)?data.jobs.slice(-MAX_BACKGROUND_JOBS):[]){const job={...row,payload:row.payload||{},task:null};if(['queued','running'].includes(job.status)){job.status='interrupted';job.finishedAt=new Date().toISOString();job.error='服务重启时任务尚未结束，已安全标记为中断，可重新执行。';job.errorDetails={code:'SERVICE_RESTART',advice:['检查当前源稿版本后点击重试']};job.progress={stage:'服务重启 · 已中断',percent:Number(job.progress?.percent)||0};}backgroundJobs.set(job.id,job);}if(backgroundJobs.size)await persistBackgroundJobs();}
+function cancelBackgroundJob(job){if(job.status!=='queued')throw Object.assign(new Error('仅排队中的任务可安全取消；运行中的发布/构建任务不会被强行终止。'),{statusCode:409,code:'JOB_NOT_CANCELLABLE'});const i=backgroundQueue.findIndex(x=>x.id===job.id);if(i>=0)backgroundQueue.splice(i,1);job.status='cancelled';job.finishedAt=new Date().toISOString();job.progress={stage:'已取消',percent:0};job.task=null;void persistBackgroundJobs();return job;}
+function retryBackgroundJob(job){if(!['failed','interrupted','cancelled'].includes(job.status))throw Object.assign(new Error('当前任务状态不能重试'),{statusCode:409,code:'JOB_NOT_RETRYABLE'});return enqueueBackgroundJob({kind:job.kind,issueId:job.issueId,payload:job.payload||{},sourceFingerprint:job.sourceFingerprint,task:backgroundTaskFor(job.kind,job.issueId,job.payload||{})});}
 async function pumpBackgroundJobs(){
-  if(backgroundJobRunning)return;
-  backgroundJobRunning=true;
-  try{
-    while(backgroundQueue.length){
-      const job=backgroundQueue.shift();job.status='running';job.startedAt=new Date().toISOString();job.progress={stage:'开始执行',percent:1};
-      try{job.result=await job.task(progress=>{job.progress={...job.progress,...progress};});job.status='succeeded';job.progress={stage:'已完成',percent:100};}
-      catch(error){job.status='failed';job.error=error?.message||String(error);job.errorDetails={code:error?.code||'',advice:Array.isArray(error?.advice)?error.advice:[]};job.progress={stage:'执行失败',percent:100};console.error(`[job:${job.id}] ${job.error}`);}
-      job.finishedAt=new Date().toISOString();
-      while(backgroundJobs.size>MAX_BACKGROUND_JOBS){const oldest=[...backgroundJobs.values()].find(x=>x.status!=='queued'&&x.status!=='running');if(!oldest)break;backgroundJobs.delete(oldest.id);}
-    }
-  }finally{backgroundJobRunning=false;}
+  if(backgroundJobRunning)return;backgroundJobRunning=true;
+  try{while(backgroundQueue.length){const job=backgroundQueue.shift();job.status='running';job.startedAt=new Date().toISOString();job.progress={stage:'开始执行',percent:1};await persistBackgroundJobs();try{await assertBackgroundJobSource(job);job.result=await job.task(progress=>{job.progress={...job.progress,...progress};void persistBackgroundJobs();});job.status='succeeded';job.progress={stage:'已完成',percent:100};}catch(error){job.status='failed';job.error=error?.message||String(error);job.errorDetails={code:error?.code||'',advice:Array.isArray(error?.advice)?error.advice:[]};job.progress={stage:'执行失败',percent:100};console.error(`[job:${job.id}] ${job.error}`);}job.finishedAt=new Date().toISOString();job.task=null;while(backgroundJobs.size>MAX_BACKGROUND_JOBS){const oldest=[...backgroundJobs.values()].find(x=>!['queued','running'].includes(x.status));if(!oldest)break;backgroundJobs.delete(oldest.id);}await persistBackgroundJobs();}}
+  finally{backgroundJobRunning=false;}
 }
 function backgroundJobResponse(job){return {ok:true,async:true,jobId:job.id,status:job.status,statusUrl:`/api/jobs/${encodeURIComponent(job.id)}`};}
 async function issueSummaries() {
@@ -435,11 +454,19 @@ const rc1AcceptanceFile = path.join(root,'reports','v3-rc1-device-acceptance.jso
 async function readRc1Acceptance(){
   try{return await readJson(rc1AcceptanceFile)}catch{return {version:V3_VERSION,updatedAt:null,records:[]}}
 }
+async function currentAcceptanceSource(){
+  const [sha,at,branch]=await Promise.all([runProcess('git',['rev-parse','HEAD']),runProcess('git',['show','-s','--format=%cI','HEAD']),runProcess('git',['rev-parse','--abbrev-ref','HEAD'])]);
+  const commit=sha.ok?String(sha.output||'').trim():'';const committedAt=at.ok?String(at.output||'').trim():'';
+  if(!/^[0-9a-f]{40}$/i.test(commit)||!Number.isFinite(Date.parse(committedAt)))throw Object.assign(new Error('当前工作目录缺少可验证的 Git 源码身份，禁止写入 Final Acceptance 证据'),{statusCode:409,code:'FINAL_SOURCE_IDENTITY_UNAVAILABLE'});
+  return {commit,committedAt,branch:branch.ok?String(branch.output||'').trim():null};
+}
+function acceptanceEvidenceSha(record){const copy={...record};delete copy.evidenceSha256;return createHash('sha256').update(JSON.stringify(copy)).digest('hex');}
 async function writeRc1Acceptance(record){
-  const report=await readRc1Acceptance();
-  report.version=V3_VERSION;report.updatedAt=new Date().toISOString();report.records=Array.isArray(report.records)?report.records:[];
+  const report=await readRc1Acceptance();const source=await currentAcceptanceSource();
+  report.version=V3_VERSION;report.updatedAt=new Date().toISOString();report.sourceCommit=source.commit;report.records=Array.isArray(report.records)?report.records:[];
   const key=`${record.deviceType||'other'}:${record.deviceName||''}`;
-  const normalized={...record,version:V3_VERSION,key,recordedAt:new Date().toISOString(),userAgent:String(record.userAgent||'').slice(0,1000)};
+  const normalized={...record,version:V3_VERSION,key,recordedAt:new Date().toISOString(),userAgent:String(record.userAgent||'').slice(0,1000),sourceCommit:source.commit,sourceCommittedAt:source.committedAt,sourceBranch:source.branch};
+  normalized.evidenceSha256=acceptanceEvidenceSha(normalized);
   const i=report.records.findIndex(x=>x.key===key);if(i>=0)report.records[i]=normalized;else report.records.push(normalized);
   await mkdir(path.dirname(rc1AcceptanceFile),{recursive:true});await writeFile(rc1AcceptanceFile,`${JSON.stringify(report,null,2)}\n`,'utf8');return report;
 }
@@ -453,6 +480,7 @@ function realBrowserUaMatches(type,ua=''){
   if(type==='mac-safari')return safari&&/Macintosh/i.test(s)&&!/Mobile\//i.test(s);
   if(type==='iphone-safari')return safari&&/iPhone/i.test(s);
   if(type==='ipad-safari')return safari&&(/iPad/i.test(s)||(/Macintosh/i.test(s)&&/Mobile\//i.test(s)));
+  if(type==='android-wechat')return /Android/i.test(s)&&/MicroMessenger/i.test(s);
   return true;
 }
 function firstVideoPath(issue={}){for(const p of issue.pages||[])for(const b of p.blocks||[])if(b.type==='video'&&b.src&&!/^https?:/i.test(b.src))return b.src;return null}
@@ -518,8 +546,11 @@ async function mediaProbe(file) {
   try{const j=JSON.parse(r.output||'{}');const stream=(j.streams||[]).find(x=>x.width||x.height)||(j.streams||[])[0]||{};const duration=Number(j.format?.duration||stream.duration);return {width:Number(stream.width)||null,height:Number(stream.height)||null,duration:Number.isFinite(duration)?Number(duration.toFixed(2)):null};}catch{return {}}
 }
 function safeAssetRelative(input='') {
-  const rel=stripAssetsPrefix(String(input||'')).replaceAll('\\','/').replace(/^\/+/, '');
-  if(!rel||rel.includes('..')||path.isAbsolute(rel))throw new Error('媒体路径不合法');
+  const source=String(input||'').trim().replaceAll('\\','/');
+  if(!source||source.startsWith('/')||/^[a-zA-Z]:\//.test(source))throw new Error('媒体路径不合法');
+  const rel=stripAssetsPrefix(source);
+  const segments=rel.split('/');
+  if(!rel||segments.some(segment=>!segment||segment==='.'||segment==='..')||path.isAbsolute(rel))throw new Error('媒体路径不合法');
   return rel;
 }
 function assetReferences(issue) {
@@ -533,7 +564,8 @@ async function listAssets(issue,id) {
   rows.sort((a,b)=>a.kind.localeCompare(b.kind)||a.path.localeCompare(b.path,'zh-CN'));
   const ttsRefs=collectReferencedAssets(issue).filter(x=>x.kind==='tts'); const foundTts=new Set(rows.filter(x=>x.kind==='tts').map(x=>stripAssetsPrefix(x.path))); const missingTts=ttsRefs.filter(x=>!foundTts.has(stripAssetsPrefix(x.path))).map(x=>x.page).filter(Boolean);
   const stored=issue.features?.narration?.sourceDigest||null,current=narrationSourceDigest(issue);
-  return {assetSource:issue.assetSource||`issues/${id}/assets`,writable:isManagedAssetRoot(issue,id),items:rows,summary:{total:rows.length,used:rows.filter(x=>x.used).length,unused:rows.filter(x=>!x.used).length,bytes:rows.reduce((n,x)=>n+x.bytes,0),size:humanBytes(rows.reduce((n,x)=>n+x.bytes,0))},tts:{expected:ttsRefs.length,found:ttsRefs.length-missingTts.length,missingPages:missingTts,stale:Boolean(stored&&stored!==current),baselinedAt:issue.features?.narration?.baselinedAt||null}};
+  const changedPages=changedTtsPages(issue);
+  return {assetSource:issue.assetSource||`issues/${id}/assets`,writable:isManagedAssetRoot(issue,id),items:rows,summary:{total:rows.length,used:rows.filter(x=>x.used).length,unused:rows.filter(x=>!x.used).length,bytes:rows.reduce((n,x)=>n+x.bytes,0),size:humanBytes(rows.reduce((n,x)=>n+x.bytes,0))},tts:{expected:ttsRefs.length,found:ttsRefs.length-missingTts.length,missingPages:missingTts,changedPages,stale:changedPages.length>0||Boolean(stored&&stored!==current),baselinedAt:issue.features?.narration?.baselinedAt||null}};
 }
 function safeUploadName(input) {
   const raw=decodeURIComponent(String(input||'').trim()).normalize('NFKC');
@@ -586,6 +618,7 @@ function cloneBlockStructure(block,target) {
     case 'articleLink': return {type:'articleLink',articleId:''};
     case 'video': return {type:'video',src:'',poster:'',caption:'请上传或选择视频'};
     case 'image': return {type:'image',src:'',alt:'请填写图片替代文字',caption:'',frameRatio:'auto',fit:'contain',positionX:50,positionY:50};
+    case 'table': return {type:'table',rows:(block.rows||[['','']]).slice(0,12).map(r=>(r||[]).slice(0,8).map(()=>'')),headerRows:Number(block.headerRows)||0,caption:''};
     case 'coverMeta': return {type:'coverMeta',text:`${target.publication||''} · ${target.label||''}`};
     case 'coverSections': return {type:'coverSections',items:(block.items||[]).slice(0,10).map(String)};
     case 'blessing': return {type:'blessing',text:'请填写本期祝福语。'};
@@ -805,7 +838,9 @@ async function publicationStorageStatus(){
 }
 async function publicationStatus(id,{refreshAudit=true}={}){
   const issue=await readJson(path.join(root,'issues',id,'issue.json'));const {audit,run}=await readPublicationAudit(id,{refresh:true,strict:true});const evidence=await readPublicationEvidence(id);const status=buildPublicationStatus(issue,audit,evidence);const storage=await publicationStorageStatus();
-  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:evidence.publicDeployment||null};
+  const savedFingerprint=issueSourceFingerprint(issue),deployment=evidence.publicDeployment||null;
+  // A successful historical deployment is not proof that the edited source is online.
+  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:publicDeployment};
 }
 function publicIssuePath(id){const raw=String(id||'').trim();const n=Number(raw);return Number.isInteger(n)&&n>0?String(n).padStart(2,'0'):raw;}
 function publicIssueUrl(id){return publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null;}
@@ -892,6 +927,7 @@ async function deployPublicIssue(id){
     for(const name of rootFiles){const file=path.join(publicMagazineRoot,name);const existed=await exists(file);rootState.find(x=>x.name===name).existed=existed;if(existed)await cp(file,path.join(backupDir,'root',name));await atomicPublicWrite(file,rootPayload[name]);}
     legacyRoute=await ensureLegacyPublicRoute(id,remotePath);
     const verification=await verifyPublicDeployment(id);const deployment={kind:'public',version:V3_VERSION,issue:id,remotePath,publicRoot:publicMagazineRoot,url:publicIssueUrl(id),archiveUrl:publicMagazineBaseUrl,deployedAt,treeSha256:staged.manifest?.treeSha256||null,verification,verified:Boolean(verification.ok),legacyRoute:legacyRoute?.legacyPath||null,backupDir:path.relative(root,backupDir).replaceAll('\\','/')};
+    deployment.sourceFingerprint=issueSourceFingerprint(await readJson(path.join(target,'issue.json')));
     const receiptFile=path.join(receiptDir,`${id}-${token}.json`);await writeFile(receiptFile,`${JSON.stringify(deployment,null,2)}\n`,'utf8');await writeFile(path.join(receiptDir,`${id}-latest.json`),`${JSON.stringify(deployment,null,2)}\n`,'utf8');await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports',`v3-public-deployment-${id}.json`),`${JSON.stringify({...deployment,receiptFile:path.relative(root,receiptFile).replaceAll('\\','/')},null,2)}\n`,'utf8');await writePublicationEvidence(id,{publicDeployment:deployment,outputs:{public:deployment}});return deployment;
   }catch(error){
     await rm(staging,{recursive:true,force:true}).catch(()=>{});if(targetSwapped)await rm(target,{recursive:true,force:true}).catch(()=>{});if(legacyRoute?.created)await rm(legacyRoute.legacyDir,{recursive:true,force:true}).catch(()=>{});if(previousExisted&&await exists(path.join(backupDir,'issue')))await rename(path.join(backupDir,'issue'),target).catch(()=>{});for(const row of rootState){const file=path.join(publicMagazineRoot,row.name),backup=path.join(backupDir,'root',row.name);if(row.existed&&await exists(backup))await cp(backup,file).catch(()=>{});else if(!row.existed)await rm(file,{force:true}).catch(()=>{});}throw error;
@@ -925,6 +961,7 @@ async function publicationPrintFixture(id){
     else if(t==='chips')body=`<ul class="chips">${(b.items||[]).map(x=>`<li>${printEsc(x?.text??x)}</li>`).join('')}</ul>`;
     else if(t==='toc')body=`<ol class="toc">${(b.items||[]).map(x=>`<li><span>${printEsc(x.number||'')}</span><strong>${printEsc(x.title||'')}</strong><small>${printEsc(x.subtitle||'')}</small><b>${printEsc(x.page||'')}</b></li>`).join('')}</ol>`;
     else if(t==='articleLink'){const a=articles[b.articleId]||{};body=`<article><h3>${printEsc(a.title||b.title||'延伸阅读')}</h3>${a.subtitle?`<p class="muted">${printEsc(a.subtitle)}</p>`:''}${(a.paras||[]).map(x=>`<p>${printEsc(x)}</p>`).join('')}</article>`;}
+    else if(t==='table'){const rows=(b.rows||[]).slice(0,40),heads=Math.max(0,Math.min(rows.length,Number(b.headerRows)||0));body=`<figure class="print-table"><table>${rows.map((r,ri)=>`<tr>${(r||[]).slice(0,12).map(c=>ri<heads?`<th>${printEsc(c)}</th>`:`<td>${printEsc(c)}</td>`).join('')}</tr>`).join('')}</table>${b.caption?`<figcaption>${printEsc(b.caption)}</figcaption>`:''}</figure>`;}
     else if(t==='image'){const src=printImages.get(stripAssetsPrefix(b.src||''));if(!src)throw publicationFailure('PDF_IMAGE_UNAVAILABLE','页面图片未绑定本地资源',['请在素材库选择图片后重试。']);body=`<figure><img class="print-image" src="${src}" alt="${printEsc(b.alt||'')}">${b.caption?`<figcaption>${printEsc(pub.captionLabel?`${pub.captionLabel} ${b.caption}`:b.caption)}</figcaption>`:''}</figure>`;}
     else if(t==='video')body=`<figure><div class="media-placeholder">视频内容 · 请在 Web Reader 中播放</div>${b.caption?`<figcaption>${printEsc(b.caption)}</figcaption>`:''}</figure>`;
     else if(t==='container')body=`<div class="print-container">${(b.columns||[]).map(col=>`<div>${(col.blocks||[]).map((x,i)=>renderBlock(x,pi,bi*100+i)).join('')}</div>`).join('')}</div>`;
@@ -950,8 +987,9 @@ async function generatePublicationPdf(id){
   let chrome=null,ws=null;const pending=new Map();let seq=0;
   const cdpSend=(method,params={},timeoutMs=15000)=>new Promise((resolve,reject)=>{const requestId=++seq;pending.set(requestId,{resolve,reject});ws.send(JSON.stringify({id:requestId,method,params}));setTimeout(()=>{const p=pending.get(requestId);if(p){pending.delete(requestId);reject(publicationFailure('PDF_CDP_TIMEOUT',`CDP ${method} 超时`,['请检查服务器资源或稍后重试。']))}},timeoutMs)});
   try{
-    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});let chromeExit=null;chrome.on('exit',(code,signal)=>{chromeExit={code,signal}});
-    let tabs=null;for(let i=0;i<250;i++){try{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);if(response.ok){tabs=await response.json();if(tabs?.length)break}}catch{}if(chromeExit)break;await new Promise(resolve=>setTimeout(resolve,100));}
+    chrome=spawn(chromium,['--headless=new','--no-sandbox','--disable-gpu','--disable-dev-shm-usage','--remote-allow-origins=*',`--remote-debugging-port=${debugPort}`,`--user-data-dir=${userDataDir}`,'--no-first-run','about:blank'],{stdio:'ignore',detached:true,env:{...process.env,HOME:userDataDir,XDG_CONFIG_HOME:path.join(userDataDir,'config'),XDG_CACHE_HOME:path.join(userDataDir,'cache')}});let chromeExit=null;let spawnError=null;chrome.once('error',error=>{spawnError=error});chrome.on('exit',(code,signal)=>{chromeExit={code,signal}});
+    let tabs=null;for(let i=0;i<250;i++){if(spawnError)break;try{const response=await fetch(`http://127.0.0.1:${debugPort}/json/list`);if(response.ok){tabs=await response.json();if(tabs?.length)break}}catch{}if(chromeExit)break;await new Promise(resolve=>setTimeout(resolve,100));}
+    if(spawnError)throw publicationFailure('PDF_CHROMIUM_START_FAILED',`Chromium 启动失败：${spawnError.message||spawnError}`,['请确认 CHROMIUM 指向可执行文件，并检查执行权限。','Web Reader、正式发布和 ZIP 归档不受影响。']);
     if(!tabs?.length)throw publicationFailure('PDF_CHROMIUM_START_FAILED',`Chromium 未能启动 PDF 调试端口。${chromeExit?`（进程已退出 code=${chromeExit.code} signal=${chromeExit.signal}）`:''}`,['请确认服务器 Chromium 可执行并允许无头模式运行。']);
     const tab=tabs.find(item=>item.type==='page')||tabs[0];ws=new WebSocket(tab.webSocketDebuggerUrl);
     await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(publicationFailure('PDF_CDP_TIMEOUT','连接 Chromium CDP 超时',['请检查服务器资源或稍后重试。'])),8000);ws.onopen=()=>{clearTimeout(timer);resolve()};ws.onerror=()=>{clearTimeout(timer);reject(publicationFailure('PDF_CDP_FAILED','连接 Chromium CDP 失败',['请检查服务器 Chromium 版本和无头运行权限。']))}});
@@ -960,33 +998,90 @@ async function generatePublicationPdf(id){
     const readiness=await cdpSend('Runtime.evaluate',{expression:`(async()=>{await document.fonts.ready;await Promise.all([...document.images].map(img=>img.decode()));const pages=[...document.querySelectorAll('.print-page')];return pages.map((page,i)=>{const body=page.querySelector('.page-body'),footer=page.querySelector('footer');const limit=footer.getBoundingClientRect().top-8;const bottom=Math.max(body.getBoundingClientRect().bottom,...[...body.querySelectorAll('*')].map(el=>el.getBoundingClientRect().bottom));return bottom>limit?i+1:null}).filter(Boolean)})()`,awaitPromise:true,returnByValue:true},30000);
     if(readiness.exceptionDetails)throw publicationFailure('PDF_RESOURCE_LOAD_FAILED','PDF 图片或字体未完成加载',['请检查图片文件是否可读取后重试。']);
     const overflowing=readiness.result?.value||[];
-    if(overflowing.length)throw publicationFailure('PDF_CONTENT_OVERFLOW',`第 ${overflowing.join('、')} 页内容超出 A4 版面`,['请将这些页面拆分或缩短正文后重新导出，避免内容被裁切。']);
+    if(overflowing.length&&!forceReleaseEnabled())throw publicationFailure('PDF_CONTENT_OVERFLOW',`第 ${overflowing.join('、')} 页内容超出 A4 版面`,['请将这些页面拆分或缩短正文后重新导出，避免内容被裁切。']);
     const pdf=await cdpSend('Page.printToPDF',{printBackground:true,preferCSSPageSize:true,paperWidth:8.2677165,paperHeight:11.6929134,marginTop:0,marginBottom:0,marginLeft:0,marginRight:0,displayHeaderFooter:false,transferMode:'ReturnAsStream'},90000);
     if(!pdf?.stream)throw publicationFailure('PDF_EMPTY_STREAM','Chromium 未返回 PDF 数据流',['请重试；若持续失败，请检查 Chromium 版本。']);
     const chunks=[];let eof=false,total=0;while(!eof){const part=await cdpSend('IO.read',{handle:pdf.stream,size:1024*1024},30000);if(part?.data){const chunk=Buffer.from(part.data,part.base64Encoded?'base64':'utf8');chunks.push(chunk);total+=chunk.length;if(total>128*1024*1024)throw publicationFailure('PDF_TOO_LARGE','Print PDF 超过 128MB 安全上限',['请减少页面或媒体数量后重试。'])}eof=Boolean(part?.eof)}
     await cdpSend('IO.close',{handle:pdf.stream},5000).catch(()=>{});if(!chunks.length)throw publicationFailure('PDF_EMPTY','Chromium 返回了空 PDF 数据流',['请检查 Chromium 运行环境后重试。']);await writeFile(stagingFile,Buffer.concat(chunks));await rename(stagingFile,file);
   }finally{try{ws?.close()}catch{}if(chrome?.pid)try{process.kill(-chrome.pid,'SIGTERM')}catch{}await new Promise(resolve=>setTimeout(resolve,120));await rm(userDataDir,{recursive:true,force:true}).catch(()=>{});await rm(stagingFile,{force:true}).catch(()=>{})}
-  if(!(await exists(file)))throw publicationFailure('PDF_NOT_CREATED','Print PDF 文件未生成',['请重试或检查 Chromium 日志。']);const info=await stat(file);const manifest={kind:'pdf',generatedAt:new Date().toISOString(),path:path.relative(root,file).replaceAll('\\','/'),url:`/publication-output/${id}/${path.basename(file)}`,bytes:info.size,sha256:await sha256(file)};await writePublicationEvidence(id,{outputs:{pdf:manifest}});return manifest;
+  if(!(await exists(file)))throw publicationFailure('PDF_NOT_CREATED','Print PDF 文件未生成',['请重试或检查 Chromium 日志。']);const info=await stat(file);const manifest={kind:'pdf',generatedAt:new Date().toISOString(),path:path.relative(root,file).replaceAll('\\','/'),url:`/publication-output/${id}/${path.basename(file)}`,bytes:info.size,sha256:await sha256(file),forceRelease:forceReleaseEnabled()};await writePublicationEvidence(id,{outputs:{pdf:manifest}});return manifest;
 }
 async function generatePublicationArchive(id){
   const web=await ensurePublicationWeb(id),dir=path.join(PUBLICATION_OUTPUT_ROOT,id),stage=path.join(dir,'.archive-stage'),file=path.join(dir,`${id}-archive.zip`);
   await rm(stage,{recursive:true,force:true});await rm(file,{force:true});await mkdir(stage,{recursive:true});await cp(path.join(dir,'web'),path.join(stage,'web'),{recursive:true});await cp(path.join(root,'issues',id,'issue.json'),path.join(stage,'issue.json'));
   const reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);if(await exists(reportFile))await cp(reportFile,path.join(stage,'audit.json'));const evidence=await readPublicationEvidence(id);const manifest={version:V3_VERSION,issue:id,generatedAt:new Date().toISOString(),source:'issue.json',outputs:{web:'web/index.html',pdf:evidence.outputs?.pdf?.path?path.basename(evidence.outputs.pdf.path):null},note:'Archive ZIP 是 issue.json 的派生归档包；issue.json 仍是唯一事实来源。'};await writeFile(path.join(stage,'archive-manifest.json'),`${JSON.stringify(manifest,null,2)}\n`,'utf8');if(evidence.outputs?.pdf?.path){const pdf=path.join(root,evidence.outputs.pdf.path);if(await exists(pdf))await cp(pdf,path.join(stage,path.basename(pdf)))}
-  try{await writeNativeZip(stage,file)}finally{await rm(stage,{recursive:true,force:true})}if(!(await exists(file)))throw publicationFailure('ARCHIVE_NOT_CREATED','Archive ZIP 生成失败',['请重试；归档使用 Node 内置 ZIP 写入器，不依赖系统 zip 命令。']);const info=await stat(file);const out={kind:'archive',generatedAt:new Date().toISOString(),path:path.relative(root,file).replaceAll('\\','/'),url:`/publication-output/${id}/${path.basename(file)}`,bytes:info.size,sha256:await sha256(file),web};await writePublicationEvidence(id,{outputs:{archive:out}});return out;
+  try{await writeNativeZip(stage,file)}finally{await rm(stage,{recursive:true,force:true})}if(!(await exists(file)))throw publicationFailure('ARCHIVE_NOT_CREATED','Archive ZIP 生成失败',['请重试；归档使用 Node 内置 ZIP 写入器，不依赖系统 zip 命令。']);const info=await stat(file);const out={kind:'archive',generatedAt:new Date().toISOString(),path:path.relative(root,file).replaceAll('\\','/'),url:`/publication-output/${id}/${path.basename(file)}`,bytes:info.size,sha256:await sha256(file),forceRelease:forceReleaseEnabled(),web};await writePublicationEvidence(id,{outputs:{archive:out}});return out;
 }
-async function generateFormalRelease(id,report=()=>{}){report({stage:'执行正式发布门禁',percent:15});const result=await runScriptAsync('publish-v3.mjs',['--issue',id,'--mark-published','--strict','--skip-browser']);if(!result.ok){const detail=summarizeCommandFailure(result.output,'正式发布门禁',id);throw Object.assign(new Error(detail),{statusCode:409,code:'PUBLICATION_RELEASE_BLOCKED',details:detail});}report({stage:'写入发布回执',percent:90});const releaseDir=path.join(root,'release-v3',id);const manifest={kind:'release',generatedAt:new Date().toISOString(),path:path.relative(root,releaseDir).replaceAll('\\','/'),output:result.output};await writePublicationEvidence(id,{outputs:{release:manifest}});return manifest;}
+
+function publicationWorkflowFingerprint(issue){const s=JSON.stringify(issue||{});let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return (h>>>0).toString(16).padStart(8,'0');}
+async function publicationWorkflowStatus(id,{refreshAudit=false}={}){
+  const issue=await readJson(path.join(root,'issues',id,'issue.json'));
+  const [review,handoffs,status]=await Promise.all([readReviewWorkspace(id),readReviewHandoffs(id),publicationStatus(id,{refreshAudit})]);
+  const unresolved=(review.items||[]).filter(item=>item.status!=='reviewed'),important=unresolved.filter(item=>item.severity==='important');
+  const rows=[...(handoffs.handoffs||[])].sort((a,b)=>(Number(b.round)||0)-(Number(a.round)||0)),latest=rows[0]||null;
+  const accepted=latest?.status==='accepted',fingerprint=publicationWorkflowFingerprint(issue),legacyAccepted=Boolean(accepted&&!latest?.baselineSnapshot?.id),fresh=Boolean(accepted&&(legacyAccepted||latest?.diffReviewedFingerprint===fingerprint));
+  const reviewReady=unresolved.length===0,signoffReady=reviewReady&&fresh;
+  const web=status.outputs?.web||{},buildReady=Boolean(web.url||web.href||web.path),gateReady=Boolean(status.canPublish);
+  const releaseOutput=status.outputs?.release||{},releaseDone=Boolean(issue.status==='published'&&(releaseOutput.path||releaseOutput.generatedAt));
+  const configured=Boolean(status.publicShare?.configured),verified=Boolean(status.publicDeployment?.verified&&status.publicDeployment?.sourceMatchesCurrent===true);
+  // Internal review and handoff remain available as records, but they are no
+  // longer release blockers. The release flow only advances through the
+  // machine-verifiable publication check, generated outputs, and deployment.
+  let nextAction='done';
+  if(!gateReady)nextAction='preflight';else if(!buildReady)nextAction='build';else if(!releaseDone||status.publicDeployment&&status.publicDeployment.sourceMatchesCurrent!==true)nextAction='release';else if(configured&&!verified)nextAction='deploy';
+  return {version:1,issue:id,generatedAt:new Date().toISOString(),sourceFingerprint:fingerprint,nextAction,review:{ready:reviewReady,required:false,unresolved:unresolved.length,important:important.length,updatedAt:review.updatedAt||null},signoff:{ready:signoffReady,required:false,accepted:Boolean(accepted),fresh,legacy:legacyAccepted,round:latest?.round||null,recipient:latest?.recipient||'',role:latest?.role||'',acceptedAt:latest?.acceptedAt||null,status:latest?.status||'missing'},gate:{ready:gateReady,lastPreflight:status.lastPreflight||null,reason:status.reason||''},build:{ready:buildReady,web},release:{ready:gateReady&&buildReady,completed:releaseDone,output:releaseOutput},deployment:{configured,verified,url:status.publicShare?.url||status.publicDeployment?.url||''}};
+}
+async function assertPublicationWorkflowReleaseReady(id){
+  const workflow=await publicationWorkflowStatus(id,{refreshAudit:false});
+  // REVIEW_SIGNOFF_REQUIRED is retained only as legacy vocabulary for old
+  // clients; internal handoff is advisory and must not block release.
+  if(!workflow.build.ready)await ensurePublicationWeb(id);
+  return workflow;
+}
+
+async function generateFormalRelease(id,report=()=>{}){await assertPublicationWorkflowReleaseReady(id);report({stage:forceReleaseEnabled()?'直接发布':'执行正式发布检查',percent:15});const result=await runScriptAsync('publish-v3.mjs',['--issue',id,'--mark-published',...(forceReleaseEnabled()?[]:['--strict']),'--skip-browser']);if(!result.ok){const detail=summarizeCommandFailure(result.output,'正式发布',id);throw Object.assign(new Error(detail),{statusCode:409,code:'PUBLICATION_RELEASE_BLOCKED',details:detail});}report({stage:'写入发布回执',percent:90});const releaseDir=path.join(root,'release-v3',id);const manifest={kind:'release',generatedAt:new Date().toISOString(),path:path.relative(root,releaseDir).replaceAll('\\','/'),forceRelease:forceReleaseEnabled(),output:result.output};await writePublicationEvidence(id,{outputs:{release:manifest}});return manifest;}
+async function replaceTtsFile(bin,target,text,options){
+  const ext=path.extname(target),temporary=`${target.slice(0,-ext.length)}.${randomUUID()}.pending${ext}`;
+  try{
+    await generateTtsFile(bin,temporary,text,options);
+    const info=await stat(temporary);if(!info.size)throw new Error('生成了空音频');
+    await rename(temporary,target);
+    return info;
+  }finally{await rm(temporary,{force:true});}
+}
 async function generateTtsForIssue(id,data,bin,report=()=>{}){
-  const issueFile=path.join(root,'issues',id,'issue.json'),issue=await readJson(issueFile),rows=Array.isArray(data.pages)?data.pages.slice(0,200):[];
-  if(!rows.length)throw Object.assign(new Error('没有可生成的页面正文'),{statusCode:400,code:'TTS_NO_PAGES'});
-  const pattern=ttsOutputPattern(issue,bin),base=managedAssetRoot(id),snapshot=await snapshotIssue(id,'tts-generate-before'),generated=[],failed=[];await mkdir(path.join(base,'tts'),{recursive:true});
+  const issueFile=path.join(root,'issues',id,'issue.json'),issue=await readJson(issueFile);
+  data={...data,voice:data.voice||issue.features?.narration?.voice||'zh-CN-XiaoxiaoNeural',rate:data.rate??issue.features?.narration?.rate??1};
+  const pattern=ttsOutputPattern(issue,bin),base=managedAssetRoot(id),generated=[],failed=[];let detectedPages=[];
+  let rows=Array.isArray(data.pages)?data.pages.slice(0,200):[];
+  if(data.autoDetect){
+    const detectedIssue={...issue,features:{...(issue.features||{}),narration:{...(issue.features?.narration||{}),voice:data.voice,rate:data.rate}}};
+    const changed=new Set(changedTtsPages(detectedIssue));
+    rows=[];
+    for(let page=1;page<=(issue.pages?.length||0);page++){
+      const rel=ttsOutputPath(pattern,page),file=path.resolve(base,rel);
+      if(changed.has(page)||!(await exists(file))){rows.push({page});detectedPages.push(page);}
+    }
+  }
+  if(!rows.length){report({stage:'TTS 已是最新，无需重新生成',percent:95});return {ok:true,snapshot:null,pattern,generated,failed,detected:detectedPages,skipped:'unchanged',narration:issue.features?.narration||null,issue:null,source:null};}
+  const snapshot=await snapshotIssue(id,'tts-generate-before');await mkdir(path.join(base,'tts'),{recursive:true});
   for(const [index,row] of rows.entries()){
-    const page=Number(row.page),text=String(row.text||'').trim();report({stage:`生成 TTS：第 ${page||'?'} 页`,percent:Math.min(90,5+Math.round((index/Math.max(1,rows.length))*80))});
+    const page=Number(row.page),text=serverNarrationPageText(issue.pages?.[page-1]||{},issue.articles||{},{scope:issue.features?.narration?.scope});report({stage:`生成 TTS：第 ${page||'?'} 页`,percent:Math.min(90,5+Math.round((index/Math.max(1,rows.length))*80))});
     if(!Number.isInteger(page)||page<1||page>(issue.pages?.length||0)||!text){failed.push({page,error:'页面编号或正文无效'});continue;}
     const rel=ttsOutputPath(pattern,page),target=path.resolve(base,rel);if(!target.startsWith(path.resolve(base)+path.sep)){failed.push({page,error:'TTS 输出路径越界'});continue;}
-    try{await rm(target,{force:true});await generateTtsFile(bin,target,text,{voice:data.voice,rate:data.rate});const info=await stat(target);if(!info.size)throw new Error('生成了空音频');generated.push({page,path:`assets/${rel}`,bytes:info.size,size:humanBytes(info.size)});}catch(e){await rm(target,{force:true});failed.push({page,error:e.message||String(e)});}
+    try{const info=await replaceTtsFile(bin,target,text,{voice:data.voice,rate:data.rate});generated.push({page,path:`assets/${rel}`,bytes:info.size,size:humanBytes(info.size)});}catch(e){failed.push({page,error:e.message||String(e)});}
   }
   if(generated.length){const neural=path.basename(bin).toLowerCase().includes('edge-tts');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.pattern=pattern;issue.features.narration.rate=Number(data.rate)||issue.features.narration.rate||1;issue.features.narration.generator=neural?'edge-neural':'server';if(neural)issue.features.narration.voice=String(data.voice||'zh-CN-XiaoxiaoNeural');issue.features.narration.generatedAt=new Date().toISOString();await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);}
-  const source=generated.length?await writeSourceReceipt(id,issue,{reason:'tts-generate',snapshot}):null;report({stage:'TTS 结果已写入',percent:95});return {ok:Boolean(generated.length),snapshot,pattern,generated,failed,narration:issue.features?.narration||null,issue:generated.length?issue:null,source};
+  if(generated.length){
+    const n=issue.features.narration,current=ttsGenerationDigests(issue);
+    n.generationDigests=(n.generationDigests||[]).slice(0,current.length);
+    for(const row of generated)n.generationDigests[row.page-1]=current[row.page-1];
+    if(current.every((digest,i)=>n.generationDigests[i]===digest)){
+      n.sourceDigest=narrationSourceDigest(issue);n.pageDigests=narrationPageDigests(issue);n.baselinedAt=new Date().toISOString();delete n.generationConfigChanged;
+    }
+    await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');
+  }
+  const source=generated.length?await writeSourceReceipt(id,issue,{reason:'tts-generate',snapshot}):null;report({stage:'TTS 结果已写入',percent:95});return {ok:Boolean(generated.length),snapshot,pattern,detected:detectedPages,generated,failed,narration:issue.features?.narration||null,issue:generated.length?issue:null,source};
 }
 
 function issueSourceFingerprint(issue){return createHash('sha256').update(JSON.stringify(issue||{})).digest('hex');}
@@ -1010,16 +1105,20 @@ async function sourceExport(id,issue){
 }
 
 
+function readBrandField(issue,field){return String(field).split('.').reduce((value,key)=>value==null?undefined:value[key],issue);}
+function assertBrandLock(fresh,next){const lock=fresh?.brandLock;if(!lock?.enabled)return;if(next?.brandLock?.enabled!==true)throw Object.assign(new Error('当前整刊模板启用了品牌锁定；不能通过普通保存关闭锁定。'),{code:'BRAND_LOCKED'});for(const field of lock.lockedFields||[]){if(JSON.stringify(readBrandField(fresh,field))!==JSON.stringify(readBrandField(next,field)))throw Object.assign(new Error(`品牌锁定项不可修改：${field}`),{code:'BRAND_LOCKED',field});}}
+
 const server=http.createServer(async(req,res)=>{try{
   const u=new URL(req.url,`http://${req.headers.host||`${host}:${port}`}`); const seg=u.pathname.split('/').filter(Boolean);
   if(seg[0]==='api'&&['rc','rc1'].includes(seg[1])&&seg[2]==='acceptance'){
     if(req.method==='GET')return send(res,200,await readRc1Acceptance());
     if(req.method==='POST'){
-      const data=await body(req,512*1024);const allowed=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','other']);
+      if(productionMode&&!acceptanceOnly&&!adminSession(req))return send(res,401,{error:'正式模式下验收记录写入需要已认证管理会话',code:'AUTH_REQUIRED'});
+      const data=await body(req,512*1024);const allowed=new Set(['edge-desktop','mac-safari','iphone-safari','ipad-safari','android-wechat','other']);
       if(!allowed.has(data.deviceType))return send(res,400,{error:'deviceType 不受支持',code:'VALIDATION_ERROR'});
       if(!data.checks||typeof data.checks!=='object')return send(res,400,{error:'缺少 checks',code:'VALIDATION_ERROR'});
       const actualUa=String(req.headers['user-agent']||data.userAgent||'').slice(0,1000);data.userAgent=actualUa;
-      if(['edge-desktop','mac-safari','iphone-safari','ipad-safari'].includes(data.deviceType)&&!realBrowserUaMatches(data.deviceType,actualUa))return send(res,400,{error:`当前浏览器 UA 与 ${data.deviceType} 不匹配，不能记为真实浏览器通过`,code:'UA_MISMATCH',userAgent:actualUa});
+      if(['edge-desktop','mac-safari','iphone-safari','ipad-safari','android-wechat'].includes(data.deviceType)&&!realBrowserUaMatches(data.deviceType,actualUa))return send(res,400,{error:`当前浏览器 UA 与 ${data.deviceType} 不匹配，不能记为真实浏览器通过`,code:'UA_MISMATCH',userAgent:actualUa});
       return send(res,200,await writeRc1Acceptance(data));
     }
   }
@@ -1028,7 +1127,11 @@ const server=http.createServer(async(req,res)=>{try{
     const issue=await readJson(file);const video=firstVideoPath(issue);const base=issueAssetRoot(issue,id);const videoFile=video?path.join(base,stripAssetsPrefix(video)):null;
     return send(res,200,{version:V3_VERSION,issue:id,pages:issue.pages?.length||0,assetSource:issue.assetSource||null,mediaAvailable:await exists(base),video:video||null,videoAvailable:Boolean(videoFile&&await exists(videoFile)),reader:`/live-preview/${id}/`});
   }
-  if(acceptanceOnly&&seg[0]==='api'&&u.pathname!=='/api/health')return send(res,403,{error:'RC acceptance-only 模式禁止编辑 API',code:'READ_ONLY'});
+  if(u.pathname==='/api/final/acceptance'&&req.method==='GET'){
+    const r=await runScriptAsync('p1-10-final-acceptance-gate-v3.mjs');let report=null;try{report=await readJson(path.join(root,'reports/p1-10-final-acceptance.json'))}catch{}
+    return send(res,report?200:500,{ok:Boolean(report),runOk:r.ok,output:r.output,report});
+  }
+  if(acceptanceOnly&&seg[0]==='api'&&u.pathname!=='/api/health')return send(res,403,{error:'Final Acceptance 模式禁止编辑 API',code:'READ_ONLY'});
   if(!acceptanceOnly&&u.pathname==='/api/auth/session'&&req.method==='GET'){
     const session=adminSession(req);
     return send(res,200,{enabled:adminLoginEnabled,authenticated:Boolean(session),user:session?.user||null});
@@ -1062,10 +1165,7 @@ const server=http.createServer(async(req,res)=>{try{
     if(publicLoginAsset)return serveFile(req,res,path.join(studioDir,u.pathname.slice(1)));
     return send(res,401,{error:'请先登录管理端',code:'AUTH_REQUIRED'});
   }
-  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]&&req.method==='GET'){
-    const job=backgroundJobs.get(seg[2]);
-    return job?send(res,200,jobView(job)):send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});
-  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]){const job=backgroundJobs.get(seg[2]);if(!job)return send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});if(req.method==='GET')return send(res,200,jobView(job));if(seg[3]==='cancel'&&req.method==='POST'){try{return send(res,200,jobView(cancelBackgroundJob(job)))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}if(seg[3]==='retry'&&req.method==='POST'){try{const next=retryBackgroundJob(job);return send(res,202,backgroundJobResponse(next))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}}
   if (u.pathname==='/api/health') return send(res,200,{ok:true,version:studioVersion});
   if (u.pathname==='/api/ai/config'&&req.method==='GET') return send(res,200,aiConfigPublic(await readAiConfig()));
   if (u.pathname==='/api/ai/config'&&req.method==='PUT') {
@@ -1130,24 +1230,26 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
   if (u.pathname==='/api/issues'&&req.method==='GET') return send(res,200,await issueSummaries());
-  if (u.pathname==='/api/issue-templates'&&req.method==='GET') return send(res,200,{templates:issueTemplateCatalog()});
+  if (u.pathname==='/api/whole-magazine-templates'&&req.method==='GET') return send(res,200,{templates:WHOLE_MAGAZINE_TEMPLATES});
   if (u.pathname==='/api/issues'&&req.method==='POST') {
     const data=await body(req);
     if(String(data.subtitle||'').length>120)return send(res,400,{error:'本期主题不能超过 120 个字符',code:'VALIDATION_ERROR'});
     if(String(data.label||'').length>40)return send(res,400,{error:'期名不能超过 40 个字符',code:'VALIDATION_ERROR'});
-    const templateId=String(data.templateId||'');
-    if(templateId&&!issueTemplateCatalog().some(t=>t.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
-    if(templateId&&data.cloneFrom)return send(res,400,{error:'整刊模板与复制旧刊只能选择一种',code:'VALIDATION_ERROR'});
+    const allowedStartModes=new Set(['clone','import','template','blank']);
+    const startMode=allowedStartModes.has(String(data.startMode||''))?String(data.startMode):(data.cloneFrom?'clone':data.templateId?'template':'blank');
+    const templateId=String(data.templateId||'').trim();
+    if(startMode==='template'&&!WHOLE_MAGAZINE_TEMPLATES.some(x=>x.id===templateId))return send(res,400,{error:'请选择有效的整刊模板',code:'VALIDATION_ERROR'});
     let cloneSource=null;
-    if(data.cloneFrom){const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
+    if(startMode==='clone'){if(!data.cloneFrom)return send(res,400,{error:'复制上期需要选择来源期刊',code:'VALIDATION_ERROR'});const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
-    if(templateId)argv.push('--template',templateId);
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;
+    } else if(startMode==='template') {
+      const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const templated=applyWholeMagazineTemplate(templateId,target); validateIssue(templated,created.id); await atomicWriteText(targetFile,`${JSON.stringify(templated,null,2)}\n`); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=templated.pages.length; created.wholeTemplate=templated.wholeTemplate;
     }
-    const createdIssue=await readJson(path.join(root,'issues',created.id,'issue.json'));const source=await writeSourceReceipt(created.id,createdIssue,{reason:'issue-created'});
-    return send(res,201,{issue:created,output:r.output,source});
+    const createdIssue=await readJson(path.join(root,'issues',created.id,'issue.json'));const source=await writeSourceReceipt(created.id,createdIssue,{reason:`issue-created:${startMode}`});
+    return send(res,201,{issue:created,output:r.output,source,startMode,next:startMode==='import'?'import':startMode==='template'?'layout':'content'});
   }
   if (seg[0]==='api'&&seg[1]==='issues'&&seg[2]) {
     const id=normalizeIssueId(seg[2]); const issueFile=path.join(root,'issues',id,'issue.json'); if(!(await exists(issueFile)))return send(res,404,{error:`找不到 issues/${id}`}); const issue=await readJson(issueFile);
@@ -1162,7 +1264,7 @@ const server=http.createServer(async(req,res)=>{try{
       return send(res,200,{ok:true,preview:`/live-preview/${id}/`,pages:preview.pages.length});
     }
     if (seg[3]==='skeleton'&&req.method==='GET') { const sourceId=normalizeIssueId(u.searchParams.get('source')||''); const sourceFile=path.join(root,'issues',sourceId,'issue.json'); if(!(await exists(sourceFile)))return send(res,404,{error:`结构来源 ${sourceId} 不存在`}); const source=await readJson(sourceFile); if(source.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊栏目骨架',code:'VALIDATION_ERROR'}); return send(res,200,{source:{id:source.id,label:source.label,pageCount:source.pages?.length||0},pages:structureSkeleton(source,issue)}); }
-    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const expectedFingerprint=String(payload?.sourceFingerprint||'');const currentFingerprint=issueSourceFingerprint(issue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,issue)});try{validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})} if(issue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:issue.publishedAt||null,source:'studio'};} const snap=await snapshotIssue(id,'studio-before-save'); await writeFile(issueFile,`${JSON.stringify(data,null,2)}\n`,'utf8'); await deleteDraftFile(id); await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap}); return send(res,200,{issue:data,snapshot:snap,source}); }
+    if (seg.length===3&&req.method==='PUT') { const payload=await body(req);const data=payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue)?payload.issue:payload;const protectedEnvelope=Boolean(payload?.issue&&typeof payload.issue==='object'&&!Array.isArray(payload.issue));const expectedFingerprint=String(payload?.sourceFingerprint||'');if(protectedEnvelope&&!expectedFingerprint)return send(res,428,{error:'保存请求缺少编辑基线指纹，请重新打开本期后再保存。',code:'SOURCE_FINGERPRINT_REQUIRED'});return withIssueWriteLock(id,async()=>{const freshIssue=await readJson(issueFile);const currentFingerprint=issueSourceFingerprint(freshIssue);if(expectedFingerprint&&expectedFingerprint!==currentFingerprint)return send(res,409,{error:'服务器制作源已更新；为避免覆盖新内容，本次保存已拒绝。请重新打开本期后再合并修改。',code:'SOURCE_DRIFT',source:await readSourceStatus(id,freshIssue)});try{assertBrandLock(freshIssue,data);validateIssue(data,id)}catch(e){return send(res,400,{error:e.message||String(e),code:e.code||'VALIDATION_ERROR',field:e.field||null})}if(freshIssue.status==='published'&&data.status==='published'){data.revision={...(data.revision||{}),pending:true,updatedAt:new Date().toISOString(),basePublishedAt:freshIssue.publishedAt||null,source:'studio'};}const snap=await snapshotIssue(id,'studio-before-save');await atomicWriteText(issueFile,`${JSON.stringify(data,null,2)}\n`);await deleteDraftFile(id);await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const source=await writeSourceReceipt(id,data,{reason:'studio-save',snapshot:snap});return send(res,200,{issue:data,snapshot:snap,source});}); }
     if (seg[3]==='review-workspace'&&req.method==='GET') return send(res,200,await readReviewWorkspace(id));
     if (seg[3]==='review-workspace'&&req.method==='PUT') {const data=await body(req);try{const clean=sanitizeReviewWorkspace(data,id);await writeReviewWorkspace(id,clean);return send(res,200,clean);}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'});}}
     if (seg[3]==='review-workspace'&&req.method==='DELETE') {await rm(reviewWorkspaceFile(id),{force:true});return send(res,200,{ok:true});}
@@ -1176,28 +1278,39 @@ const server=http.createServer(async(req,res)=>{try{
     if (seg[3]==='snapshots'&&req.method==='GET') return send(res,200,await listSnapshots(id));
     if (seg[3]==='snapshot'&&req.method==='POST') { const data=await body(req); return send(res,201,await snapshotIssue(id,data.label||'studio-manual')); }
     if (seg[3]==='rollback'&&req.method==='POST') { const data=await body(req); if(!data.snapshot)return send(res,400,{error:'缺少 snapshot'}); const x=await restoreSnapshot(id,data.snapshot); await deleteDraftFile(id); await runScriptAsync('sync-assets-v3.mjs',['--issue',id]);const restoredIssue=await readJson(issueFile),source=await writeSourceReceipt(id,restoredIssue,{reason:'snapshot-rollback',snapshot:x}); return send(res,200,{restored:x,source}); }
+    if (seg[3]==='publication'&&seg[4]==='workflow'&&req.method==='GET') { const refresh=u.searchParams.get('refresh')==='1'; return send(res,200,await publicationWorkflowStatus(id,{refreshAudit:refresh})); }
     if (seg[3]==='publication'&&seg[4]==='status'&&req.method==='GET') { const refresh=u.searchParams.get('refresh')!=='0'; return send(res,200,await publicationStatus(id,{refreshAudit:refresh})); }
-    if (seg[3]==='publication'&&seg[4]==='preflight'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-preflight',issueId:id,task:report=>runPublicationPreflight(id,report)});return send(res,202,backgroundJobResponse(job));}return send(res,200,await runPublicationPreflight(id));}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PREFLIGHT_FAILED'});} }
-    if (seg[3]==='publication'&&seg[4]==='preview'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-preview',issueId:id,task:async report=>{report({stage:'构建当前期刊',percent:10});const output=await ensurePublicationWeb(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await ensurePublicationWeb(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PREVIEW_FAILED'});} }
-    if (seg[3]==='publication'&&seg[4]==='pdf'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-pdf',issueId:id,task:async report=>{report({stage:'生成 PDF',percent:10});const output=await generatePublicationPdf(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await generatePublicationPdf(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PDF_FAILED'});} }
-    if (seg[3]==='publication'&&seg[4]==='archive'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-archive',issueId:id,task:async report=>{report({stage:'生成归档包',percent:10});const output=await generatePublicationArchive(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await generatePublicationArchive(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_ARCHIVE_FAILED'});} }
-    if (seg[3]==='publication'&&seg[4]==='release'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-release',issueId:id,task:async report=>{const output=await generateFormalRelease(id,report);const nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return {ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source};}});return send(res,202,backgroundJobResponse(job));}const output=await generateFormalRelease(id);const nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source});}catch(e){return send(res,e.statusCode||409,{error:e.message||String(e),code:e.code||'PUBLICATION_RELEASE_BLOCKED'});} }
-    if (seg[3]==='publication'&&seg[4]==='deploy'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'public-deploy',issueId:id,task:async report=>{report({stage:'部署公开 Reader',percent:10});const deployment=await deployPublicIssue(id);report({stage:'在线校验',percent:90});return {ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const deployment=await deployPublicIssue(id);return send(res,deployment.verified?200:502,{ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||409,{error:e.message||String(e),code:e.code||'PUBLIC_DEPLOYMENT_FAILED'});} }
-    if (seg[3]==='audit'&&req.method==='POST') { const data=await body(req,32*1024);const argv=['--issue',id,'--quiet'];if(data.strict)argv.push('--strict');if(data.async){const job=enqueueBackgroundJob({kind:'audit',issueId:id,task:async report=>{report({stage:'执行审计',percent:10});const r=await runScriptAsync('audit-v3.mjs',argv);const reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let auditReport=null;try{auditReport=await readJson(reportFile)}catch{}return {ok:r.ok,output:r.output,strict:Boolean(data.strict),generatedAt:auditReport?.generatedAt||null,audit:auditReport?.issues?.[0]||null,htmlUrl:`/reports/v3-release-audit-${id}.html`};}});return send(res,202,backgroundJobResponse(job));}const r=await runScriptAsync('audit-v3.mjs',argv);const reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let report=null;try{report=await readJson(reportFile)}catch{}const audit=report?.issues?.[0]||null;return send(res,200,{ok:r.ok,output:r.output,strict:Boolean(data.strict),generatedAt:report?.generatedAt||null,audit,htmlUrl:`/reports/v3-release-audit-${id}.html`}); }
-    if (seg[3]==='build'&&req.method==='POST') { const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'build',issueId:id,task:async report=>{report({stage:'构建当前期刊',percent:10});const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return {ok:r.ok,output:r.output,preview:`/preview/${id}/`};}});return send(res,202,backgroundJobResponse(job));}const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return send(res,r.ok?200:400,{ok:r.ok,output:r.output,preview:`/preview/${id}/`}); }
+    if (seg[3]==='publication'&&seg[4]==='preflight'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-preflight',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:report=>runPublicationPreflight(id,report)});return send(res,202,backgroundJobResponse(job));}return send(res,200,await runPublicationPreflight(id));}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PREFLIGHT_FAILED'});} }
+    if (seg[3]==='publication'&&seg[4]==='preview'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-preview',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'构建当前期刊',percent:10});const output=await ensurePublicationWeb(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await ensurePublicationWeb(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PREVIEW_FAILED'});} }
+    if (seg[3]==='publication'&&seg[4]==='pdf'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-pdf',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'生成 PDF',percent:10});const output=await generatePublicationPdf(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await generatePublicationPdf(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_PDF_FAILED'});} }
+    if (seg[3]==='publication'&&seg[4]==='archive'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-archive',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'生成归档包',percent:10});const output=await generatePublicationArchive(id);return {ok:true,output,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const output=await generatePublicationArchive(id);return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'PUBLICATION_ARCHIVE_FAILED'});} }
+    if (seg[3]==='publication'&&seg[4]==='release'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'publication-release',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{const output=await generateFormalRelease(id,report);const nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return {ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source};}});return send(res,202,backgroundJobResponse(job));}const output=await generateFormalRelease(id);const nextIssue=await readJson(issueFile),source=await writeSourceReceipt(id,nextIssue,{reason:'formal-release'});return send(res,200,{ok:true,output,status:await publicationStatus(id,{refreshAudit:true}),issue:nextIssue,source});}catch(e){return send(res,e.statusCode||409,{error:e.message||String(e),code:e.code||'PUBLICATION_RELEASE_BLOCKED'});} }
+    if (seg[3]==='publication'&&seg[4]==='deploy'&&req.method==='POST') { try{const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'public-deploy',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'部署公开 Reader',percent:10});const deployment=await deployPublicIssue(id);report({stage:'在线校验',percent:90});return {ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})};}});return send(res,202,backgroundJobResponse(job));}const deployment=await deployPublicIssue(id);return send(res,deployment.verified?200:502,{ok:deployment.verified,deployment,status:await publicationStatus(id,{refreshAudit:false})});}catch(e){return send(res,e.statusCode||409,{error:e.message||String(e),code:e.code||'PUBLIC_DEPLOYMENT_FAILED'});} }
+    if (seg[3]==='audit'&&req.method==='POST') { const data=await body(req,32*1024);const argv=['--issue',id,'--quiet'];if(data.strict)argv.push('--strict');if(data.async){const job=enqueueBackgroundJob({kind:'audit',issueId:id,payload:{strict:Boolean(data.strict)},sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'执行审计',percent:10});const r=await runScriptAsync('audit-v3.mjs',argv);const reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let auditReport=null;try{auditReport=await readJson(reportFile)}catch{}return {ok:r.ok,output:r.output,strict:Boolean(data.strict),generatedAt:auditReport?.generatedAt||null,audit:auditReport?.issues?.[0]||null,htmlUrl:`/reports/v3-release-audit-${id}.html`};}});return send(res,202,backgroundJobResponse(job));}const r=await runScriptAsync('audit-v3.mjs',argv);const reportFile=path.join(root,'reports',`v3-release-audit-${id}.json`);let report=null;try{report=await readJson(reportFile)}catch{}const audit=report?.issues?.[0]||null;return send(res,200,{ok:r.ok,output:r.output,strict:Boolean(data.strict),generatedAt:report?.generatedAt||null,audit,htmlUrl:`/reports/v3-release-audit-${id}.html`}); }
+    if (seg[3]==='build'&&req.method==='POST') { const data=await body(req,32*1024);if(data.async){const job=enqueueBackgroundJob({kind:'build',issueId:id,sourceFingerprint:issueSourceFingerprint(issue),task:async report=>{report({stage:'构建当前期刊',percent:10});const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return {ok:r.ok,output:r.output,preview:`/preview/${id}/`};}});return send(res,202,backgroundJobResponse(job));}const r=await runScriptAsync('build-v3.mjs',['--issue',id]);return send(res,r.ok?200:400,{ok:r.ok,output:r.output,preview:`/preview/${id}/`}); }
     if (seg[3]==='assets'&&seg.length===4&&req.method==='GET') return send(res,200,await listAssets(issue,id));
     if (seg[3]==='assets'&&seg[4]==='stock'&&req.method==='POST') { const data=await body(req,32*1024); try{return send(res,201,await installStockAsset(issue,id,data.stockId));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'STOCK_ASSET_INSTALL_FAILED'});} }
     if (seg[3]==='assets'&&seg[4]==='delete'&&req.method==='DELETE') { const data=await body(req); try{return send(res,200,await deleteAsset(issue,id,data.path));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR',references:e.references||[]});} }
     if (seg[3]==='assets'&&seg[4]==='cleanup'&&req.method==='POST') { const data=await body(req); try{return send(res,200,await cleanupAssets(issue,id,Boolean(data.confirm)));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR'});} }
     if (seg[3]==='assets'&&seg[4]==='poster'&&req.method==='POST') { const data=await body(req); try{return send(res,201,await generateVideoPoster(issue,id,data.path));}catch(e){return send(res,e.statusCode||400,{error:e.message,code:e.code||'VALIDATION_ERROR'});} }
+    if(seg[3]==='tts'&&seg[4]==='preview'&&req.method==='POST'){
+      const data=await body(req,32*1024),text=String(data.text||'').trim().slice(0,200),bin=resolveTtsGenerator();
+      if(!text)return send(res,400,{error:'当前页没有可试听正文'});
+      if(!bin||!path.basename(bin).toLowerCase().includes('edge-tts'))return send(res,503,{error:'服务器尚未配置 Edge TTS'});
+      const voice=String(data.voice||'zh-CN-XiaoxiaoNeural'),rate=Number(data.rate??1);
+      if(!/^[a-z]{2}-[A-Z]{2}-[A-Za-z]+Neural$/.test(voice)||!Number.isFinite(rate)||rate<.5||rate>2)return send(res,400,{error:'声音或语速无效'});
+      const dir=await mkdtemp(path.join(os.tmpdir(),'jinchang-tts-preview-'));
+      try{const file=path.join(dir,'preview.mp3');await generateTtsFile(bin,file,text,{voice,rate});const bytes=await readFile(file);if(!bytes.length)throw Error('生成了空音频');return send(res,200,{audio:`data:audio/mpeg;base64,${bytes.toString('base64')}`});}
+      finally{await rm(dir,{recursive:true,force:true});}
+    }
     if (seg[3]==='tts'&&seg[4]==='generate'&&req.method==='POST') {
       if(!isManagedAssetRoot(issue,id))return send(res,409,{error:'当前期刊使用历史/外部 assetSource，不能直接写入 TTS。请先迁移到本期独立 assets 目录。',code:'ASSET_SOURCE_READONLY'});
       const bin=resolveTtsGenerator();if(!bin)return send(res,501,{error:'服务器未配置 TTS 生成器。请在服务环境安装 espeak-ng，或设置 V3_TTS_BIN 与 V3_TTS_ARGS；浏览器朗读回退仍可用。',code:'TTS_GENERATOR_UNAVAILABLE'});
       const data=await body(req,2*MiB);
-      if(data.async){const job=enqueueBackgroundJob({kind:'tts-generate',issueId:id,task:report=>generateTtsForIssue(id,data,bin,report)});return send(res,202,backgroundJobResponse(job));}
-      try{const result=await generateTtsForIssue(id,data,bin);return send(res,result.generated.length&&result.failed.length?207:result.generated.length?200:422,result);}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'TTS_GENERATE_FAILED'});}
+      if(data.async){const job=enqueueBackgroundJob({kind:'tts-generate',issueId:id,payload:data,sourceFingerprint:issueSourceFingerprint(issue),task:report=>generateTtsForIssue(id,data,bin,report)});return send(res,202,backgroundJobResponse(job));}
+      try{const result=await generateTtsForIssue(id,data,bin);return send(res,result.generated.length&&result.failed.length?207:result.failed.length?422:200,result);}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'TTS_GENERATE_FAILED'});}
     }
-    if (seg[3]==='tts'&&seg[4]==='baseline'&&req.method==='POST') { const refs=collectReferencedAssets(issue).filter(x=>x.kind==='tts');const base=issueAssetRoot(issue,id);const missing=[];for(const ref of refs)if(!(await exists(path.join(base,ref.path))))missing.push(ref.page);if(missing.length)return send(res,409,{error:`TTS 尚未补齐，缺失 ${missing.length} 页`,code:'TTS_INCOMPLETE',missingPages:missing});const snap=await snapshotIssue(id,'tts-baseline-before');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.sourceDigest=narrationSourceDigest(issue);issue.features.narration.pageDigests=narrationPageDigests(issue);issue.features.narration.baselinedAt=new Date().toISOString();await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');const source=await writeSourceReceipt(id,issue,{reason:'tts-baseline',snapshot:snap});return send(res,200,{ok:true,snapshot:snap,narration:issue.features.narration,source}); }
+    if (seg[3]==='tts'&&seg[4]==='baseline'&&req.method==='POST') { const refs=collectReferencedAssets(issue).filter(x=>x.kind==='tts');const base=issueAssetRoot(issue,id);const missing=[];for(const ref of refs)if(!(await exists(path.join(base,ref.path))))missing.push(ref.page);if(missing.length)return send(res,409,{error:`TTS 尚未补齐，缺失 ${missing.length} 页`,code:'TTS_INCOMPLETE',missingPages:missing});const snap=await snapshotIssue(id,'tts-baseline-before');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.sourceDigest=narrationSourceDigest(issue);issue.features.narration.pageDigests=narrationPageDigests(issue);issue.features.narration.generationDigests=ttsGenerationDigests(issue);issue.features.narration.baselinedAt=new Date().toISOString();delete issue.features.narration.generationConfigChanged;await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');const source=await writeSourceReceipt(id,issue,{reason:'tts-baseline',snapshot:snap});return send(res,200,{ok:true,snapshot:snap,narration:issue.features.narration,source}); }
     if (seg[3]==='assets'&&seg[4]==='upload'&&req.method==='POST') {
       if(!isManagedAssetRoot(issue,id))return send(res,409,{error:'当前期刊使用历史/外部 assetSource，制作中心按只读处理。请在新一期自身 assets 目录中上传资源。',code:'ASSET_SOURCE_READONLY'});
       const kind=String(u.searchParams.get('kind')||''); const rule=uploadRules[kind]; if(!rule)return send(res,400,{error:'不支持的媒体类型',code:'VALIDATION_ERROR'});
@@ -1233,7 +1346,7 @@ const server=http.createServer(async(req,res)=>{try{
   if (seg[0]==='reports'&&seg[1]) { const base=path.resolve(root,'reports'); const file=path.resolve(base,seg.slice(1).join('/')); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
   if (seg[0]==='publication-output'&&seg[1]) { const id=normalizeIssueId(seg[1]); const base=path.resolve(PUBLICATION_OUTPUT_ROOT,id); const rest=decodeURIComponent(seg.slice(2).join('/'))||'web/index.html'; const file=path.resolve(base,rest); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
   if (seg[0]==='preview'&&seg[1]) { const id=normalizeIssueId(seg[1]); const rest=seg.slice(2).join('/')||'index.html'; const base=path.resolve(root,'dist-v3',id); const file=path.resolve(base,rest); if(!file.startsWith(base+path.sep)&&file!==base)return send(res,403,{error:'Forbidden'}); return serveFile(req,res,file); }
-  if (u.pathname==='/'||u.pathname==='/index.html'||u.pathname==='/workspace'||u.pathname==='/workspace/') return serveFile(req,res,path.join(studioDir,acceptanceOnly?'rc1-acceptance.html':'index.html'));
+  if (u.pathname==='/'||u.pathname==='/index.html'||u.pathname==='/workspace'||u.pathname==='/workspace/') return serveFile(req,res,path.join(studioDir,acceptanceOnly?'final-acceptance.html':'index.html'));
   // Beta1: real nested Studio modules (e.g. /workspace/viewport.js) must win before the legacy /workspace/* compatibility fallback.
   const staticFile=path.resolve(studioDir,'.'+u.pathname);
   if(staticFile.startsWith(studioDir+path.sep)&&await exists(staticFile))return serveFile(req,res,staticFile);
@@ -1243,8 +1356,9 @@ const server=http.createServer(async(req,res)=>{try{
 }catch(e){console.error(e);return send(res,e.statusCode||500,{error:e.message||String(e),code:e.statusCode===413?'PAYLOAD_TOO_LARGE':undefined})}});
 
 async function runPublicationPreflight(id,report=()=>{}){
-  const steps=[];const exec=async(label,script,args=[])=>{report({stage:label,percent:Math.min(95,10+steps.length*20)});const result=await runScriptAsync(script,args);steps.push({label,ok:result.ok,output:result.output});return result};
-  const check=await exec('数据校验','check-v3.mjs',['--issue',id]);const build=check.ok?await exec('构建','build-v3.mjs',['--issue',id]):{ok:false};const smoke=build.ok?await exec('静态 Smoke','smoke-v3.mjs',['--issue',id]):{ok:false};const storage=await publicationStorageStatus();steps.push({label:'服务器存储空间',ok:storage.ok,advisory:storage.status!=='critical',output:storage.advice});steps.push({label:'设备回归（提示项）',ok:true,skipped:true,advisory:true,output:'设备兼容性回归属于提示项，不阻断正式发布'});const audit=await exec('发布审计（硬性门禁 + 提示项）','audit-v3.mjs',['--issue',id,'--quiet','--strict']);const hardOk=Boolean(check.ok&&build.ok&&smoke.ok&&audit.ok&&storage.ok);const previous=await readPublicationEvidence(id);const evidence=await writePublicationEvidence(id,{devices:{mobile:previous.devices?.mobile||'pending',desktop:previous.devices?.desktop||'pending',checkedAt:previous.devices?.checkedAt||null,policy:'advisory'},lastPreflight:{ok:hardOk,strict:true,at:new Date().toISOString(),steps:steps.map(item=>({label:item.label,ok:item.ok,skipped:Boolean(item.skipped),advisory:Boolean(item.advisory)}))}});return {ok:hardOk,steps,evidence,status:await publicationStatus(id,{refreshAudit:false})};
+  const force=forceReleaseEnabled();const steps=[];const exec=async(label,script,args=[])=>{report({stage:label,percent:Math.min(95,10+steps.length*20)});const result=await runScriptAsync(script,args);steps.push({label,ok:result.ok,output:result.output});return result};
+  const check=await exec('数据校验','check-v3.mjs',['--issue',id]);const build=check.ok?await exec('构建','build-v3.mjs',['--issue',id]):{ok:false};const smoke=build.ok?await exec('静态 Smoke','smoke-v3.mjs',['--issue',id]):{ok:false};steps.push({label:'设备回归（提示项）',ok:true,skipped:true,advisory:true,output:'设备兼容性回归属于提示项，不阻断正式发布'});const audit=await exec('发布审计（硬性门禁 + 提示项）','audit-v3.mjs',['--issue',id,'--quiet','--strict']);const hardOk=force||Boolean(check.ok&&build.ok&&smoke.ok&&audit.ok);const previous=await readPublicationEvidence(id);const evidence=await writePublicationEvidence(id,{devices:{mobile:previous.devices?.mobile||'pending',desktop:previous.devices?.desktop||'pending',checkedAt:previous.devices?.checkedAt||null,policy:'advisory'},lastPreflight:{ok:hardOk,strict:!force,force,at:new Date().toISOString(),steps:steps.map(item=>({label:item.label,ok:item.ok,skipped:Boolean(item.skipped),advisory:Boolean(item.advisory)}))}});return {ok:hardOk,steps,evidence,status:await publicationStatus(id,{refreshAudit:false})};
 }
-if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','login.css','login.js','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
-server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Promotion 实机验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});
+if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','login.css','login.js','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js','final-acceptance.html','final-acceptance.css','final-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
+await restoreBackgroundJobs();
+server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Acceptance 真实环境验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});

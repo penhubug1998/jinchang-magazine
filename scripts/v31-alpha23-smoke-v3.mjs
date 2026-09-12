@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { buildPublishingPlan, flowFragmentFor, normalizePagePublishing, normalizeBlockPublishing, LAYOUT_ENGINE_INFO } from '../src/reader/layout-engine.js';
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.23','3.1.0-alpha.24','3.1.0-alpha.25','3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2','3.1.0'].includes(pkg.version),`version=${pkg.version}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.23','3.1.0-alpha.24','3.1.0-alpha.25','3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2'].includes(pkg.version),`version=${pkg.version}`);
 assert(['3.1-alpha23','3.1-alpha24'].includes(pkg.v31SchemaVersion),`schema=${pkg.v31SchemaVersion}`);
 const issue=JSON.parse(await readFile('examples/v31-publishing-alpha23/issue.json','utf8'));
 const plan=buildPublishingPlan(issue);

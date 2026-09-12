@@ -6,6 +6,7 @@ node_modules/
 !.env.example
 .vscode/
 .idea/
+node_modules/
 *.log
 .tmp-v3-*/
 # v3.1 browser suites write .tmp-v31-*-browser/, which ".tmp-v3-*/" does not
@@ -29,5 +30,9 @@ release-rc1-trial/
 
 .v3-review-handoffs/
 .v3-source-ledger/
+.v3-ai-config.json
+.v3-ai-cache/
 outputs/
 outputs-v3/
+.v3-background-jobs/
+.tts-backups/

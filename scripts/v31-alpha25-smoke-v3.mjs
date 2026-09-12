@@ -12,9 +12,9 @@ const evidence={devices:{mobile:'pass',desktop:'pass',checkedAt:new Date().toISO
 const good=buildPublicationStatus(issue,audit,evidence);
 assert(good.canPublish&&good.metrics.content===100&&good.metrics.pageHealth===100&&good.metrics.media===100&&good.metrics.accessibility===100,`publish metrics ${JSON.stringify(good)}`);
 assert(good.metrics.links.status==='pass'&&good.metrics.narration.label==='2 / 2','link/narration metric failed');
-assert(publicationReadinessLabel(good)==='严格门禁通过 · 可以正式发布'&&publicationOutputLabel('pdf')==='Print PDF','labels failed');
+assert(publicationReadinessLabel(good)==='可直接发布 · 检查项仅作提示'&&publicationOutputLabel('pdf')==='Print PDF','labels failed');
 const bad=buildPublicationStatus({...issue,pages:[{title:'正文',blocks:[{type:'paragraph',richText:{type:'doc',content:[{type:'paragraph',content:[{type:'text',text:'坏链接',marks:[{type:'link',attrs:{href:'javascript:alert(1)'}}]}]}]}}]}]},audit,evidence);
-assert(!bad.canPublish&&bad.metrics.links.status==='fail','unsafe link must block publication');
+assert(bad.canPublish&&bad.metrics.links.status==='fail'&&bad.advisories.some(x=>x.includes('不安全')),'unsafe link must remain visible as an advisory');
 const [studio,html,css,server,readerCss,readerJs]=await Promise.all([readFile('src/studio/studio.js','utf8'),readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('scripts/studio-v3.mjs','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8')]);
 for(const token of ['openPublicationCenter','runPublicationAction','runPublicationPreflightUi','createPublicationSnapshotUi','rollbackPublicationSnapshot','formalPublicationUi'])assert(studio.includes(token),`studio missing ${token}`);
 for(const token of ['内容完整度','页面健康','媒体完整','移动端','桌面端','无障碍','链接','朗读音频'])assert(studio.includes(token),`studio metric missing ${token}`);
@@ -23,4 +23,4 @@ for(const token of ['publication-metrics','publication-output-card','publication
 for(const token of ["seg[4]==='status'","seg[4]==='preflight'","seg[4]==='preview'","seg[4]==='pdf'","seg[4]==='archive'","seg[4]==='release'",'Page.printToPDF','ReturnAsStream','IO.read','archive-manifest.json','issue.json 仍是唯一事实来源'])assert(server.includes(token),`server missing ${token}`);
 assert(server.includes('buildPublishingPlan(issue)')&&server.includes('normalizePagePublishing(p)'),'PDF renderer must consume Alpha23 publishing rules');
 assert(readerJs.includes('__V3_PRINT_MODE__')&&readerCss.includes('Alpha25 Print / PDF'),'reader print contract missing');
-console.log('V3.1-alpha25 Smoke 通过：发布评分、严格门禁、发布中心 UI、Web/PDF/ZIP 三输出和 issue.json 单一事实源成立。');
+console.log('V3.1-alpha25 Smoke 通过：发布评分、直接发布中心 UI、Web/PDF/ZIP 三输出和 issue.json 单一事实源成立。');

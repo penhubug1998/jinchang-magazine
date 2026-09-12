@@ -7,9 +7,9 @@
 <link rel="stylesheet" href="./rc1-acceptance.css">
 </head>
 <body>
-<header class="top"><div><span class="eyebrow" id="runtimeVersion">V3.1 RC</span><h1>Final Promotion 实机验收台</h1><p>Microsoft Edge / Mac Safari / iPhone Safari · 只读验收模式</p></div><div class="status" id="saveState">尚未提交</div></header>
+<header class="top"><div><span class="eyebrow" id="runtimeVersion">V3.1 RC</span><h1>Final Promotion 实机验收台</h1><p>Microsoft Edge / Mac Safari / iPhone Safari / Android 微信 · 当前源码只读验收模式</p></div><div class="status" id="saveState">尚未提交</div></header>
 <main>
-<section class="card intro"><div><h2>设备与期刊</h2><p>Final 前分别用 Windows Microsoft Edge、Mac Safari 与 iPhone Safari 完成一次；移动设备与验收服务器需处于同一可信网络。</p></div><div class="controls"><label>设备类型<select id="deviceType"><option value="edge-desktop">Microsoft Edge (Desktop)</option><option value="mac-safari">Mac Safari</option><option value="iphone-safari">iPhone Safari</option><option value="ipad-safari">iPad Safari</option><option value="other">其他浏览器</option></select></label><label>设备名称<input id="deviceName" placeholder="例如 Edge on Mac / Windows 11 Edge / MacBook Pro / iPhone 15"></label><label>期号<input id="issueId" value="002" inputmode="numeric"></label><button id="reload">重新载入 Reader</button></div></section>
+<section class="card intro"><div><h2>设备与期刊</h2><p>Final 前分别用 Windows/Mac Microsoft Edge、Mac Safari、iPhone Safari 与 Android 微信内置浏览器分别完成一次；移动设备与验收服务器需处于同一可信网络。</p></div><div class="controls"><label>设备类型<select id="deviceType"><option value="edge-desktop">Microsoft Edge (Desktop)</option><option value="mac-safari">Mac Safari</option><option value="iphone-safari">iPhone Safari</option><option value="ipad-safari">iPad Safari</option><option value="android-wechat">Android 微信内置浏览器</option><option value="other">其他浏览器</option></select></label><label>设备名称<input id="deviceName" placeholder="例如 Edge on Mac / Windows 11 Edge / MacBook Pro / iPhone 15"></label><label>期号<input id="issueId" value="002" inputmode="numeric"></label><button id="reload">重新载入 Reader</button></div></section>
 <section class="grid">
 <div class="card"><h2>自动能力探测</h2><div id="autoChecks" class="checks"></div><p class="hint">“不支持 visualViewport”本身不是失败；V3.0.0 已提供 fallback。FullScreen 只需标准或 WebKit 任一路径可用。</p></div>
 <div class="card"><h2>人工交互验收</h2><div id="manualChecks" class="manual"></div></div>

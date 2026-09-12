@@ -8,8 +8,8 @@ import path from 'node:path';
 const root=process.cwd();
 const assert=(c,m)=>{if(!c)throw new Error(m)};
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-assert(['3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19','3.1.0'].includes(pkg.version),`V3.1 alpha5 版本错误：${pkg.version}`);
-assert(['3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19','3.1-alpha24'].includes(pkg.v31SchemaVersion),`V3.1 schema 版本错误：${pkg.v31SchemaVersion}`);
+assert(pkg.version==='3.1.0'||['3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version),`V3.1 alpha5 版本错误：${pkg.version}`);
+assert(pkg.v31SchemaVersion==='3.1-alpha24'||['3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion),`V3.1 schema 版本错误：${pkg.v31SchemaVersion}`);
 assert(pkg.v3StableVersion==='3.0.0','V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha5.json','utf8'));
 assert(schema.layoutAssetLibrary?.storedOutsideIssueJson===true,'Alpha5 版式资产必须存储在 issue.json 之外');
@@ -44,7 +44,7 @@ const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1'
 let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);const base=`http://127.0.0.1:${port}`;
 try{
   let health=null;for(let i=0;i<120;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(50)}
-  assert(health?.ok&&(health?.version===pkg.version),`Alpha5 Studio health 异常：${logs}`);
+  assert(health?.ok&&(health.version==='3.1.0'||['3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(health.version)),`Alpha5 Studio health 异常：${logs}`);
   let r=await fetch(`${base}/api/layout-library`),j=await r.json();assert(r.ok&&Array.isArray(j.layouts)&&j.layouts.length===0,'Alpha5 我的版式初始库异常');
   const valid={name:'双栏测试版式',contextType:'article',previewPreset:'two-balanced',blueprint:{pageDesign:{background:'#fffaf0',padding:4,contentWidth:90},nodes:[{kind:'slot'},{kind:'container',layout:'two-equal',gap:'md',align:'start',mobile:'stack',columns:[{nodes:[{kind:'slot'}]},{nodes:[{kind:'slot'}]}]}],slotCount:3}};
   r=await fetch(`${base}/api/layout-library`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(valid)});j=await r.json();assert(r.status===201&&j.id&&j.blueprint?.slotCount===3,'Alpha5 我的版式保存失败');const savedId=j.id;

@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#7a1717">
   <title>离退休干部电子期刊</title>
-  <link rel="stylesheet" href="./reader.css?v=3.1.0-ai-link-20260902-06">
+  <link rel="stylesheet" href="./reader.css?v=3.1.0-text-focus-20260908-03">
 </head>
 <body>
   <div class="app" id="app">
+    <div id="networkStatus" class="network-status" role="status" aria-live="polite" hidden><span id="networkStatusText"></span><button id="networkRetry" type="button">重试</button></div>
     <header class="topbar">
       <div class="brand" id="homeLink">
         <span class="mark">刊</span>
@@ -108,9 +109,9 @@
   <dialog id="issueDialog">
     <div class="dialog-head"><strong>切换期数</strong><button data-close="issueDialog" type="button" aria-label="关闭"><svg aria-hidden="true"><use href="#i-close"></use></svg></button></div>
     <div class="issue-list" id="issueList">
-      <a class="issue-link" data-issue-id="001" href="../01/"><b>第一期</b><small>深学铸魂固初心 · 精管护航安伏夏</small></a>
-      <a class="issue-link" data-issue-id="002" href="../02/"><b>第二期</b><small>银发丹心映晚晴 · 清风护航伴新秋</small></a>
-      <a class="issue-link" data-issue-id="003" href="../03/"><b>第三期</b><small>银发初心映秋色 · 清风正气润晚晴</small></a>
+      <a class="issue-link" data-issue-id="001" href="../01/"><b data-issue-label>第一期</b><small data-issue-subtitle>加载中…</small></a>
+      <a class="issue-link" data-issue-id="002" href="../02/"><b data-issue-label>第二期</b><small data-issue-subtitle>加载中…</small></a>
+      <a class="issue-link" data-issue-id="003" href="../03/"><b data-issue-label>第三期</b><small data-issue-subtitle>加载中…</small></a>
     </div>
   </dialog>
 
@@ -141,6 +142,6 @@
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <audio id="bgm" loop preload="none"></audio>
   <audio id="narration" preload="none"></audio>
-<script type="module" src="./reader.js?v=3.1.0-ai-link-20260902-06"></script>
+<script type="module" src="./reader.js?v=3.1.0-focus-20260912-07"></script>
 </body>
 </html>

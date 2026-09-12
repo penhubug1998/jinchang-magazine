@@ -1,0 +1,16 @@
+import { readFile } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
+const assert=(c,m)=>{if(!c)throw new Error(m)};
+const studio=await readFile('src/studio/studio.js','utf8');
+const server=await readFile('scripts/studio-v3.mjs','utf8');
+const ignore=await readFile('.gitignore','utf8');
+assert(studio.includes('sourceObservedFingerprint')&&studio.includes('sourceConflict'),'Studio must separate edit baseline from observed server source');
+assert(studio.includes('if(state.sourceConflict)')&&studio.includes('adoptBaseline:false'),'SOURCE_DRIFT must lock repeat saves without upgrading baseline');
+assert(server.includes('withIssueWriteLock')&&server.includes('atomicWriteText'),'server must serialize issue writes and atomically replace issue.json');
+assert(server.includes('SOURCE_FINGERPRINT_REQUIRED'),'Studio protected save must require an edit-baseline fingerprint');
+assert(server.includes('productionMode')&&server.includes('正式模式必须配置 STUDIO_ADMIN_PASSWORD'),'formal server must fail closed without credentials');
+assert(ignore.includes('.v3-ai-config.json')&&ignore.includes('.v3-ai-cache/'),'AI local config/cache must stay ignored');
+const env={...process.env,NODE_ENV:'production',V3_FORMAL_MODE:'1'};delete env.STUDIO_ADMIN_PASSWORD;
+const child=spawn(process.execPath,['scripts/studio-v3.mjs','--port','43991'],{env,stdio:['ignore','pipe','pipe']});let out='';child.stdout.on('data',x=>out+=x);child.stderr.on('data',x=>out+=x);const code=await new Promise(r=>child.on('exit',r));
+assert(code!==0&&out.includes('STUDIO_ADMIN_PASSWORD'),'formal direct server must refuse unauthenticated boot: '+code+' '+out);
+console.log('Plan P0 reliability smoke 通过：编辑基线锁、并发原子写入、正式鉴权与本地配置边界已固化。');
