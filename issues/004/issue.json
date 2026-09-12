@@ -1,0 +1,825 @@
+{
+  "id": "004",
+  "label": "第四期",
+  "publication": "中国人民银行金昌市分行离退休干部电子期刊",
+  "publisher": "中国人民银行金昌市分行",
+  "subtitle": "5",
+  "engine": "v3",
+  "status": "draft",
+  "assetSource": "issues/004/assets",
+  "theme": "begonia-orange",
+  "createdAt": "2026-09-08T13:38:34.946Z",
+  "features": {
+    "flipAnimation": true,
+    "fullscreen": true,
+    "music": {
+      "src": "assets/music/bgm.mp3",
+      "defaultOn": false
+    },
+    "narration": {
+      "pattern": "assets/tts/page-{page}.mp3",
+      "fallback": "speechSynthesis",
+      "continuousDefault": false,
+      "rate": 1
+    }
+  },
+  "articles": {},
+  "pages": [
+    {
+      "type": "cover",
+      "navTitle": "封面",
+      "title": "5",
+      "kicker": "中国人民银行金昌市分行",
+      "design": {
+        "accent": "#ae5538",
+        "padding": 7,
+        "contentWidth": 88
+      },
+      "blocks": [
+        {
+          "type": "coverMeta",
+          "text": "中国人民银行金昌市分行离退休干部电子期刊 · 第四期"
+        },
+        {
+          "type": "coverSections",
+          "items": [
+            "活动速览",
+            "精彩瞬间",
+            "人物风采",
+            "温暖回声"
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 0,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "navTitle": "卷首语",
+      "kicker": "FOREWORD",
+      "title": "把美好瞬间留在这一期",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 卷首语",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 82
+      },
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "请填写本期卷首语，说明本期主题、编排思路与阅读提示。",
+          "design": {
+            "fontSize": 20,
+            "fontWeight": "500"
+          }
+        },
+        {
+          "type": "quote",
+          "text": "模板已预置栏目页、页眉页脚、字号层级、品牌色和图片比例，可在不破坏品牌锁定项的前提下继续编辑内容。"
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 1,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "toc",
+      "navTitle": "目录",
+      "kicker": "CONTENTS",
+      "title": "本期导读",
+      "blocks": [
+        {
+          "type": "toc",
+          "items": [
+            {
+              "number": "01",
+              "title": "活动速览",
+              "subtitle": "进入栏目",
+              "page": 4
+            },
+            {
+              "number": "02",
+              "title": "精彩瞬间",
+              "subtitle": "进入栏目",
+              "page": 6
+            },
+            {
+              "number": "03",
+              "title": "人物风采",
+              "subtitle": "进入栏目",
+              "page": 8
+            },
+            {
+              "number": "04",
+              "title": "温暖回声",
+              "subtitle": "进入栏目",
+              "page": 10
+            }
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 2,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "role": "section",
+      "navTitle": "活动速览｜栏目页",
+      "section": "活动速览",
+      "kicker": "SECTION",
+      "title": "活动速览",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 活动速览",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 86
+      },
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "活动速览",
+          "level": 2,
+          "design": {
+            "fontSize": 28,
+            "fontWeight": "700"
+          }
+        },
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "用影像记录现场，用图注补全时间、地点与人物。",
+          "design": {
+            "fontSize": 20,
+            "fontWeight": "500"
+          }
+        },
+        {
+          "type": "image",
+          "src": "",
+          "alt": "请上传图片并填写替代文字",
+          "caption": "活动速览栏目主视觉",
+          "frameRatio": "16:9",
+          "fit": "cover",
+          "positionX": 50,
+          "positionY": 50
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 3,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "navTitle": "活动速览｜图集页",
+      "section": "活动速览",
+      "kicker": "活动速览",
+      "title": "活动速览｜图集页",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 活动速览",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 6,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-left",
+          "gap": "lg",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "活动速览｜图集页配图",
+                  "frameRatio": "16:9",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "lead",
+                  "text": "请在这里填写导语。",
+                  "design": {
+                    "fontSize": 19,
+                    "fontWeight": "500"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "请在这里填写正文。正文建议按自然段组织，可继续添加图片、引言、卡片或链接。",
+                  "design": {
+                    "fontSize": 16
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 A",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 B",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 4,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "role": "section",
+      "navTitle": "精彩瞬间｜栏目页",
+      "section": "精彩瞬间",
+      "kicker": "SECTION",
+      "title": "精彩瞬间",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 精彩瞬间",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 86
+      },
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "精彩瞬间",
+          "level": 2,
+          "design": {
+            "fontSize": 28,
+            "fontWeight": "700"
+          }
+        },
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "用影像记录现场，用图注补全时间、地点与人物。",
+          "design": {
+            "fontSize": 20,
+            "fontWeight": "500"
+          }
+        },
+        {
+          "type": "image",
+          "src": "",
+          "alt": "请上传图片并填写替代文字",
+          "caption": "精彩瞬间栏目主视觉",
+          "frameRatio": "3:2",
+          "fit": "cover",
+          "positionX": 50,
+          "positionY": 50
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 5,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "navTitle": "精彩瞬间｜图集页",
+      "section": "精彩瞬间",
+      "kicker": "精彩瞬间",
+      "title": "精彩瞬间｜图集页",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 精彩瞬间",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 6,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-right",
+          "gap": "lg",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "精彩瞬间｜图集页配图",
+                  "frameRatio": "3:2",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "lead",
+                  "text": "请在这里填写导语。",
+                  "design": {
+                    "fontSize": 19,
+                    "fontWeight": "500"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "请在这里填写正文。正文建议按自然段组织，可继续添加图片、引言、卡片或链接。",
+                  "design": {
+                    "fontSize": 16
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 A",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 B",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 6,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "role": "section",
+      "navTitle": "人物风采｜栏目页",
+      "section": "人物风采",
+      "kicker": "SECTION",
+      "title": "人物风采",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 人物风采",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 86
+      },
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "人物风采",
+          "level": 2,
+          "design": {
+            "fontSize": 28,
+            "fontWeight": "700"
+          }
+        },
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "用影像记录现场，用图注补全时间、地点与人物。",
+          "design": {
+            "fontSize": 20,
+            "fontWeight": "500"
+          }
+        },
+        {
+          "type": "image",
+          "src": "",
+          "alt": "请上传图片并填写替代文字",
+          "caption": "人物风采栏目主视觉",
+          "frameRatio": "1:1",
+          "fit": "cover",
+          "positionX": 50,
+          "positionY": 50
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 7,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "navTitle": "人物风采｜图集页",
+      "section": "人物风采",
+      "kicker": "人物风采",
+      "title": "人物风采｜图集页",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 人物风采",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 6,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-left",
+          "gap": "lg",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "人物风采｜图集页配图",
+                  "frameRatio": "1:1",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "lead",
+                  "text": "请在这里填写导语。",
+                  "design": {
+                    "fontSize": 19,
+                    "fontWeight": "500"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "请在这里填写正文。正文建议按自然段组织，可继续添加图片、引言、卡片或链接。",
+                  "design": {
+                    "fontSize": 16
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 A",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 B",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 8,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "role": "section",
+      "navTitle": "温暖回声｜栏目页",
+      "section": "温暖回声",
+      "kicker": "SECTION",
+      "title": "温暖回声",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 温暖回声",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 86
+      },
+      "blocks": [
+        {
+          "type": "sectionHeading",
+          "text": "温暖回声",
+          "level": 2,
+          "design": {
+            "fontSize": 28,
+            "fontWeight": "700"
+          }
+        },
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "用影像记录现场，用图注补全时间、地点与人物。",
+          "design": {
+            "fontSize": 20,
+            "fontWeight": "500"
+          }
+        },
+        {
+          "type": "image",
+          "src": "",
+          "alt": "请上传图片并填写替代文字",
+          "caption": "温暖回声栏目主视觉",
+          "frameRatio": "16:9",
+          "fit": "cover",
+          "positionX": 50,
+          "positionY": 50
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 9,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "article",
+      "navTitle": "温暖回声｜图集页",
+      "section": "温暖回声",
+      "kicker": "温暖回声",
+      "title": "温暖回声｜图集页",
+      "chrome": {
+        "header": "中国人民银行金昌市分行离退休干部电子期刊 · 温暖回声",
+        "footer": "第四期 · 第 {page}/12 页"
+      },
+      "design": {
+        "accent": "#ae5538",
+        "padding": 6,
+        "contentWidth": 92
+      },
+      "blocks": [
+        {
+          "type": "container",
+          "layout": "media-right",
+          "gap": "lg",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "温暖回声｜图集页配图",
+                  "frameRatio": "16:9",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "paragraph",
+                  "style": "lead",
+                  "text": "请在这里填写导语。",
+                  "design": {
+                    "fontSize": 19,
+                    "fontWeight": "500"
+                  }
+                },
+                {
+                  "type": "paragraph",
+                  "style": "body",
+                  "text": "请在这里填写正文。正文建议按自然段组织，可继续添加图片、引言、卡片或链接。",
+                  "design": {
+                    "fontSize": 16
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "container",
+          "layout": "two-equal",
+          "gap": "md",
+          "align": "start",
+          "mobile": "stack",
+          "columns": [
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 A",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            },
+            {
+              "blocks": [
+                {
+                  "type": "image",
+                  "src": "",
+                  "alt": "请上传图片并填写替代文字",
+                  "caption": "补充照片 B",
+                  "frameRatio": "4:3",
+                  "fit": "cover",
+                  "positionX": 50,
+                  "positionY": 50
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 10,
+        "lockedBrand": true
+      }
+    },
+    {
+      "type": "closing",
+      "navTitle": "尾页",
+      "kicker": "EDITORIAL",
+      "title": "本期寄语",
+      "design": {
+        "accent": "#ae5538",
+        "padding": 8,
+        "contentWidth": 82
+      },
+      "blocks": [
+        {
+          "type": "paragraph",
+          "style": "lead",
+          "text": "请在这里填写本期寄语。",
+          "design": {}
+        },
+        {
+          "type": "producer",
+          "text": "中国人民银行金昌市分行制作"
+        }
+      ],
+      "templateSlot": {
+        "templateId": "gallery",
+        "index": 11,
+        "lockedBrand": true
+      }
+    }
+  ],
+  "design": {
+    "tokens": {
+      "accent": "#ae5538",
+      "paper": "#fff8f2",
+      "canvas": "#33231d",
+      "texture": "plain",
+      "text": "#3d2b25",
+      "muted": "#8e7064",
+      "fontBase": 14.4,
+      "radius": 16,
+      "spacing": 12
+    }
+  },
+  "brandLock": {
+    "enabled": true,
+    "templateId": "gallery",
+    "templateName": "活动图集",
+    "lockedFields": [
+      "publication",
+      "publisher",
+      "design.tokens.accent"
+    ],
+    "accent": "#ae5538",
+    "appliedAt": "2026-09-08T13:38:34.964Z"
+  },
+  "wholeTemplate": {
+    "id": "gallery",
+    "name": "活动图集",
+    "version": 1,
+    "appliedAt": "2026-09-08T13:38:34.964Z",
+    "imageRatios": [
+      "16:9",
+      "3:2",
+      "1:1"
+    ]
+  }
+}

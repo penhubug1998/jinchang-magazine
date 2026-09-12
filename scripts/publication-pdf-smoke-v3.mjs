@@ -4,7 +4,7 @@ import path from 'node:path';
 import {createTestWorkspace,writePublicationFixture,startTestStudio,stopTestStudio,removeTestWorkspace} from './lib-v3-test-workspace.mjs';
 const dir=await createTestWorkspace('pdf-export');let studio;
 try{
-  const issue=await writePublicationFixture(dir);studio=await startTestStudio(dir);
+  const issue=await writePublicationFixture(dir);studio=await startTestStudio(dir,{V3_STRICT_RELEASE:'1'});
   const status=await(await fetch(studio.base+'/api/issues/003/publication/status')).json();assert(status.exportCapabilities?.pdf?.available,'PDF 验收需要可执行 Chrome / Edge / Chromium，或配置 CHROMIUM');
   const exportPdf=async()=>{const response=await fetch(studio.base+'/api/issues/003/publication/pdf',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});return {response,result:await response.json()}};
   const created=await exportPdf();assert(created.response.ok,JSON.stringify(created.result));

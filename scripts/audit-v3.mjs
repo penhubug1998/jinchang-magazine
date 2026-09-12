@@ -1,13 +1,14 @@
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import {
-  V3_VERSION, MiB, collectReferencedAssets, exists, fileMeta, humanBytes, listFilesRecursive, narrationPageDigests, narrationSourceDigest,
+  V3_VERSION, MiB, collectReferencedAssets, exists, fileMeta, forceReleaseEnabled, humanBytes, listFilesRecursive, narrationPageDigests, narrationSourceDigest,
   normalizeIssueId, parseArgs, readJson, root, stripAssetsPrefix, writeJson
 } from './lib-v3-production.mjs';
 
 const args = parseArgs();
 const targetId = normalizeIssueId(args.issue || args.id || '');
 const strict = Boolean(args.strict);
+const force = forceReleaseEnabled();
 const quiet = Boolean(args.quiet);
 const reportDir = path.join(root, String(args.output || 'reports'));
 const thresholds = { video: 30 * MiB, music: 8 * MiB, image: 2 * MiB, tts: 2 * MiB, total: 100 * MiB };
@@ -153,7 +154,7 @@ async function auditOne(dirName) {
     else if(blocks.length>12){const splitAfter=Math.max(1,Math.ceil(blocks.length/2));add(warnings,'warning','BLOCK_DENSITY_HIGH',`第 ${n} 页有 ${blocks.length} 个内容块，编辑和移动端阅读密度可能偏高；建议在第 ${splitAfter} 个内容块后拆到续页`,{...loc('blocks'),suggestedSplitAfter:splitAfter,fix:`建议在第 ${splitAfter} 个内容块后拆分到续页，或合并同类信息；单页优先控制在 4–10 个内容块。`});}
     for(const [bi,b] of blocks.entries()){
       if(!b||typeof b!=='object'){add(blockers,'blocker','BLOCK_INVALID',`第 ${n} 页第 ${bi+1} 个内容块不是有效对象`,{...loc('blocks'),blockIndex:bi});continue}
-      const knownBlocks=new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
+      const knownBlocks=new Set(['paragraph','heading','quote','chips','cardline','casePair','toc','articleLink','video','image','table','coverMeta','coverSections','blessing','producer','cards','container','textFlow','pullQuote','sidebar','sectionHeading']);
       if(!knownBlocks.has(b.type))add(blockers,'blocker','BLOCK_TYPE_UNSUPPORTED',`第 ${n} 页第 ${bi+1} 个内容块类型 ${b.type||'(空)'} 不受支持`,{...loc('blocks'),blockIndex:bi,fix:'在可视化编辑器中替换为受支持的内容块，或在高级 JSON 中修正 type。'});
       const arrays=[];const collectArrays=(v,path='')=>{if(Array.isArray(v)){arrays.push({path,count:v.length});v.forEach((x,i)=>collectArrays(x,`${path}[${i}]`))}else if(v&&typeof v==='object')for(const [k,x] of Object.entries(v))collectArrays(x,path?`${path}.${k}`:k)};collectArrays(b);
       const tooMany=arrays.find(x=>x.count>40);if(tooMany)add(blockers,'blocker','BLOCK_ARRAY_LIMIT',`第 ${n} 页第 ${bi+1} 个内容块的 ${tooMany.path||'数组'} 有 ${tooMany.count} 项，超过 40 项上限`,{...loc('blocks'),blockIndex:bi,fix:'拆分内容块或减少条目数量。'});
@@ -232,4 +233,5 @@ const cards=audits.map(audit=>{const all=[...audit.blockers,...audit.warnings,..
 const html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>V3 发布前审计报告</title><style>*{box-sizing:border-box}body{margin:0;background:#f5f2ec;color:#302821;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;overflow-wrap:anywhere}.wrap{max-width:1100px;margin:auto;padding:32px 18px 60px}.hero{background:#6f1d1b;color:#fff6e6;border-radius:22px;padding:26px 28px;box-shadow:0 14px 34px #5b1a1524}.hero h1{margin:0 0 8px}.summary{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}.summary span{background:#ffffff18;border:1px solid #ffffff28;padding:8px 12px;border-radius:999px}.issue{margin-top:18px;background:white;border-radius:18px;padding:20px 22px;border:1px solid #e8ded0;box-shadow:0 8px 22px #4b382312}.issue header{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.issue h2{margin:0}.issue h2 small{font-size:12px;color:#8d7a69}.issue header p{margin:6px 0;color:#766555}.issue header>strong{padding:6px 10px;border-radius:999px;background:#eee}.issue.ready header>strong{background:#e8f5eb;color:#2d6b42}.issue.warning header>strong{background:#fff4d8;color:#8a5a00}.issue.blocked header>strong{background:#fde8e6;color:#a32922}.metrics{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;margin:16px 0}.metrics span{background:#f7f4ef;border-radius:12px;padding:10px 12px}.metrics b{display:block;margin-top:2px}.path{font-size:13px;color:#806f60;word-break:break-all}ul{padding:0;list-style:none;margin-bottom:0}li{margin:8px 0;padding:10px 12px;border-radius:10px;background:#f8f5f0}li b,li div,li small{display:block}li code{font-size:10px}li small{color:#796c62;margin-top:4px}.blocker{border-left:4px solid #a32922}.warning{border-left:4px solid #b77a12}.note{border-left:4px solid #397359}@media(max-width:650px){.metrics{grid-template-columns:1fr 1fr}.issue header{display:block}.issue header>strong{display:inline-block;margin-top:8px}.wrap{padding:16px 8px 40px}.hero,.issue{border-radius:14px;padding:16px}}</style></head><body><main class="wrap"><section class="hero"><h1>V3 发布前审计报告</h1><div>${esc(generatedAt)} · ${strict?'严格发布检查':'日常审计'} · ${esc(targetId||'全部期刊')}</div><div class="summary"><span>Ready ${summary.ready}</span><span>Warning ${summary.warning}</span><span>Blocked ${summary.blocked}</span><span>阻断 ${summary.blockers}</span><span>警告 ${summary.warnings}</span><span>平均可发布度 ${summary.averageScore}</span></div></section>${cards}</main></body></html>`;
 await writeFile(htmlPath,html,'utf8');
 if(!quiet){console.log(`V3 发布审计完成：${path.relative(root,mdPath)}`);console.log(`浏览器报告：${path.relative(root,htmlPath)}`);for(const a of audits)console.log(`- ${a.id} ${a.label}: ${a.readiness} · score=${a.score??'-'} blockers=${a.blockers.length} warnings=${a.warnings.length}`)}
-if(strict&&summary.blocked>0)process.exit(1);
+if(strict&&summary.blocked>0&&!force)process.exit(1);
+if(strict&&summary.blocked>0&&force)console.warn('直接发布模式：审计阻断仅记录为提示，不阻断发布。');

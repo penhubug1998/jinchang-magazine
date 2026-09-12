@@ -1,7 +1,8 @@
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { spawnSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { V3_VERSION, exists, root } from './lib-v3-production.mjs';
+import { V3_VERSION, exists, forceReleaseEnabled, root } from './lib-v3-production.mjs';
 
 export const PUBLICATION_OUTPUT_ROOT = process.env.V3_PUBLICATION_OUTPUT_ROOT
   ? path.resolve(process.env.V3_PUBLICATION_OUTPUT_ROOT)
@@ -20,20 +21,47 @@ function pageHealth(issue,audit){const pages=issue.pages||[];if(!pages.length)re
 function mediaCompleteness(audit){const m=audit?.media;if(!m||!m.referenced)return 100;return clampPercent((Number(m.found||0)/Math.max(1,Number(m.referenced||0)))*100);}
 function narrationMetric(issue,audit){const enabled=Boolean(issue.features?.narration);const n=audit?.narration||{};if(!enabled)return {expected:0,found:0,complete:true,label:'未启用'};const expected=Number(n.expected??issue.pages?.length??0),found=Number(n.found||0);return {expected,found,complete:expected===0||found>=expected,label:`${found} / ${expected}`};}
 export function buildPublicationStatus(issue,audit=null,evidence={}){
+  const force=forceReleaseEnabled();
   const links=collectLinks(issue),badLinks=links.filter(x=>!validHttpish(x.href));const content=contentCompleteness(issue),pageHealthValue=pageHealth(issue,audit),media=mediaCompleteness(audit),accessibility=accessibilityMetric(issue),narration=narrationMetric(issue,audit);const devices=evidence.devices||{mobile:'pending',desktop:'pending',checkedAt:null};const blockers=Number(audit?.blockers?.length||0),warnings=Number(audit?.warnings?.length||0),pageCount=Array.isArray(issue?.pages)?issue.pages.length:0;
   // The formal publisher runs audit-v3 with --strict, which requires ready or
   // published.  Keep this status model identical to that command: drafts are
   // editable, but they are never shown as formally publishable.
   const releaseableStatus=['ready','published'].includes(String(issue.status||'draft'));
-  const statusReady=releaseableStatus;const hardReady=statusReady&&pageCount>0&&blockers===0&&badLinks.length===0;const formalReady=hardReady&&devices.mobile==='pass'&&devices.desktop==='pass';
+  const statusReady=releaseableStatus;const hardReady=force||statusReady&&pageCount>0&&blockers===0&&badLinks.length===0;const formalReady=force||hardReady&&devices.mobile==='pass'&&devices.desktop==='pass';
   const findings=[...(audit?.blockers||[]),...(audit?.warnings||[])];
   const pageFindings=new Map();for(const finding of findings){const n=Number(finding?.location?.page??finding?.page);if(Number.isInteger(n)&&n>0&&n<=pageCount){const item=pageFindings.get(n)||{blockers:0,warnings:0,findings:[]};if(finding.severity==='blocker'||finding.severity==='error')item.blockers++;else item.warnings++;item.findings.push(finding);pageFindings.set(n,item);}}
-  const completion={pageCount,completePages:0,pendingPages:[],nextPage:null};for(const [index,page] of (issue.pages||[]).entries()){const n=index+1,row=pageFindings.get(n)||{blockers:0,warnings:0,findings:[]},pending=row.blockers>0;const item={page:n,title:String(page?.navTitle||page?.title||`第 ${n} 页`),blockers:row.blockers,warnings:row.warnings,complete:!pending,findings:row.findings.slice(0,3)};if(item.complete)completion.completePages++;else {completion.pendingPages.push(item);if(!completion.nextPage)completion.nextPage=item;}}
+  const completion={pageCount,completePages:0,pendingPages:[],nextPage:null};for(const [index,page] of (issue.pages||[]).entries()){const n=index+1,row=pageFindings.get(n)||{blockers:0,warnings:0,findings:[]},pending=!force&&row.blockers>0;const item={page:n,title:String(page?.navTitle||page?.title||`第 ${n} 页`),blockers:row.blockers,warnings:row.warnings,complete:!pending,findings:row.findings.slice(0,3)};if(item.complete)completion.completePages++;else {completion.pendingPages.push(item);if(!completion.nextPage)completion.nextPage=item;}}
   const advisories=[];if(content<95)advisories.push(`内容完整度 ${content}%：建议补齐元数据、页面标题或正文`);if(pageHealthValue<90)advisories.push(`页面健康 ${pageHealthValue}%：建议在 Reader 中检查密度与留白`);if(media<100)advisories.push(`媒体完整度 ${media}%：建议补齐缺失资源`);if(badLinks.length)advisories.push(`发现 ${badLinks.length} 个不安全或格式错误链接：必须先修复`);if(!narration.complete)advisories.push(`朗读音频 ${narration.label}：建议补齐 TTS 或更新基线`);if(accessibility<90)advisories.push(`无障碍评分 ${accessibility}%：建议补充图片 ALT 与视频说明`);if(devices.mobile!=='pass'||devices.desktop!=='pass')advisories.push('设备兼容性验收当前为提示项：建议在发布前完成桌面端与手机端真实回归。');if(warnings)advisories.push(`还有 ${warnings} 项提示检查，请在发布中心查看`);
-  const reason=!releaseableStatus?`当前状态“${issue.status||'未设置'}”不能正式发布；请先在期刊信息中设为 ready。`:!pageCount?'期刊至少需要 1 个页面。':blockers?`严格发布检查发现 ${blockers} 项硬性阻断问题。`:badLinks.length?`仍有 ${badLinks.length} 个不安全或格式错误链接，修复后才能发布。`:formalReady?'严格发布门禁已通过，质量与设备提示也已完成。':'严格发布门禁已通过；设备验收仍为提示项。';
-  return {version:V3_VERSION,issue:issue.id,label:issue.label||issue.id,status:issue.status||'draft',generatedAt:new Date().toISOString(),auditMode:'strict',metrics:{content,pageHealth:pageHealthValue,media,accessibility,links:{status:badLinks.length?'fail':'pass',total:links.length,invalid:badLinks.length},narration},devices,audit:{readiness:audit?.readiness||'unknown',score:Number(audit?.score||0),blockers,warnings,findings:findings.slice(0,24)},completion,canPublish:hardReady,hardReady,formalReady,advisories,outputs:evidence.outputs||{},lastPreflight:evidence.lastPreflight||null,reason};
+  const reason=force?'可直接发布：状态、内容、媒体、链接、设备和审计检查仅作提示。':!releaseableStatus?`当前状态“${issue.status||'未设置'}”不能正式发布；请先在期刊信息中设为 ready。`:!pageCount?'期刊至少需要 1 个页面。':blockers?`发布检查发现 ${blockers} 项提示。`:badLinks.length?`发现 ${badLinks.length} 个不安全或格式错误链接。`:formalReady?'发布检查已完成，质量与设备检查仅作提示。':'发布检查已完成；设备验收仍为提示项。';
+  return {version:V3_VERSION,issue:issue.id,label:issue.label||issue.id,status:issue.status||'draft',generatedAt:new Date().toISOString(),auditMode:force?'force':'strict',forceRelease:force,metrics:{content,pageHealth:pageHealthValue,media,accessibility,links:{status:badLinks.length?'fail':'pass',total:links.length,invalid:badLinks.length},narration},devices,audit:{readiness:audit?.readiness||'unknown',score:Number(audit?.score||0),blockers,warnings,findings:findings.slice(0,24)},completion,canPublish:hardReady,hardReady,formalReady,advisories,outputs:evidence.outputs||{},lastPreflight:evidence.lastPreflight||null,reason};
+}
+
+export function publicationIssueFingerprint(issue){return crypto.createHash('sha256').update(JSON.stringify(issue||{})).digest('hex');}
+export function publicationSourceIdentity(cwd=root){
+  const rev=spawnSync('git',['rev-parse','HEAD'],{cwd,encoding:'utf8'});
+  const commit=rev.status===0?String(rev.stdout||'').trim():'';
+  if(!/^[0-9a-f]{40}$/i.test(commit))return {available:false,commit:null,clean:false};
+  const work=spawnSync('git',['diff','--quiet','--ignore-submodules','--'],{cwd,encoding:'utf8'});
+  const index=spawnSync('git',['diff','--cached','--quiet','--ignore-submodules','--'],{cwd,encoding:'utf8'});
+  return {available:true,commit,clean:work.status===0&&index.status===0};
+}
+async function publicationOutputProvenance(id){
+  let issueFingerprint=null;
+  const issueFile=path.join(root,'issues',String(id),'issue.json');
+  if(await exists(issueFile)){try{issueFingerprint=publicationIssueFingerprint(JSON.parse(await readFile(issueFile,'utf8')));}catch{}}
+  const source=publicationSourceIdentity();
+  return {issueFingerprint,sourceAvailable:source.available,sourceCommit:source.commit,sourceClean:source.clean};
 }
 export function publicationEvidenceFile(id){return path.join(PUBLICATION_OUTPUT_ROOT,String(id),'publication-evidence.json');}
 export async function readPublicationEvidence(id){const file=publicationEvidenceFile(id);if(!(await exists(file)))return {version:V3_VERSION,issue:id,outputs:{}};try{return JSON.parse(await readFile(file,'utf8'));}catch{return {version:V3_VERSION,issue:id,outputs:{}};}}
-export async function writePublicationEvidence(id,patch){const current=await readPublicationEvidence(id);const next={...current,...patch,outputs:{...(current.outputs||{}),...(patch.outputs||{})},issue:id,updatedAt:new Date().toISOString()};const file=publicationEvidenceFile(id);await mkdir(path.dirname(file),{recursive:true});await writeFile(file,`${JSON.stringify(next,null,2)}\n`,'utf8');return next;}
+export async function writePublicationEvidence(id,patch){
+  const current=await readPublicationEvidence(id);
+  const rawOutputs=patch?.outputs&&typeof patch.outputs==='object'?patch.outputs:{};
+  let outputs=rawOutputs;
+  if(Object.keys(rawOutputs).length){
+    const provenance=await publicationOutputProvenance(id);
+    outputs=Object.fromEntries(Object.entries(rawOutputs).map(([key,value])=>[key,value&&typeof value==='object'&&!Array.isArray(value)?{...value,...provenance}:value]));
+  }
+  const next={...current,...patch,outputs:{...(current.outputs||{}),...outputs},issue:id,updatedAt:new Date().toISOString()};const file=publicationEvidenceFile(id);await mkdir(path.dirname(file),{recursive:true});await writeFile(file,`${JSON.stringify(next,null,2)}\n`,'utf8');return next;
+}
 export async function sha256(file){const data=await readFile(file);return crypto.createHash('sha256').update(data).digest('hex');}

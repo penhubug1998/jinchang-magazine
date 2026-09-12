@@ -4,11 +4,12 @@ import { spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import { buildArchiveHtml, catalogHref } from './lib-v3-catalog.mjs';
 import { snapshotIssue } from './lib-v3-history.mjs';
-import { V3_VERSION, exists, normalizeIssueId, parseArgs, readJson, root, writeJson } from './lib-v3-production.mjs';
+import { V3_VERSION, exists, forceReleaseEnabled, normalizeIssueId, parseArgs, readJson, root, writeJson } from './lib-v3-production.mjs';
 import { CACHE_POLICY, nginxCacheSnippet, writeDeploymentArtifacts } from './lib-v3-deploy.mjs';
 
 const args = parseArgs();
 const id = normalizeIssueId(args.issue || args.id || args._[0] || '');
+const force = forceReleaseEnabled();
 // Public URLs use a stable two-digit path (/01/, /02/, /03/) even though
 // source and release directories retain their three-digit issue ids.
 const publicIssuePath = (value) => {
@@ -20,7 +21,7 @@ const issueFile = path.join(root, 'issues', id, 'issue.json');
 if (!(await exists(issueFile))) { console.error(`找不到 issues/${id}`); process.exit(1); }
 let issue = await readJson(issueFile);
 if (issue.engine !== 'v3') { console.error(`${id} 不是 V3 期刊，发布器已停止。`); process.exit(1); }
-if (!['draft','review','ready','published'].includes(String(issue.status || 'draft'))) { console.error(`发布器要求 status=draft、review、ready 或 published，当前为 ${issue.status || 'unknown'}`); process.exit(1); }
+if (!force && !['ready','published'].includes(String(issue.status || 'draft'))) { console.error(`发布器要求 status=ready 或 published，当前为 ${issue.status || 'unknown'}；draft/review 请继续使用 Studio 预览或归档导出。`); process.exit(1); }
 
 function run(label, script, scriptArgs=[]) {
   console.log(`\n=== ${label} ===`);
@@ -29,7 +30,8 @@ function run(label, script, scriptArgs=[]) {
 }
 // Never turn real content/media/TTS blockers into a warning.  Browser device
 // checks are advisory for routine publishing and are handled separately.
-const checkArgs=['--issue',id,'--strict','--skip-browser'];
+const checkArgs=force?['--issue',id,'--skip-browser']:['--issue',id,'--strict','--skip-browser'];
+if(force)console.warn('直接发布模式：跳过发布前阻断检查，仅保留构建、产物写入和运行时错误检查。');
 run('发布前完整门禁','release-check-v3.mjs',checkArgs);
 
 const snapshot = await snapshotIssue(id, 'pre-publish');

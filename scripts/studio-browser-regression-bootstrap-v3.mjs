@@ -1,0 +1,92 @@
+import { spawn } from 'node:child_process';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+
+const root = process.cwd();
+const sourceFile = path.join(root, 'scripts', 'studio-browser-regression-v3.mjs');
+const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'jinchang-studio-browser-bootstrap-'));
+const tmpFile = path.join(tmpDir, 'studio-browser-regression-v3.mjs');
+
+const legacy = `const [html,css,js,presetJs]=await Promise.all([readFile(path.join(root,'src/studio/index.html'),'utf8'),readFile(path.join(root,'src/studio/studio.css'),'utf8'),readFile(path.join(root,'src/studio/studio.js'),'utf8'),readFile(path.join(root,'src/studio/design-presets.js'),'utf8')]);const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =').replace(/\\nexport const DESIGN_PRESET_IDS[^;]+;\\s*$/s,'\\n');const studioJs=js.replace(\"import { DESIGN_PRESETS } from './design-presets.js';\",presetInline);`;
+const current = `const [html,css,js,presetJs,inspectorJs]=await Promise.all([readFile(path.join(root,'src/studio/index.html'),'utf8'),readFile(path.join(root,'src/studio/studio.css'),'utf8'),readFile(path.join(root,'src/studio/studio.js'),'utf8'),readFile(path.join(root,'src/studio/design-presets.js'),'utf8'),readFile(path.join(root,'src/studio/workspace/inspector.js'),'utf8')]);const presetInline=presetJs.replace('export const DESIGN_PRESETS =','const DESIGN_PRESETS =');const studioJs=js.replace(/import\\s*\\{\\s*DESIGN_PRESETS(?:\\s*,\\s*DESIGN_PRESET_GROUPS)?\\s*\\}\\s*from\\s*['\"]\\.\\/design-presets\\.js['\"]\\s*;?/,presetInline);if(/from\\s*['\"]\\.\\/design-presets\\.js['\"]/.test(studioJs))throw new Error('Studio browser fixture failed to inline design-presets.js');`;
+const cssNeedle = `html.replace('<link rel="stylesheet" href="./studio.css">',`;
+const cssReplacement = `html.replace(/<link rel="stylesheet" href="\\.\\/studio\\.css(?:\\?[^\"]*)?">/,`;
+const scriptNeedle = `.replace('<script type="module" src="./studio.js"></script>',`;
+const scriptReplacement = `.replace(/<script type="module" src="\\.\\/studio\\.js(?:\\?[^\"]*)?"><\\/script>/,`;
+const inspectorFixtureNeedle = '`${mock}<script type="module">${studioJs}</script>`';
+const inspectorFixtureReplacement = '`${mock}<script type="module">${inspectorJs}</script><script type="module">${studioJs}</script>`';
+const runtimeHookNeedle = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);`;
+const runtimeHookReplacement = `await Promise.all([cdp.send('Page.enable'),cdp.send('Runtime.enable')]);const runtimeErrors=[];cdp.on('Runtime.exceptionThrown',p=>runtimeErrors.push(p.exceptionDetails?.exception?.description||p.exceptionDetails?.text||'runtime exception'));`;
+const readyNeedle = `const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,'Studio did not become ready');`;
+const readyReplacement = `const studioDiagnostics=studioReady?null:await evaluate(\`(()=>({ready:window.__V3_STUDIO_READY__===true,body:document.body?.innerText?.slice(0,500)||'',scripts:[...document.scripts].map(s=>({type:s.type,src:s.src||'',text:(s.textContent||'').slice(0,120)})),runtimeErrors:${'${JSON.stringify(runtimeErrors)}'}}))()\`).catch(error=>({diagnosticError:String(error),runtimeErrors}));const assert=(c,m)=>{if(!c)throw new Error(m)};assert(studioReady,\`Studio did not become ready: ${'${JSON.stringify(studioDiagnostics)}'}\`);`;
+const saveMockNeedle = `if(p==='/api/issues/003'&&opts.method==='PUT')return body({issue:JSON.parse(opts.body),snapshot:{id:'test'}});`;
+const saveMockReplacement = `if(p==='/api/issues/003'&&opts.method==='PUT'){const payload=JSON.parse(opts.body);return body({issue:structuredClone(payload.issue),source:{fingerprint:payload.sourceFingerprint||''},snapshot:{id:'test'}});}`;
+const auditStartNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<50;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#auditFindings .finding').length===3\"),`;
+const auditStartReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.getElementById('workspaceAuditRun').click()\");for(let i=0;i<80;i++){if(await evaluate(\"window.__V3_STUDIO__.state.audit && document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\").catch(()=>false))break;await sleep(30)}assert(await evaluate(\"document.querySelectorAll('#workspaceAuditTips .workspace-audit-row').length===3\"),`;
+const auditFirstLocateNeedle = `document.querySelector('#auditFindings .finding:nth-child(1) button')?.click()`;
+const auditFirstLocateReplacement = `document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(1) button')?.click()`;
+const auditSecondNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(2) button')?.click()\");`;
+const auditSecondReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(2) button')?.click()\");`;
+const auditThirdNeedle = `await evaluate(\"document.getElementById('auditBtn').click()\");for(let i=0;i<40;i++){if(await evaluate(\"!document.getElementById('auditCard').classList.contains('hidden')\").catch(()=>false))break;await sleep(25)}await evaluate(\"document.querySelector('#auditFindings .finding:nth-child(3) button')?.click()\");`;
+const auditThirdReplacement = `await evaluate(\"document.getElementById('auditBtn').click();document.querySelector('#workspaceAuditTips .workspace-audit-row:nth-child(3) button')?.click()\");`;
+const auditFirstAssertNeedle = `window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
+const auditFirstAssertReplacement = `!document.getElementById('workspaceAuditDialog').open && window.__V3_STUDIO__.state.page===17 && ((getComputedStyle(document.getElementById('visualEditor')).display==='none' && document.getElementById('managerWorkspaceTitle')?.textContent.length>0) || (document.activeElement?.id==='pageTitle' && window.__V3_STUDIO__.state.pageMetaExpanded===true && !document.getElementById('pageMetaCard').classList.contains('is-collapsed')))`;
+const mediaMetricNeedle = `summary:document.querySelectorAll('#mediaSummary>div').length,inspector:!!document.querySelector('#mediaInspector h4')}})()`;
+const mediaMetricReplacement = `summary:document.querySelectorAll('#mediaSummary>div').length,summaryText:document.getElementById('mediaSummary')?.textContent||'',inspector:!!document.querySelector('#mediaInspector h4')}})()`;
+const mediaAssertNeedle = `med.items===2&&med.summary===4&&med.inspector`;
+const mediaAssertReplacement = `med.items===2&&med.summary===5&&med.summaryText.includes('精选素材')&&med.inspector`;
+const designEditNeedle = `await evaluate(\`(()=>{const x=document.querySelector('[data-design-key="accent"]');x.value='#245b47';x.dispatchEvent(new Event('input',{bubbles:true}));})()\`);assert(await evaluate(\"window.__V3_STUDIO__.state.issue.design.tokens.accent==='#245b47'\"),`;
+const designEditReplacement = `assert(await evaluate(\"window.__V3_STUDIO__.state.designScope==='page'\"),\`${'${v.name}'}: Design entry should follow current page context\`);await evaluate(\"document.querySelector('[data-design-scope=theme]').click()\");assert(await evaluate(\"window.__V3_STUDIO__.state.designScope==='theme'\"),\`${'${v.name}'}: Theme design scope switch failed\`);await evaluate(\`(()=>{const x=document.querySelector('[data-design-key="accent"]');x.value='#245b47';x.dispatchEvent(new Event('input',{bubbles:true}));})()\`);assert(await evaluate(\"window.__V3_STUDIO__.state.issue.design.tokens.accent==='#245b47'\"),`;
+
+try {
+  const source = await readFile(sourceFile, 'utf8');
+  for (const [needle, label] of [
+    [legacy, 'legacy preset inline sequence'],
+    [cssNeedle, 'Studio stylesheet fixture replacement'],
+    [scriptNeedle, 'Studio script fixture replacement'],
+    [inspectorFixtureNeedle, 'workspace inspector fixture'],
+    [runtimeHookNeedle, 'Runtime hook'],
+    [readyNeedle, 'Studio ready assertion'],
+    [saveMockNeedle, 'wrapped Studio save mock'],
+    [auditStartNeedle, 'workspace audit start flow'],
+    [auditFirstLocateNeedle, 'workspace audit first locator'],
+    [auditSecondNeedle, 'workspace audit second locator'],
+    [auditThirdNeedle, 'workspace audit third locator'],
+    [auditFirstAssertNeedle, 'workspace audit first locate assertion'],
+    [mediaMetricNeedle, 'media workbench summary metrics'],
+    [mediaAssertNeedle, 'media workbench summary assertion'],
+    [designEditNeedle, 'context-aware design entry']
+  ]) {
+    if (!source.includes(needle)) throw new Error(`Studio browser bootstrap contract drifted: ${label} not found`);
+  }
+  const patched = source
+    .replace(legacy, current)
+    .replace(cssNeedle, cssReplacement)
+    .replace(scriptNeedle, scriptReplacement)
+    .replace(inspectorFixtureNeedle, inspectorFixtureReplacement)
+    .replace(runtimeHookNeedle, runtimeHookReplacement)
+    .replace(readyNeedle, readyReplacement)
+    .replace(saveMockNeedle, saveMockReplacement)
+    .replace(auditStartNeedle, auditStartReplacement)
+    .replace(auditFirstLocateNeedle, auditFirstLocateReplacement)
+    .replace(auditSecondNeedle, auditSecondReplacement)
+    .replace(auditThirdNeedle, auditThirdReplacement)
+    .replace(auditFirstAssertNeedle, auditFirstAssertReplacement)
+    .replace(mediaMetricNeedle, mediaMetricReplacement)
+    .replace(mediaAssertNeedle, mediaAssertReplacement)
+    .replace(designEditNeedle, designEditReplacement);
+  await writeFile(tmpFile, patched);
+  const exitCode = await new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [tmpFile], {
+      cwd: root,
+      env: process.env,
+      stdio: 'inherit'
+    });
+    child.once('error', reject);
+    child.once('exit', code => resolve(code ?? 1));
+  });
+  if (exitCode !== 0) process.exitCode = exitCode;
+} finally {
+  await rm(tmpDir, { recursive: true, force: true }).catch(() => {});
+}

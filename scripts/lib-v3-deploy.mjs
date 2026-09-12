@@ -18,11 +18,17 @@ export function cacheClass(file='') {
   return 'other';
 }
 export function cacheControlFor(file=''){ return CACHE_POLICY[cacheClass(file)]; }
+export function portableNameCompare(a='',b=''){
+  return Buffer.compare(Buffer.from(String(a),'utf8'),Buffer.from(String(b),'utf8'));
+}
+export function treeSha256ForFiles(files=[]){
+  return crypto.createHash('sha256').update((files||[]).map(x=>`${x.path}:${x.sha256}:${x.bytes}`).join('\n')).digest('hex');
+}
 
 export async function integrityManifest(dir,{issue=null}={}){
   const files=[];
   async function walk(current){
-    for(const entry of (await readdir(current,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){
+    for(const entry of (await readdir(current,{withFileTypes:true})).sort((a,b)=>portableNameCompare(a.name,b.name))){
       const file=path.join(current,entry.name);
       if(entry.isDirectory()) await walk(file);
       else if(entry.isFile()){
@@ -30,12 +36,15 @@ export async function integrityManifest(dir,{issue=null}={}){
         if(rel==='integrity.json') continue;
         const bytes=await readFile(file); const info=await stat(file);
         files.push({path:rel,bytes:info.size,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),cacheClass:cacheClass(rel),cacheControl:cacheControlFor(rel)});
+      } else {
+        throw new Error(`完整性清单不接受非常规文件：${posix(path.relative(dir,file))}`);
       }
     }
   }
   await walk(dir);
-  const treeSha256=crypto.createHash('sha256').update(files.map(x=>`${x.path}:${x.sha256}:${x.bytes}`).join('\n')).digest('hex');
-  return {version:V3_VERSION,issue,generatedAt:new Date().toISOString(),files,totalFiles:files.length,totalBytes:files.reduce((n,x)=>n+x.bytes,0),totalSize:humanBytes(files.reduce((n,x)=>n+x.bytes,0)),treeSha256};
+  const totalBytes=files.reduce((n,x)=>n+x.bytes,0);
+  const treeSha256=treeSha256ForFiles(files);
+  return {version:V3_VERSION,issue,generatedAt:new Date().toISOString(),files,totalFiles:files.length,totalBytes,totalSize:humanBytes(totalBytes),treeSha256};
 }
 
 export async function writeDeploymentArtifacts(dir,{issue=null}={}){
@@ -51,12 +60,46 @@ export function nginxCacheSnippet(){
 export async function verifyIntegrity(dir,manifestFile=path.join(dir,'integrity.json')){
   if(!(await exists(manifestFile))) return {ok:false,errors:['缺少 integrity.json'],checked:0};
   const manifest=JSON.parse(await readFile(manifestFile,'utf8')); const errors=[];
-  for(const item of manifest.files||[]){
+  const rows=Array.isArray(manifest.files)?manifest.files:[];
+  const manifestPaths=new Set();
+  let declaredBytes=0;
+  for(const item of rows){
+    if(!item||typeof item.path!=='string'){errors.push('manifest 包含无效文件项');continue}
+    if(manifestPaths.has(item.path)){errors.push(`manifest 重复文件：${item.path}`);continue}
+    manifestPaths.add(item.path);
+    declaredBytes+=Number(item.bytes)||0;
     const file=path.resolve(dir,item.path); if(file!==dir&&!file.startsWith(path.resolve(dir)+path.sep)){errors.push(`路径越界：${item.path}`);continue}
     if(!(await exists(file))){errors.push(`缺少文件：${item.path}`);continue}
     const bytes=await readFile(file); const sha=crypto.createHash('sha256').update(bytes).digest('hex');
     if(bytes.length!==item.bytes)errors.push(`大小变化：${item.path}`);
     if(sha!==item.sha256)errors.push(`SHA256 变化：${item.path}`);
   }
-  return {ok:errors.length===0,errors,checked:(manifest.files||[]).length,manifest};
+
+  if(manifest.totalFiles!==rows.length)errors.push(`manifest totalFiles 不一致：${manifest.totalFiles} != ${rows.length}`);
+  if(manifest.totalBytes!==declaredBytes)errors.push(`manifest totalBytes 不一致：${manifest.totalBytes} != ${declaredBytes}`);
+  const calculatedTreeSha=treeSha256ForFiles(rows);
+  if(manifest.treeSha256!==calculatedTreeSha)errors.push('manifest treeSha256 自校验失败');
+
+  const actualPaths=new Set();
+  const dirRoot=path.resolve(dir);
+  const manifestAbs=path.resolve(manifestFile);
+  const manifestRel=manifestAbs.startsWith(dirRoot+path.sep)?posix(path.relative(dirRoot,manifestAbs)):null;
+  async function walkActual(current){
+    for(const entry of await readdir(current,{withFileTypes:true})){
+      const file=path.join(current,entry.name);
+      const rel=posix(path.relative(dirRoot,file));
+      if(entry.isDirectory())await walkActual(file);
+      else if(entry.isFile()){
+        if(rel==='integrity.json'||rel===manifestRel)continue;
+        actualPaths.add(rel);
+      } else {
+        errors.push(`检测到未受支持的非常规文件：${rel}`);
+      }
+    }
+  }
+  await walkActual(dirRoot);
+  for(const rel of actualPaths)if(!manifestPaths.has(rel))errors.push(`未登记额外文件：${rel}`);
+  for(const rel of manifestPaths)if(!actualPaths.has(rel))errors.push(`manifest 登记文件不在实际文件集合：${rel}`);
+
+  return {ok:errors.length===0,errors,checked:rows.length,manifest,actualFiles:actualPaths.size,calculatedTreeSha256:calculatedTreeSha};
 }

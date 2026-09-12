@@ -17,7 +17,8 @@ function harness(){
   const elements=new Map(),calls={save:0,diff:0,draft:0,render:0};
   const issue={id:'001',status:'draft',subtitle:'原稿',pages:[]};
   const state={issue:structuredClone(issue),originalIssue:structuredClone(issue),sourceFingerprint:'base',sourceStatus:{fingerprint:'base'},dirty:true,sourceConflict:false,saving:false};
-  const context={state,Boolean,String,JSON,Promise,encodeURIComponent,
+  const context={state,Boolean,String,JSON,Promise,encodeURIComponent,PEER_SESSION_ID:'test-session',
+    window:{addEventListener(){}},document:{addEventListener(){}},
     $:id=>{if(!elements.has(id))elements.set(id,{disabled:false,textContent:'',value:'draft'});return elements.get(id)},
     cloneData:structuredClone,issuesEqual:(a,b)=>JSON.stringify(a)===JSON.stringify(b),
     commitPage:()=>true,syncMeta:()=>{},ensureIssueIdentity:()=>({changed:false}),
@@ -44,6 +45,12 @@ function harness(){
   assert.equal(await c.saveIssue(),false);await Promise.resolve();
   assert.equal(await c.saveIssue(),false);assert.equal(calls.save,1,'retry must remain blocked until conflict is resolved');
   assert.equal(s.sourceFingerprint,'base');assert.equal(s.issue.subtitle,'原稿');assert.equal(s.dirty,true);
+  assert(s.sourceConflict,'first SOURCE_DRIFT must lock saving against the remote version');
+  // Reopening the issue starts a clean session: the local baseline is rebound to the newest server version.
+  s.issue=structuredClone(s.originalIssue);s.dirty=false;s.sourceConflict=false;
+  await c.refreshSourceStatus({quiet:true,adoptBaseline:true});
+  assert.equal(s.sourceFingerprint,'remote-new','rebinding must adopt the newest source version');
+  assert.equal(await c.saveIssue(),false);assert(calls.save>=2,'after rebinding, saving must reach the server instead of being silently skipped');
 }
 {
   const {context:c,state:s,calls}=harness();let finish;

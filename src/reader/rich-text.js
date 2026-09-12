@@ -1,4 +1,4 @@
-const TIPTAP_VERSION = '3.30.2';
+const TIPTAP_VERSION = '3.31.3';
 const LOCAL_VENDOR_MODULE = './vendor/tiptap-runtime.js';
 
 const esc = (value='') => String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
@@ -173,6 +173,7 @@ export function createNativeStructuredEditor({element,content,onUpdate,onSelecti
 export async function createRichTextEditor({ element, content, onUpdate, onSelectionUpdate, onBlur }) {
   try{
     const {Editor,StarterKit,TextStyleKit,Highlight,TextAlign,version}=await loadTiptapRuntime();
+    element.replaceChildren();
     const editor=new Editor({
       element,
       extensions:[StarterKit.configure({heading:{levels:[1,2,3,4]}}),TextStyleKit,Highlight.configure({multicolor:true}),TextAlign.configure({types:['heading','paragraph']})],
@@ -182,6 +183,8 @@ export async function createRichTextEditor({ element, content, onUpdate, onSelec
       onSelectionUpdate:({editor})=>onSelectionUpdate?.(editor),
       onBlur:({editor})=>onBlur?.(editor.getJSON(),editor),
     });
+    const destroy=editor.destroy.bind(editor);
+    editor.destroy=()=>{const doc=editor.getJSON();destroy();element.innerHTML=renderRichText(doc);};
     editor.richTextRuntime='tiptap'; return editor;
   }catch(error){
     console.warn('Self-hosted Tiptap runtime unavailable; using structured native fallback.',error);

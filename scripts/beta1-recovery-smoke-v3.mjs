@@ -6,7 +6,7 @@ import { V3_VERSION } from './lib-v3-production.mjs';
 
 const root=process.cwd(); const sandbox=path.join(root,'.tmp-v3-beta1-recovery');
 const assert=(c,m)=>{if(!c)throw new Error(m)};
-function run(script,args=[],expect=0){const r=spawnSync(process.execPath,[path.join(sandbox,'scripts',script),...args],{cwd:sandbox,encoding:'utf8'});if((r.status??1)!==expect)throw new Error(`${script} status=${r.status} expected=${expect}\n${r.stdout}\n${r.stderr}`);return r;}
+function run(script,args=[],expect=0,env={}){const r=spawnSync(process.execPath,[path.join(sandbox,'scripts',script),...args],{cwd:sandbox,encoding:'utf8',env:{...process.env,...env}});if((r.status??1)!==expect)throw new Error(`${script} status=${r.status} expected=${expect}\n${r.stdout}\n${r.stderr}`);return r;}
 async function digestDir(dir){const rows=[];async function walk(d){for(const e of (await readdir(d,{withFileTypes:true})).sort((a,b)=>a.name.localeCompare(b.name))){const f=path.join(d,e.name);if(e.isDirectory())await walk(f);else{const b=await readFile(f);rows.push(`${path.relative(dir,f).replaceAll('\\','/')}:${crypto.createHash('sha256').update(b).digest('hex')}`)}}}await walk(dir);return crypto.createHash('sha256').update(rows.join('\n')).digest('hex')}
 
 await rm(sandbox,{recursive:true,force:true});await mkdir(sandbox,{recursive:true});
@@ -37,7 +37,7 @@ try{
   issue=JSON.parse(await readFile(issueFile,'utf8'));issue.subtitle='Beta1 第二次发布';await writeFile(issueFile,JSON.stringify(issue,null,2)+'\n');run('publish-v3.mjs',['--issue','001','--skip-browser']);releaseMeta=JSON.parse(await readFile(path.join(releaseDir,'release.json'),'utf8'));assert(releaseMeta.subtitle==='Beta1 第二次发布','第二次发布未替换为新版本');const goodRelease=await digestDir(releaseDir);assert(goodRelease!==firstRelease,'第二次成功发布未更新 release 内容');
 
   // 失败发布必须保留上一份可用 release。状态检查在 staging 前失败。
-  issue=JSON.parse(await readFile(issueFile,'utf8'));issue.status='draft';await writeFile(issueFile,JSON.stringify(issue,null,2)+'\n');const failed=run('publish-v3.mjs',['--issue','001','--skip-browser'],1);const failedAudit=JSON.parse(await readFile(path.join(sandbox,'reports','v3-release-audit-001.json'),'utf8'));assert(failedAudit.issues[0].blockers.some(x=>x.code==='STATUS_NOT_READY'),'失败原因不是预期的发布状态门禁');const afterFailed=await digestDir(releaseDir);assert(afterFailed===goodRelease,'失败发布破坏了上一份 release 目录');
+  issue=JSON.parse(await readFile(issueFile,'utf8'));issue.status='draft';await writeFile(issueFile,JSON.stringify(issue,null,2)+'\n');const failed=run('publish-v3.mjs',['--issue','001','--skip-browser'],1,{V3_STRICT_RELEASE:'1'});const failedOutput=`${failed.stdout}\n${failed.stderr}`;assert(/status=ready 或 published/.test(failedOutput),`失败原因不是预期的发布状态门禁。实际输出：\n${failedOutput}`);const afterFailed=await digestDir(releaseDir);assert(afterFailed===goodRelease,'失败发布破坏了上一份 release 目录');
   assert(!(await readdir(path.join(sandbox,'release-v3'))).some(x=>x.includes('.staging-')||x.includes('.previous-')),'发布失败后残留 staging/previous 目录');
   console.log('V3 beta1 恢复专项通过：重复构建一致、快照安全回滚、连续成功发布、失败发布保留上一发布包，且无 staging 残留。');
 } finally { await rm(sandbox,{recursive:true,force:true}); }

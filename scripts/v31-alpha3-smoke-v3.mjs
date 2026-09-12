@@ -3,8 +3,8 @@ import crypto from 'node:crypto';
 import { DESIGN_PRESETS } from '../src/studio/design-presets.js';
 
 const pkg=JSON.parse(await readFile('package.json','utf8'));
-if(!['3.1.0-alpha.3','3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19','3.1.0'].includes(pkg.version))throw new Error(`V3.1 alpha3 回归不支持当前版本：${pkg.version}`);
-if(!['3.1-alpha3','3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19','3.1-alpha24'].includes(pkg.v31SchemaVersion))throw new Error(`V3.1 alpha3 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
+if(pkg.version!=='3.1.0'&&!['3.1.0-alpha.3','3.1.0-alpha.4','3.1.0-alpha.5','3.1.0-alpha.6','3.1.0-alpha.7','3.1.0-alpha.8','3.1.0-alpha.9','3.1.0-alpha.10','3.1.0-alpha.11','3.1.0-alpha.12','3.1.0-alpha.13','3.1.0-alpha.14','3.1.0-alpha.15','3.1.0-alpha.16','3.1.0-alpha.17','3.1.0-alpha.18','3.1.0-alpha.19'].includes(pkg.version))throw new Error(`V3.1 alpha3 回归不支持当前版本：${pkg.version}`);
+if(pkg.v31SchemaVersion!=='3.1-alpha24'&&!['3.1-alpha3','3.1-alpha4','3.1-alpha5','3.1-alpha6','3.1-alpha7','3.1-alpha8','3.1-alpha9','3.1-alpha10','3.1-alpha11','3.1-alpha12','3.1-alpha13','3.1-alpha14','3.1-alpha15','3.1-alpha16','3.1-alpha17','3.1-alpha18','3.1-alpha19'].includes(pkg.v31SchemaVersion))throw new Error(`V3.1 alpha3 回归不支持当前 schema：${pkg.v31SchemaVersion}`);
 if(pkg.v3StableVersion!=='3.0.0')throw new Error('V3.0.0 稳定发布锁未保留');
 const schema=JSON.parse(await readFile('baselines/v3-schema-3.1-alpha3.json','utf8'));
 if(schema.designWorkflow?.themePresets!==true||schema.designWorkflow?.readerDirectTargeting!=='studio-embed-only')throw new Error('Alpha3 设计工作流 schema 不完整');
@@ -30,7 +30,12 @@ const lock=JSON.parse(await readFile('baselines/v3.0-final-gate-lock-alpha3.json
 if(lock.stableVersion!=='3.0.0'||lock.parentOverlaySha256!=='88b0528541f67401613f8bd2df98998d8ff5ed58e2c784e7f27f0c65a2228daa')throw new Error('正式门禁锁定基线信息异常');
 for(const [file,expected] of Object.entries(lock.files||{})){
   const actual=crypto.createHash('sha256').update(await readFile(file)).digest('hex');
-  if(actual!==expected)throw new Error(`V3.0 正式门禁关键文件被 Alpha3 改动：${file}`);
+  if(actual!==expected)throw new Error(`Alpha3 发布边界关键文件发生漂移：${file}`);
 }
+if(lock.releaseBoundaryPolicy!=='V3.1 generic final entrypoint fail-closed; V3.0 implementation preserved under versioned script')throw new Error('Alpha3 发布边界策略声明异常');
+const finalGuard=await readFile('scripts/final-release-v3.mjs','utf8');
+if(!finalGuard.includes('[P1-16]')||!finalGuard.includes('final:v31')||!finalGuard.includes('process.exit(64)'))throw new Error('Alpha3 未锁住 V3.1 通用 final 入口 fail-closed 行为');
+const finalV30=await readFile('scripts/final-release-v30-v3.mjs','utf8');
+if(!finalV30.includes('FINAL_PACKAGE_READY_FOR_DEPLOY')||!finalV30.includes("status:'RELEASED'"))throw new Error('Alpha3 未锁住 V3.0 版本化两阶段发布实现');
 const digest=crypto.createHash('sha256').update(JSON.stringify(schema)).digest('hex').slice(0,16);
 console.log(`V3.1-alpha3 smoke 通过：主题预设、样式复制粘贴、页面/组件批量套用、设计撤销重做、Studio Reader 点选直达和 V3.0 证据绑定均正常。schema=${digest}`);
