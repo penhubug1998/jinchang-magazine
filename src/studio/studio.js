@@ -788,6 +788,59 @@ function selectedPageSplitPlan(){const page=currentPage(),blocks=page?.blocks||[
 function renderSplitPageDialog(plan){if(!plan?.ok)return;const sourceTitle=$('#splitPageSourceTitle'),targetTitle=$('#splitPageTargetTitle'),summary=$('#splitPageDialogSummary'),sourceList=$('#splitPageSourceList'),targetList=$('#splitPageTargetList'),confirmButton=$('#confirmSplitPage');if(sourceTitle)sourceTitle.textContent=`第 ${plan.sourceIndex+1} 页 · ${plan.sourceTitle}`;if(targetTitle)targetTitle.textContent=`新页 · ${plan.target.navTitle||plan.target.title||'续页'}`;if(summary)summary.textContent=`将 ${plan.selected.length} 个内容块移动到新续页；原文与内容块 ID 保持不变，不复制内容。`;if(sourceList)sourceList.innerHTML=plan.remaining.length?plan.remaining.map((block,index)=>`<div class="split-page-item muted"><b>保留</b><span>${escText(splitBlockLabel(block,index))}</span></div>`).join(''):'<div class="split-page-item muted"><b>提示</b><span>来源页将没有剩余内容块。</span></div>';if(targetList)targetList.innerHTML=plan.selected.map((block,index)=>`<div class="split-page-item"><b>移动</b><span>${escText(splitBlockLabel(block,plan.selectedIndices[index]))}</span></div>`).join('');if(confirmButton)confirmButton.disabled=false;}
 function openSplitPageDialog(){const plan=selectedPageSplitPlan();if(!plan.ok)return toast(plan.message,3200);state.pageMovePreview=plan;renderSplitPageDialog(plan);$('#visualHealthDialog')?.close();const dialog=$('#splitPageDialog');if(dialog&&!dialog.open)dialog.showModal();return plan;}
 function moveSelectedBlocksToNewPage(){const plan=state.pageMovePreview||selectedPageSplitPlan();if(!plan?.ok)return toast(plan?.message||'当前选择无法拆分',3200);const source=state.issue?.pages?.[plan.sourceIndex];if(!source||source.id!==plan.sourceId)return toast('当前页面已变化，请重新选择内容块',3200);const liveBlocks=source.blocks||[],selectedIdSet=new Set(plan.selectedIds),moved=liveBlocks.filter(block=>selectedIdSet.has(block?.id));if(moved.length!==plan.selectedIds.length||moved.length>=liveBlocks.length)return toast('内容块已变化，请重新打开拆分预览',3200);const target=cloneData(plan.target);target.blocks=moved;const insertAt=Math.min(state.issue.pages.length,Math.max(0,plan.sourceIndex+1)),closing=state.issue.pages.findIndex(page=>page?.type==='closing'),actualAt=closing>=0&&insertAt>closing?closing:insertAt;source.blocks=liveBlocks.filter(block=>!selectedIdSet.has(block?.id));state.issue.pages.splice(actualAt,0,target);state.page=actualAt;state.readerTargetPage=actualAt;state.selectedBlocks=new Set(moved.map((_,index)=>index));state.selectedBlockIds=new Set(moved.map(block=>block.id));state.lastSelectedBlock=moved.length-1;state.pageMovePreview=null;$('#splitPageDialog')?.close();ensureIssueIdentity(state.issue);syncJsonFromPage();markDirty({historyGroup:'page-split',forceHistory:true});renderPages();renderPage();syncWorkspaceRoute();broadcastPeer('presence');requestAnimationFrame(()=>document.querySelector(`.page-item[data-page-index="${state.page}"]`)?.scrollIntoView({block:'nearest'}));toast(`已将 ${moved.length} 个内容块移动到第 ${actualAt+1} 页`);return true;}
+// —— PPT 式画布编辑：复制 / 粘贴 / 原位复制 / 层级 ——
+// 画布模式下面向"自由编辑"的最小命令集。所有改动都走同一条历史链，
+// 一次操作一个撤销点。
+function selectedBlockRows(){return validSelectedBlockIndices();}
+function copySelectedBlocks(){
+  const blocks=currentPage()?.blocks||[],rows=selectedBlockRows();
+  if(!rows.length)return toast('请先选择内容块');
+  state.canvasClipboard=rows.map(i=>cloneData(blocks[i])).filter(Boolean);
+  toast(`已复制 ${state.canvasClipboard.length} 个内容块`);
+  return state.canvasClipboard.length;
+}
+function pasteCanvasClipboard(offset={x:18,y:18}){
+  const blocks=currentPage()?.blocks||[],clip=state.canvasClipboard||[];
+  if(!clip.length){toast('剪贴板为空，先按 ⌘/Ctrl+C 复制');return false;}
+  if(blocks.length+clip.length>LIMITS.blocksPerPage){toast(`粘贴后超过单页 ${LIMITS.blocksPerPage} 个内容块`);return false;}
+  const inserted=[],ids=[];
+  for(const source of clip){
+    const copy=cloneData(source);
+    regenerateBlockIdentity(copy);
+    const design={...(copy.design||{})};
+    design.x=Math.round((Number(design.x)||0)+offset.x);
+    design.y=Math.round((Number(design.y)||0)+offset.y);
+    copy.design=design;
+    const at=blocks.length;
+    blocks.push(copy);
+    inserted.push(at);
+    ids.push(copy.id);
+  }
+  state.selectedBlocks=new Set(inserted);
+  state.selectedBlockIds=new Set(ids);
+  state.lastSelectedBlock=inserted[0]??null;
+  mutateBlocks();
+  if(state.canvasMode)pushReaderPreview().catch(()=>{});
+  toast(`已粘贴 ${inserted.length} 个内容块`);
+  return true;
+}
+function setSelectedCanvasLayer(direction){
+  if(!state.canvasMode)return false;
+  const blocks=currentPage()?.blocks||[],rows=selectedBlockRows();
+  if(!rows.length)return toast('请先选择内容块');
+  const current=blocks.reduce((max,b)=>Math.max(max,Number(b?.design?.z)||0),0);
+  for(const index of rows){
+    const block=blocks[index];if(!block)continue;
+    const z=Number(block.design?.z)||0;
+    const next=direction==='front'?current+1:direction==='back'?Math.min(0,z)-1:z+1;
+    block.design={...(block.design||{}),z:Math.round(next)};
+  }
+  markDirty({preview:false,historyGroup:`canvas-layer-${direction}`,forceHistory:true});
+  syncJsonFromPage();renderBlockList();renderPreview();pushReaderPreview().catch(()=>{});
+  toast(direction==='front'?'已置于最上层':direction==='back'?'已置于最下层':'已上移一层');
+  return true;
+}
+function canvasClipboardActive(){return Boolean(state.canvasMode&&(state.canvasClipboard||[]).length);}
 function duplicateSelectedBlocks(){const blocks=currentPage()?.blocks||[],rows=validSelectedBlockIndices();if(!rows.length)return toast('请先选择内容块');if(blocks.length+rows.length>LIMITS.blocksPerPage)return toast(`复制后超过单页 ${LIMITS.blocksPerPage} 个内容块`);let offset=0,newSel=[],newIds=[];for(const i of rows){const at=i+offset+1;const copy=cloneData(blocks[i+offset]);regenerateBlockIdentity(copy);blocks.splice(at,0,copy);newSel.push(at);newIds.push(copy.id);offset++;}state.selectedBlocks=new Set(newSel);state.selectedBlockIds=new Set(newIds);state.lastSelectedBlock=newSel[0]??null;mutateBlocks();toast(`已复制 ${rows.length} 个内容块`);}
 function deleteSelectedBlocks(){const blocks=currentPage()?.blocks||[],rows=validSelectedBlockIndices();if(!rows.length)return toast('请先选择内容块');if(!confirm(`删除已选 ${rows.length} 个内容块？`))return;for(const i of [...rows].sort((a,b)=>b-a))blocks.splice(i,1);state.selectedBlocks.clear();state.selectedBlockIds.clear();state.lastSelectedBlock=null;mutateBlocks();toast(`已删除 ${rows.length} 个内容块`);}
 function setCanvasMode(on,{silent=false}={}){state.canvasMode=Boolean(on);document.body.classList.toggle('canvas-editor-on',state.canvasMode);const b=$('#canvasModeBtn');if(b){b.setAttribute('aria-pressed',String(state.canvasMode));b.textContent=state.canvasMode?'✓ 画布编排':'✥ 画布编排';}try{localStorage.setItem('v3StudioCanvasMode',state.canvasMode?'1':'0')}catch{}/* Page navigation is authoritative. Send it before canvas state so a stale iframe cannot claim a new page without rendering it. */syncReaderPreviewPage({reliable:true});requestAnimationFrame(()=>syncCanvasSelectionToReader());setTimeout(()=>syncCanvasSelectionToReader(),120);if(!silent)toast(state.canvasMode?'已开启预览画布直编：拖动排序，右侧手柄调宽度':'已退出画布编排');}
@@ -1657,6 +1710,16 @@ window.addEventListener('message',e=>{const data=e.data||{};if(data.type!=='canv
 window.addEventListener('message',e=>{const frame=$('#builtPreviewFrame'),data=e.data||{},pending=state.readerPendingPageRequest;if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||data.issueId!==state.issue?.id||!pending)return;if(data.type==='page-ack'){const raw=Number(data.pageIndex),rendered=Number(data.renderedPageIndex),pageId=data.pageId==null?null:String(data.pageId),valid=raw===pending.target&&rendered===pending.target&&(!pending.pageId||pageId===pending.pageId);if(!valid){pending.observedMismatch=true;sendReaderPageCommand(pending.target,{reliable:true,reuseRequest:true});e.stopImmediatePropagation();}}else if(data.type==='page'){const raw=Number(data.pageIndex);if(raw!==pending.target){pending.observedMismatch=true;sendReaderPageCommand(pending.target,{reliable:true,reuseRequest:true});}e.stopImmediatePropagation();}},true);
 window.addEventListener('message',e=>{const data=e.data||{},managerFrame=$('#managerPagePreview');if(managerFrame&&e.source===managerFrame.contentWindow&&data.source==='v3-reader'&&data.issueId===state.issue?.id){if(data.type==='page'){const i=resolveReaderPageIndex(data);if(i>=0&&i!==state.page)goToPage(i,{fromReader:true});}return;}const frame=$('#builtPreviewFrame');if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||data.issueId!==state.issue?.id)return;if(data.type==='page-ack'){const i=resolveReaderPageIndex(data),pending=state.readerPendingPageRequest;if(pending&&data.requestId===pending.requestId&&i===pending.target&&(!pending.pageId||!data.pageId||pending.pageId===data.pageId)){clearReaderPageRequest(pending.requestId);frame.dataset.pageIndex=String(i);frame.dataset.renderedPageIndex=String(i);frame.dataset.pageSyncState='synced';if(data.pageId)frame.dataset.pageId=data.pageId;updateBuiltPreviewState();}return;}if(data.type==='page'){const i=resolveReaderPageIndex(data);if(i<0)return;const pending=state.readerPendingPageRequest;if(pending){if(i===pending.target){clearReaderPageRequest(pending.requestId);frame.dataset.pageIndex=String(i);frame.dataset.renderedPageIndex=String(i);frame.dataset.pageSyncState='synced';updateBuiltPreviewState();}else{pending.observedMismatch=true;sendReaderPageCommand(pending.target,{reliable:true,reuseRequest:true});}return;}frame.dataset.renderedPageIndex=String(i);if(i!==state.page)goToPage(i,{fromReader:true});else{frame.dataset.requestedPageIndex=String(i);frame.dataset.pageSyncState='synced';updateBuiltPreviewState();}return;}if(data.type==='ready'){state.readerPreviewReady=true;updateBuiltPreviewState();pushReaderPreview().finally(()=>syncReaderPreviewPage({reliable:true}));requestAnimationFrame(()=>{syncReaderPreviewPage({reliable:true});syncCanvasSelectionToReader();renderMobileStudio();});return;}if(data.type==='synced'){state.readerPreviewReady=true;state.builtPreviewStale=false;updateBuiltPreviewState();syncReaderPreviewPage({reliable:true});syncCanvasSelectionToReader();renderMobileStudio();return;}if(data.type==='visual-metrics'){state.visualMetrics={pages:Array.isArray(data.pages)?data.pages:[],at:Number(data.at)||Date.now()};updateVisualHealth();if(state.readerPreviewDevice==='adaptive')refreshAdaptiveReaderDevice();return;}if(data.type==='canvas-select'){const i=resolveReaderPageIndex(data);if(i<0)return;if(i!==state.page){if(!goToPage(i,{fromReader:true}))return;}const blockIndex=resolveTopBlockIndex(data);if(blockIndex<0)return;if(data.blockId)setBlockSelectionByIds([data.blockId],{additive:Boolean(data.additive)});else toggleBlockSelection(blockIndex,{metaKey:Boolean(data.additive),ctrlKey:Boolean(data.additive)});focusBlock(findBlockIndexById(currentPage(),data.blockId)>=0?findBlockIndexById(currentPage(),data.blockId):blockIndex);return;}if(data.type==='canvas-reorder'){const from=resolveTopBlockIndex(data),to=Number(data.toIndex);if(!Number.isInteger(from)||!Number.isInteger(to)||from===to)return;const blocks=currentPage()?.blocks||[];if(from<0||to<0||from>=blocks.length||to>=blocks.length)return;const blockId=blocks[from]?.id,selected=validSelectedBlockIds().includes(blockId);if(!blockId)return;const moved=dispatchStudioCommand('block:reorder',{blockId,toIndex:to},{historyGroup:'canvas-reorder',forceHistory:true,preview:false});if(!moved)return;if(selected){state.selectedBlockIds=new Set([blockId]);renderBlockSelectionState();}state.lastSelectedBlock=findBlockIndexById(currentPage(),blockId);renderPreview();pushReaderPreview().catch(()=>{});return;}if(data.type==='canvas-resize'){const i=resolveTopBlockIndex(data),width=Math.max(25,Math.min(100,Number(data.width)||100));const block=currentPage()?.blocks?.[i];if(!block)return;const anchor=captureReaderViewportAnchor();dispatchStudioCommand('block:design',{blockId:block.id,changes:{width}},{historyGroup:'canvas-resize',forceHistory:true,preview:false});renderPreview();pushReaderPreview().then(()=>requestAnimationFrame(()=>restoreReaderViewportAnchor(anchor))).catch(()=>{});return;}if(data.type==='canvas-align'){const i=resolveTopBlockIndex(data),align=String(data.align||'');const block=currentPage()?.blocks?.[i];if(!block||!['left','center','right'].includes(align))return;dispatchStudioCommand('block:design',{blockId:block.id,changes:{alignSelf:align}},{historyGroup:'canvas-align',forceHistory:true,preview:false});renderPreview();pushReaderPreview().catch(()=>{});return;}if(data.type==='canvas-media'){const i=resolveTopBlockIndex(data),action=String(data.action||''),block=currentPage()?.blocks?.[i];if(!block||!['image','video'].includes(block.type))return;setBlockSelection([i],{anchor:i});if(action==='replace'){openMediaDialog({kind:block.type==='video'?'video':'image',blockIndex:i,field:'src'});return;}if(action==='adjust'&&block.type==='image'){openImageAdjust(i);return;}if(action==='poster'&&block.type==='video'){openMediaDialog({kind:'image',blockIndex:i,field:'poster'});return;}if(action==='fit'&&block.type==='image'){block.fit=block.fit==='cover'?'contain':'cover';mutateBlocks();toast(`图片填充：${block.fit}`);return;}if(action==='ratio'&&block.type==='image'){const seq=['auto','16:9','4:3','3:2','1:1'],at=Math.max(0,seq.indexOf(block.frameRatio||'auto'));block.frameRatio=seq[(at+1)%seq.length];mutateBlocks();toast(`画框比例：${block.frameRatio}`);return;}return;}if(data.type==='canvas-richtext-edit'){const i=resolveTopBlockIndex(data),block=data.blockId?findBlockByIdDeep(currentPage()?.blocks||[],data.blockId):currentPage()?.blocks?.[i],doc=data.richText;if(!block||!['paragraph','quote'].includes(block.type)||!doc||doc.type!=='doc'||!Array.isArray(doc.content))return;const plain=String(data.plainText??'').slice(0,24000);dispatchStudioCommand('block:update',{blockId:block.id,changes:{richText:cloneData(doc),text:plain}},{historyGroup:`canvas-richtext:${String(data.sessionId||block.id)}`,forceHistory:Boolean(data.final),recordHistory:Boolean(data.final),preview:false,renderBlocks:Boolean(data.final)});setBlockSelectionByIds([block.id]);if(data.final){renderPreview();scheduleDraftSave();}return;}if(data.type==='canvas-text-edit'){const i=resolveTopBlockIndex(data),field=String(data.field||''),block=data.blockId?findBlockByIdDeep(currentPage()?.blocks||[],data.blockId):currentPage()?.blocks?.[i];if(!block||!['text','title','case','warning'].includes(field)||typeof block[field]!=='string')return;const changes={[field]:String(data.value??'').slice(0,12000)};if(data.resetRichText&&field==='text'&&['paragraph','quote'].includes(block.type))changes.richText=null;dispatchStudioCommand('block:update',{blockId:block.id,changes},{historyGroup:'canvas-text',forceHistory:true,preview:false});setBlockSelectionByIds([block.id]);renderPreview();scheduleReaderPreviewSync(160);return;}if(data.type==='canvas-style'){const i=resolveTopBlockIndex(data),action=String(data.action||'');if(Number.isInteger(i))setBlockSelection(state.selectedBlocks.size?[...state.selectedBlocks]:[i]);if(action==='font-delta'){const delta=Number(data.value)||0;mutateSelectedBlocks(block=>{block.design={...(block.design||{})};block.design.fontSize=Math.max(10,Math.min(48,Number(block.design.fontSize||14)+delta));},{group:'canvas-style',message:''});}else if(action==='bold'){mutateSelectedBlocks(block=>{block.design={...(block.design||{})};block.design.fontWeight=String(block.design.fontWeight)==='700'?'400':'700';},{group:'canvas-style',message:''});}else if(action==='align'){applyQuickDesign({textAlign:['left','center','right','justify'].includes(data.value)?data.value:'left'},{message:''});}return;}if(data.type==='design-target'){const i=resolveReaderPageIndex(data),blockIndex=Number(data.blockIndex);if(i<0||!Number.isInteger(blockIndex))return;if(i!==state.page){if(!commitPage()){syncReaderPreviewPage();return;}state.page=i;renderPages();renderPage();}const target={blockIndex,blockId:data.blockId||null};if(Number.isInteger(Number(data.columnIndex)))target.columnIndex=Number(data.columnIndex);if(Number.isInteger(Number(data.childIndex)))target.childIndex=Number(data.childIndex);focusBlock(blockIndex);openDesignDialog('block',target);return;}if(data.type==='page'){const i=resolveReaderPageIndex(data);if(i<0||i===state.page)return;goToPage(i,{fromReader:true});}});
 window.addEventListener('message',e=>{const frame=managerPreviewFrame(),data=e.data||{};if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||String(data.issueId)!==String(state.issue?.id))return;if(data.type==='ready'){state.managerPreviewReady=true;state.managerPreviewIssueId=String(state.issue.id);syncManagerPreviewIssue();sendManagerPreviewPage();return;}if(data.type==='synced'){state.managerPreviewReady=true;sendManagerPreviewPage();}});
+// Reader 画布工具条转发的编辑命令（复制/粘贴/层级）。
+window.addEventListener('message',e=>{const frame=$('#builtPreviewFrame'),data=e.data||{};if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||String(data.issueId)!==String(state.issue?.id)||data.type!=='canvas-command')return;
+  if(!state.canvasMode)return;
+  const blockId=data.blockId?String(data.blockId):'';
+  if(blockId){const index=findBlockIndexById(currentPage(),blockId);if(index>=0){state.selectedBlocks=new Set([index]);state.selectedBlockIds=new Set([blockId]);state.lastSelectedBlock=index;}}
+  const action=String(data.action||'');
+  const handlers={copy:()=>copySelectedBlocks(),paste:()=>pasteCanvasClipboard(),duplicate:()=>duplicateSelectedBlocks(),'layer-front':()=>setSelectedCanvasLayer('front'),'layer-back':()=>setSelectedCanvasLayer('back'),'layer-forward':()=>setSelectedCanvasLayer('forward'),'layer-backward':()=>setSelectedCanvasLayer('backward')};
+  const run=handlers[action];
+  if(run)run();
+});
 window.addEventListener('message',e=>{const frame=$('#builtPreviewFrame'),data=e.data||{};if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||String(data.issueId)!==String(state.issue?.id)||data.type!=='canvas-transform')return;const block=findBlockByIdDeep(currentPage()?.blocks||[],data.blockId)||resolveBlockLocation(data)?.block;if(!block)return;const raw=data.changes||{},changes={};for(const key of ['x','y','rotate','scale']){if(raw[key]==null)continue;const limits=key==='scale'?[.5,1.8]:key==='rotate'?[-180,180]:[-240,240];const n=Number(raw[key]);if(!Number.isFinite(n))continue;changes[key]=key==='scale'?Number(Math.max(limits[0],Math.min(limits[1],n)).toFixed(2)):Math.round(Math.max(limits[0],Math.min(limits[1],n)));}if(!Object.keys(changes).length)return;dispatchStudioCommand('block:design',{blockId:block.id,changes},{historyGroup:'canvas-transform',forceHistory:true,preview:false});renderPreview();scheduleReaderPreviewSync(80);});
 window.addEventListener('message',e=>{const frame=$('#builtPreviewFrame'),data=e.data||{};if(!frame||e.source!==frame.contentWindow||data.source!=='v3-reader'||String(data.issueId)!==String(state.issue?.id)||data.type!=='canvas-text-edit')return;const field=String(data.field||''),match=/^items\.(\d+)\.(title|text)$/.exec(field),block=findBlockByIdDeep(currentPage()?.blocks||[],data.blockId)||resolveBlockLocation(data)?.block;if(!block||(!match&&field!=='attribution'))return;if(match){const items=Array.isArray(block.items)?clone(block.items):[],item=items[Number(match[1])];if(!item)return;item[match[2]]=String(data.value??'').slice(0,12000);dispatchStudioCommand('block:update',{blockId:block.id,changes:{items}},{historyGroup:'canvas-text',forceHistory:true,preview:false});}else{dispatchStudioCommand('block:update',{blockId:block.id,changes:{attribution:String(data.value??'').slice(0,12000)}},{historyGroup:'canvas-text',forceHistory:true,preview:false});}setBlockSelectionByIds([block.id]);renderPreview();scheduleReaderPreviewSync(80);});
 $('#builtPreviewFrame').addEventListener('load',()=>{state.readerPreviewReady=false;const frame=$('#builtPreviewFrame');frame?.removeAttribute('data-rendered-page-index');updateBuiltPreviewState();scheduleReaderPreviewFit();setTimeout(()=>syncReaderPreviewPage({reliable:true}),0);});
@@ -2440,6 +2503,60 @@ function syncNewStartModeUi(){const mode=selectedNewStartMode();$('#newCloneFiel
 function openNewIssueDialog(){ $('#newSubtitle').value=''; $('#newLabel').value=''; renderCloneOptions(); const radio=document.querySelector('input[name="newStartMode"][value="clone"]');if(radio)radio.checked=true;syncNewStartModeUi();$('#newDialog').showModal(); }
 $('#studioBuildBtn')?.addEventListener('click',openNewIssueDialog);
 document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.action-menu[open]'))if(!menu.contains(e.target))menu.removeAttribute('open');});
+// PPT 式精确微调：画布模式下选中内容块后，方向键移动 1px，Shift 键 10px。
+// 手感要求来自"像 PPT 那样自由编辑"，键盘对齐是最基础的一条。
+function nudgeSelectedCanvasBlocks(dx,dy){
+  if(!state.canvasMode||!state.issue)return false;
+  const selected=[...state.selectedBlocks].filter(i=>Number.isInteger(i)).sort((a,b)=>a-b);
+  if(!selected.length)return false;
+  const page=currentPage();if(!page)return false;
+  let changed=0;
+  for(const index of selected){
+    const block=page.blocks?.[index];if(!block)continue;
+    const design={...(block.design||{})};
+    design.x=Math.round((Number(design.x)||0)+dx);
+    design.y=Math.round((Number(design.y)||0)+dy);
+    if(!design.x)delete design.x;
+    if(!design.y)delete design.y;
+    if(Object.keys(design).length)block.design=design;else delete block.design;
+    changed++;
+  }
+  if(!changed)return false;
+  markDirty({preview:false,historyGroup:'canvas-nudge',forceHistory:true});
+  syncJsonFromPage();
+  renderBlockList();
+  renderPreview();
+  pushReaderPreview().catch(()=>{});
+  return true;
+}
+// 画布快捷键：⌘/Ctrl+C 复制、⌘/Ctrl+V 粘贴、⌘/Ctrl+D 原位复制、
+// ⌘/Ctrl+[ / ] 下移 / 上移一层、⌘/Ctrl+Shift+[ / ] 置底 / 置顶。
+document.addEventListener('keydown',e=>{
+  if(!state.canvasMode)return;
+  const mod=e.metaKey||e.ctrlKey;
+  if(!mod)return;
+  const editable=e.target?.closest?.('input,textarea,select,[contenteditable="true"]');
+  if(editable)return;
+  const key=String(e.key||'').toLowerCase();
+  if(key==='c'){if(e.shiftKey)return;if(copySelectedBlocks())e.preventDefault();return;}
+  if(key==='v'){if(pasteCanvasClipboard())e.preventDefault();return;}
+  if(key==='d'){if(duplicateSelectedBlocks())e.preventDefault();return;}
+  if(key==='['||key===']'){
+    const direction=key===']'?(e.shiftKey?'front':'forward'):(e.shiftKey?'back':'backward');
+    if(setSelectedCanvasLayer(direction))e.preventDefault();
+    return;
+  }
+});
+document.addEventListener('keydown',e=>{
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  if(!/^Arrow(Up|Down|Left|Right)$/.test(e.key))return;
+  const editable=e.target?.closest?.('input,textarea,select,[contenteditable="true"]');
+  if(editable)return;
+  const step=e.shiftKey?10:1;
+  const dx=e.key==='ArrowRight'?step:e.key==='ArrowLeft'?-step:0;
+  const dy=e.key==='ArrowDown'?step:e.key==='ArrowUp'?-step:0;
+  if(nudgeSelectedCanvasBlocks(dx,dy)){e.preventDefault();}
+});
 document.addEventListener('keydown',e=>{const mod=e.metaKey||e.ctrlKey;if(!mod)return;const editable=e.target.closest?.('input,textarea,select,[contenteditable="true"]');if(e.key.toLowerCase()==='s'){e.preventDefault();saveFromToolbar();return;}if(editable)return;if(e.key.toLowerCase()==='z'){e.preventDefault();e.shiftKey?redoHistory():undoHistory();return;}if(e.key.toLowerCase()==='y'){e.preventDefault();redoHistory();}});
 window.addEventListener('visibilitychange',()=>{if(document.hidden&&state.dirty)saveDraftNow();});window.addEventListener('pagehide',()=>closePeerChannel());
 window.addEventListener('pagehide',()=>{if(!state.issue||!state.dirty)return;try{fetch(appUrl(`/api/issues/${encodeURIComponent(state.issue.id)}/draft`),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({issue:state.issue}),keepalive:true});}catch{}});
