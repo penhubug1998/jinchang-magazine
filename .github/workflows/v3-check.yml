@@ -7,11 +7,21 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    env:
+      # findChromium() 只读取 CHROMIUM，不读取运行器已设置的 CHROME_BIN。
+      # 不显式指定时它会先命中 /usr/bin/chromium（Chromium snapshot 构建），
+      # 该构建在无头模式下不会暴露 DevTools 端口，导致 PDF 导出失败。
+      CHROMIUM: /usr/bin/google-chrome
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Browser runtime preflight
+        run: |
+          set -euo pipefail
+          test -x "$CHROMIUM"
+          "$CHROMIUM" --version
       - run: npm run test:narration-scope
       - run: npm run test:import-safety
       - run: npm run test:publication-share
