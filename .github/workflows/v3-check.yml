@@ -40,8 +40,17 @@ jobs:
       - run: npm run test:default-templates
       - name: Core verification
         run: npm run verify:core
-      - name: Reader browser regression (001 + 002)
-        run: npm run test:browser:001 && npm run test:browser
+      - name: Browser regression (required)
+        # reader 001/002 plus every suite measured to pass on this runner.
+        # Reports all failures instead of stopping at the first one.
+        run: |
+          set -uo pipefail
+          suites="test:browser:001 test:browser test:beta1-browser test:v31-alpha16-browser test:v31-alpha19-browser test:v31-alpha20-browser test:v31-alpha21-browser test:v31-alpha22-browser test:v31-alpha22-1-browser test:v31-alpha23-browser test:v31-alpha26-browser test:v31-alpha1-browser test:v31-alpha2-browser test:v31-alpha3-browser test:v31-alpha4-browser test:v31-alpha5-browser test:v31-alpha6-browser test:v31-alpha7-browser test:v31-alpha8-browser test:v31-alpha9-browser test:v31-alpha10-browser test:v31-alpha11-browser test:v31-alpha12-browser test:v31-alpha13-browser"
+          failed=0
+          for suite in $suites; do
+            if npm run --silent "$suite"; then echo "PASS  $suite"; else echo "FAIL  $suite"; failed=1; fi
+          done
+          [ "$failed" -eq 0 ]
       - name: Verify complete repository media
         run: npm run media:check -- --strict
 
@@ -53,7 +62,7 @@ jobs:
         continue-on-error: true
         run: |
           set -uo pipefail
-          suites="test:studio-browser test:alpha13-browser test:alpha14-browser test:beta1-browser test:beta2-browser test:rc1-browser test:rc3-browser test:v31-alpha14-browser test:v31-alpha15-browser test:v31-alpha16-browser test:v31-alpha17-browser test:v31-alpha18-browser test:v31-alpha19-browser test:v31-alpha20-browser test:v31-alpha21-browser test:v31-alpha22-browser test:v31-alpha22-1-browser test:v31-alpha23-browser test:v31-alpha24-browser test:v31-alpha25-browser test:v31-alpha26-browser test:v31-alpha1-browser test:v31-alpha2-browser test:v31-alpha3-browser test:v31-alpha4-browser test:v31-alpha5-browser test:v31-alpha6-browser test:v31-alpha7-browser test:v31-alpha8-browser test:v31-alpha9-browser test:v31-alpha10-browser test:v31-alpha11-browser test:v31-alpha12-browser test:v31-alpha13-browser"
+          suites="test:studio-browser test:alpha13-browser test:alpha14-browser test:beta2-browser test:rc1-browser test:rc3-browser test:v31-alpha14-browser test:v31-alpha15-browser test:v31-alpha17-browser test:v31-alpha18-browser test:v31-alpha24-browser test:v31-alpha25-browser"
           passed=0; failed=0; failing=""
           for suite in $suites; do
             log="$(mktemp)"

@@ -1,4 +1,5 @@
-import { assetTagPattern } from './lib-v3-browser-page.mjs';
+import { assetTagPattern, buildReaderModule } from './lib-v3-browser-page.mjs';
+const readerModule = await buildReaderModule();
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn, spawnSync } from 'node:child_process';
 import os from 'node:os';
@@ -55,7 +56,7 @@ const readerDoc = readerHtml
   .replace(assetTagPattern('link','reader.css'), `<style>${readerCss}</style>`)
   .replace(
     '<script type="module" src="./reader.js"></script>',
-    `<script>window.__ISSUE_DATA__=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(window.__ISSUE_DATA__),{status:200,headers:{'Content-Type':'application/json'}})</script><script type="module">${readerJs}</script>`,
+    `<script>window.__ISSUE_DATA__=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(window.__ISSUE_DATA__),{status:200,headers:{'Content-Type':'application/json'}})</script><script type="module">${readerModule}</script>`,
   );
 
 const mock = `<script>
