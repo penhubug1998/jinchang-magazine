@@ -134,7 +134,11 @@ export function detectPublicationStructure(paras=[],title=''){
   // 被剥掉序号前缀的标题、只作为标记存在的标题）记在 retained 上，由分页阶段
   // 落回页面正文。这里不允许静默丢内容。
   const keep=(target,p,represented)=>{target.retained=target.retained||[];const text=cleanText(p.text);if(represented==null||!sameText(represented,text))target.retained.push({text,level:Number(p.level||2),links:Array.isArray(p.links)?p.links:[]});};
-  const addPara=p=>{if(closing){closing.paras.push(p);return;}if(preface&&!currentSection){preface.paras.push(p);return;}if(currentArticle){currentArticle.paras.push(p);return;}if(currentSection){currentSection.intro.push(p);}};
+  // 兜底桶：出现在第一个版块标题之前、又不属于卷首语/尾刊的内容（副标题、导语等）
+  // 过去会被静默丢弃；现在收进 lead，由分页阶段生成"刊首"页。
+  let lead=null;
+  const leadStore=()=>{lead=lead||{paras:[],retained:[]};return lead;};
+  const addPara=p=>{if(closing){closing.paras.push(p);return;}if(preface&&!currentSection){preface.paras.push(p);return;}if(currentArticle){currentArticle.paras.push(p);return;}if(currentSection){currentSection.intro.push(p);return;}leadStore().paras.push(p);};
   for(const p0 of paras){const p={...p0,text:cleanText(p0.text),level:Number(p0.level||headingLevel(p0.style))};if(!p.text)continue;if(title&&p.text===title&&p.level===1)continue;
     if(isPrefaceHeading(p.text)&&p.level<=2&&bareMarker(p.text)){prefaceStore=preface={title:'卷首语',paras:[],retained:[]};currentSection=null;currentArticle=null;closing=null;continue;}
     if(isClosingHeading(p.text)&&p.level<=2&&bareMarker(p.text)){closingStore=closing={title:p.text.replace(/^[📌\s]+/,''),paras:[],retained:[]};currentSection=null;currentArticle=null;preface=null;continue;}
@@ -146,7 +150,7 @@ export function detectPublicationStructure(paras=[],title=''){
   for(const section of sections){const semantic=classifySectionSemantic(section);section.semanticType=semantic.id;section.semanticLabel=semantic.label;section.semanticConfidence=semantic.confidence;section.semanticReason=semantic.reason;section.suggestedLayout=semantic.layoutPreset;section.pageType=semantic.pageType;}
   const articleCount=sections.reduce((n,s)=>n+s.articles.length,0);const detected=sections.length>=2&&(articleCount>=3||prefaceStore||closingStore);if(!detected)return null;
   const lowConfidence=sections.filter(s=>s.semanticConfidence==='low').length;const summary={kind:'periodical',confidence:sections.length>=4?'high':'medium',title,hasPreface:Boolean(prefaceStore),hasClosing:Boolean(closingStore),sectionCount:sections.length,articleCount,dynamicSections:true,unknownSectionCount:lowConfidence,sections:sections.map(s=>({name:s.name,tagline:s.tagline,pageType:s.pageType,semanticType:s.semanticType,semanticLabel:s.semanticLabel,semanticConfidence:s.semanticConfidence,semanticReason:s.semanticReason,suggestedLayout:s.suggestedLayout,articles:s.articles.length,hasIntro:s.intro.length>0,feature:s.feature||'',source:s.source||''}))};
-  return {summary,preface:prefaceStore,closing:closingStore,sections};
+  return {summary,preface:prefaceStore,closing:closingStore,lead:lead&&lead.paras.length?lead:null,sections};
 }
 
 
@@ -354,6 +358,7 @@ function restoreRetainedMarkers(pub={}){
   const add=(bucket,rows)=>{for(const row of rows||[]){const text=cleanText(row.text);if(!text||textAlreadyVisible(bucket,text))continue;const links=Array.isArray(row.links)?row.links:[];bucket.paras.unshift({text,style:'Subhead',level:Number(row.level)||2,links,richText:null,list:false,restoredMarker:true});}};
   for(const sec of pub.sections||[]){if(!Array.isArray(sec.intro))sec.intro=[];add({paras:sec.intro},sec.retained);for(const article of sec.articles||[]){if(!Array.isArray(article.paras))article.paras=[];add({paras:article.paras},article.retained);}}
   if(pub.preface&&Array.isArray(pub.preface.paras))add(pub.preface,pub.preface.retained);
+  if(pub.lead&&Array.isArray(pub.lead.paras))add(pub.lead,pub.lead.retained);
   if(pub.closing&&Array.isArray(pub.closing.paras))add(pub.closing,pub.closing.retained);
 }
 function textAlreadyVisible(bucket,text){
@@ -407,6 +412,7 @@ export function importCompletenessReport(doc={},pages=[]){
 export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){
   const pub=doc.publication;restoreRetainedMarkers(pub);if(!pub)throw new Error('未识别到整期期刊结构');const requested=Math.max(420,Math.min(1400,Number(targetChars)||760));const target=Math.max(900,Math.round(requested*1.28));const pages=[];
   if(pub.preface?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:'卷首语',kicker:'卷首语',section:'',pageType:'article',paras:pub.preface.paras},target));}
+  if(pub.lead?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:doc.title||'刊首',kicker:'刊首',section:'',pageType:'article',paras:pub.lead.paras},target));}
   for(const sec of pub.sections){const kicker=sec.display||sec.name;const introBlocks=semanticBlocks(sec.intro,sec.pageType);const introWeight=introBlocks.reduce((n,b)=>n+blockWeight(b),0);const hasRestoredMarker=(sec.intro||[]).some(p=>p&&p.restoredMarker);if(introBlocks.length&&(introWeight>=160||sec.feature||hasRestoredMarker)){const introTitle=sec.feature||sec.tagline||`${sec.name}导读`;pages.push(...semanticUnitPages({title:introTitle,navTitle:`${sec.name}｜导读`,kicker,section:sec.name,pageType:sec.pageType,paras:sec.intro},Math.max(target,900)));}
     for(const article of sec.articles){const cleanTitle=stripNumberPrefix(article.title)||article.title;pages.push(...semanticUnitPages({title:cleanTitle,navTitle:`${sec.name}｜${cleanTitle}`,kicker,section:sec.name,pageType:sec.pageType,paras:article.paras},target));}
   }

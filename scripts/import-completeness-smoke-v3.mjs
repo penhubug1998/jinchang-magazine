@@ -41,25 +41,48 @@ const PARAGRAPHS = [
   ['BodyText', '尾页正文。']
 ];
 
+// 内联图片与表格：DOCX 里最常见的非文字对象，必须在导入与分页后都存在
+const INLINE_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+const TABLE_ROWS = [['项目', '第一季度', '第二季度'], ['走访慰问', '12 次', '15 次']];
+
 function docxParts() {
   const esc = value => String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const body = PARAGRAPHS.map(([style, text]) => `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`).join('');
+  const imagePara = '<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">'
+    + '<wp:extent cx="1524000" cy="1016000"/><wp:docPr id="1" name="图片 1" descr="测试插图"/>'
+    + '<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    + '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    + '<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">'
+    + '<pic:nvPicPr><pic:cNvPr id="1" name="image1.png"/><pic:cNvPicPr/></pic:nvPicPr>'
+    + '<pic:blipFill><a:blip r:embed="rId10"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>'
+    + '<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="1524000" cy="1016000"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>'
+    + '</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>';
+  const tablePara = '<w:tbl><w:tblPr/><w:tblGrid/>' + TABLE_ROWS.map(row =>
+    '<w:tr>' + row.map(cell => `<w:tc><w:p><w:r><w:t xml:space="preserve">${esc(cell)}</w:t></w:r></w:p></w:tc>`).join('') + '</w:tr>').join('') + '</w:tbl>';
+  const body = PARAGRAPHS.map(([style, text], index) => {
+    if (style === 'Heading2' && text === '一、防火灾') return imagePara + `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+    if (style === 'BodyText' && text === '防火灾正文。') return `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>` + tablePara;
+    void index;
+    return `<w:p><w:pPr><w:pStyle w:val="${style}"/></w:pPr><w:r><w:t xml:space="preserve">${esc(text)}</w:t></w:r></w:p>`;
+  }).join('');
   const styles = ['Heading1', 'Heading2', 'Heading3'].map((name, index) => `<w:style w:type="paragraph" w:styleId="${name}"><w:name w:val="heading ${index + 1}"/></w:style>`).join('');
   return {
     'word/document.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`,
     'word/styles.xml': `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${styles}</w:styles>`,
-    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>'
+    'word/_rels/document.xml.rels': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId10" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/image1.png"/></Relationships>',
+    '[Content_Types].xml': '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>',
+    'word/media/image1.png': { __base64: INLINE_PNG_BASE64 }
   };
 }
 
 async function buildFixtureDocx() {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'v3-import-fixture-'));
   const parts = docxParts();
+  const { mkdir, writeFile } = await import('node:fs/promises');
   for (const [name, content] of Object.entries(parts)) {
     const target = path.join(dir, name);
-    const { mkdir, writeFile } = await import('node:fs/promises');
     await mkdir(path.dirname(target), { recursive: true });
-    await writeFile(target, content, 'utf8');
+    if (content && typeof content === 'object' && content.__base64) await writeFile(target, Buffer.from(content.__base64, 'base64'));
+    else await writeFile(target, content, 'utf8');
   }
   const file = path.join(dir, 'fixture.docx');
   const zip = spawnSync('zip', ['-q', '-r', file, ...Object.keys(parts)], { cwd: dir, encoding: 'utf8' });
@@ -101,12 +124,32 @@ async function checkDocument(file, { label, minPages = 1 }) {
       `${label}: ${thin}/${pag.pages.length} 页内容量过低（分页密度失控）`);
   }
 
+  // 3.5 非文字对象：源里有图片/表格时，分页后必须还在（这是"Word 图文导入"的核心保证）
+  const countBlocks = (blocks, type) => {
+    let n = 0;
+    for (const b of blocks || []) {
+      if (b?.type === type) n++;
+      for (const col of b?.columns || []) n += countBlocks(col.blocks, type);
+    }
+    return n;
+  };
+  const sourceImages = countBlocks(doc.blocks, 'image');
+  const sourceTables = countBlocks(doc.blocks, 'table');
+  const pageImages = pag.pages.reduce((n, p) => n + countBlocks(p.blocks, 'image'), 0);
+  const pageTables = pag.pages.reduce((n, p) => n + countBlocks(p.blocks, 'table'), 0);
+  assert.equal(pageImages, sourceImages, `${label}: 图片丢失（源 ${sourceImages} → 页 ${pageImages}）`);
+  assert.equal(pageTables, sourceTables, `${label}: 表格丢失（源 ${sourceTables} → 页 ${pageTables}）`);
+  if (sourceImages) {
+    const assets = (doc.embeddedAssets || []).length;
+    assert.equal(assets, sourceImages, `${label}: 内嵌图片资产数量与图片块不一致（${assets} vs ${sourceImages}）`);
+  }
+
   // 4. 标题层级必须保留（历史故障是把 80 个 Word 标题全降级成普通段落）
   const headings = doc.blocks.filter(b => /heading/i.test(String(b.style || '')) || Number(b.level) > 0);
   const subheads = doc.blocks.filter(b => b.style === 'subhead' || /subhead/i.test(String(b.style || '')));
   assert.ok(headings.length + subheads.length > 0, `${label}: 没有识别出任何标题层级`);
 
-  console.log(`  ${label}: ${pag.completeness.sourceBlocks} 块 → ${pag.pages.length} 页（总权重 ${total}），0 丢失、0 空页，权重<400 的页 ${thin} 个`);
+  console.log(`  ${label}: ${pag.completeness.sourceBlocks} 块 → ${pag.pages.length} 页（总权重 ${total}），0 丢失、0 空页，图片 ${pageImages}/${sourceImages}、表格 ${pageTables}/${sourceTables} 保留，权重<400 的页 ${thin} 个`);
   return pag;
 }
 
