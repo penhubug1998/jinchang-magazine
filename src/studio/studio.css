@@ -933,3 +933,14 @@ dialog.publication-center-dialog:not([open]){display:none}
 @media(max-width:620px){.unified-dialog>form>.unified-dialog-body{padding:12px}.unified-dialog>form>.dialog-head,.unified-dialog>form>.dialog-actions{padding:12px!important}}
 .source-conflict-banner,.publication-review-step{flex:0 0 auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px;border:1px solid #e7c39a;border-radius:12px;background:#fff6e8;margin-bottom:16px}.source-conflict-banner>div,.publication-review-step>div{flex:1 1 260px}.source-conflict-banner p,.publication-review-step p{font-size:12px;line-height:1.7;margin:6px 0 0}.source-conflict-banner.hidden{display:none}.publication-review-step{background:#f6f7f2;border-color:var(--line)}
 @media(max-width:700px){.source-conflict-banner button,.publication-review-step button{width:100%}}
+
+/* 图层列表（属性面板）：按 design.z 从高到低列出当前页内容块。 */
+.layer-list{list-style:none;margin:0 0 8px;padding:0;display:grid;gap:4px;max-height:220px;overflow:auto}
+.layer-row{display:flex;align-items:center;gap:7px;padding:6px 7px;border:1px solid var(--line,#e6dcd2);border-radius:9px;background:#fffdfa;cursor:pointer;font-size:10px;line-height:1.35}
+.layer-row:hover{border-color:#cbb9a6;background:#fff8ef}
+.layer-row.is-selected{border-color:var(--accent,#8d1f1c);background:#fff3ec;box-shadow:0 0 0 1px rgba(141,31,28,.18) inset}
+.layer-order{font-variant-numeric:tabular-nums;color:#a3927f;font-size:9px;min-width:16px}
+.layer-copy{flex:1 1 auto;min-width:0;display:grid;gap:1px}
+.layer-copy b{font-size:10px;color:#4a3a2c}
+.layer-copy small{color:#8b7c6c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-z{color:#a3927f;font-size:9px;font-variant-numeric:tabular-nums}
