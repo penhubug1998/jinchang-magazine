@@ -49,7 +49,22 @@ async function emitV3Issue(issueDir, targetName){
   if (issue.engine !== "v3") return null;
   const target = path.join(output, targetName);
   await mkdir(target, { recursive:true });
-  await cp(readerSource, target, { recursive:true });
+  // 只复制运行需要的 reader 资源；README 之类的文档不进入公开发布包。
+  const publishableReaderFiles = new Set(["index.html", "reader.js", "reader.css", "rich-text.js", "layout-engine.js"]);
+  for (const entry of await readdir(readerSource, { withFileTypes:true })) {
+    if (entry.isFile()) {
+      if (!publishableReaderFiles.has(entry.name)) continue;
+      await cp(path.join(readerSource, entry.name), path.join(target, entry.name));
+      continue;
+    }
+    if (entry.isDirectory() && entry.name === "vendor") {
+      // vendor 只带运行时产物，附带 README / 源码映射不发布
+      await cp(path.join(readerSource, entry.name), path.join(target, entry.name), {
+        recursive:true,
+        filter: source => !/\.(md|txt|map|ts)$/i.test(source)
+      });
+    }
+  }
   const readerIndex=path.join(target,"index.html");
   const stamped=(await readFile(readerIndex,"utf8"))
     .replace(/\.\/reader\.css(?:\?[^"']*)?/,`./reader.css?v=${readerAssetTag}`)
