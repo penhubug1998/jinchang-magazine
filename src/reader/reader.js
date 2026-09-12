@@ -572,6 +572,51 @@ function bindStudioTextToolbar(){const bar=$("studioTextToolbar"),bubble=$("stud
 window.__V3_RICH_TEXT_ENGINE__={info:RICH_TEXT_ENGINE_INFO,get active(){return Boolean(activeRichTextEditor)},get runtime(){return getRichTextRuntimeStatus()},normalizeRichText,richTextPlainText};
 window.__V3_LAYOUT_ENGINE__={info:LAYOUT_ENGINE_INFO,get plan(){return state.publishingPlan},rebuild(){state.publishingPlan=buildPublishingPlan(state.issue||{});return state.publishingPlan;}};
 // Canvas gestures change geometry only; document order stays in the structure panel.
+// 对齐参考线：拖动时把元素边缘/中线吸附到页面边缘、页面中线，以及同页其它元素的
+// 边缘与中线。PPT 里"对齐不费劲"靠的就是这个，之前只有画线函数但从未被调用。
+const CANVAS_SNAP_PX=6;
+function studioCanvasSnapContext(el){
+  const page=el.closest('.page');
+  if(!page)return null;
+  const pageRect=page.getBoundingClientRect();
+  const zoom=Math.max(.01,pageRect.width/page.offsetWidth);
+  const toLocal=rect=>({
+    left:(rect.left-pageRect.left)/zoom,right:(rect.right-pageRect.left)/zoom,
+    top:(rect.top-pageRect.top)/zoom,bottom:(rect.bottom-pageRect.top)/zoom
+  });
+  const vertical=[{pos:0,kind:'page-left'},{pos:page.offsetWidth/2,kind:'page-center'},{pos:page.offsetWidth,kind:'page-right'}];
+  const horizontal=[{pos:0,kind:'page-top'},{pos:page.offsetHeight/2,kind:'page-middle'},{pos:page.offsetHeight,kind:'page-bottom'}];
+  for(const other of studioAllTargets()){
+    if(other===el)continue;
+    const r=toLocal(other.getBoundingClientRect());
+    vertical.push({pos:r.left,kind:'peer-left'},{pos:(r.left+r.right)/2,kind:'peer-center'},{pos:r.right,kind:'peer-right'});
+    horizontal.push({pos:r.top,kind:'peer-top'},{pos:(r.top+r.bottom)/2,kind:'peer-middle'},{pos:r.bottom,kind:'peer-bottom'});
+  }
+  return {page,zoom,pageRect,vertical,horizontal};
+}
+function studioCanvasSnapAxis(candidates,values){
+  let best=null;
+  for(const candidate of candidates||[]){
+    for(const value of values){
+      const delta=candidate.pos-value;
+      if(Math.abs(delta)<=CANVAS_SNAP_PX&&(!best||Math.abs(delta)<Math.abs(best.delta)))best={delta,pos:candidate.pos};
+    }
+  }
+  return best;
+}
+function applyStudioCanvasSnap(el,snap,proposedX,proposedY){
+  if(!snap)return {x:proposedX,y:proposedY};
+  const rect=el.getBoundingClientRect();
+  const width=rect.width/snap.zoom,height=rect.height/snap.zoom;
+  const left=rect.left/snap.zoom,top=rect.top/snap.zoom;
+  const v=studioCanvasSnapAxis(snap.vertical,[left+proposedX,left+proposedX+width/2,left+proposedX+width]);
+  const h=studioCanvasSnapAxis(snap.horizontal,[top+proposedY,top+proposedY+height/2,top+proposedY+height]);
+  clearStudioCanvasGuides();
+  // 参考线是 body 级绝对定位元素，位置要换算回视口坐标。
+  if(v)studioCanvasGuide('vertical',snap.pageRect.left+v.pos*snap.zoom);
+  if(h)studioCanvasGuide('horizontal',snap.pageRect.top+h.pos*snap.zoom);
+  return {x:proposedX+(v?v.delta:0),y:proposedY+(h?h.delta:0)};
+}
 function bindStudioCanvasTransformDrag(handle,index,blockId,el=handle,mode='move'){
   handle.onpointerdown=ev=>{
     if(!state.canvasMode||ev.button!==0)return;
@@ -579,19 +624,23 @@ function bindStudioCanvasTransformDrag(handle,index,blockId,el=handle,mode='move
     const base={x:Number(el.dataset.designX)||0,y:Number(el.dataset.designY)||0,rotate:Number(el.dataset.designRotate)||0,scale:Number(el.dataset.designScale)||1};
     const page=el.closest('.page'),zoom=page?Math.max(.01,page.getBoundingClientRect().width/page.offsetWidth):1;
     const sx=ev.clientX,sy=ev.clientY,rect=el.getBoundingClientRect(),original=el.style.transform;
+    const snapContext=mode==='move'?studioCanvasSnapContext(el):null;
     let changes={...base},moved=false;
     handle.setPointerCapture?.(ev.pointerId);
     const move=e=>{
       const dx=(e.clientX-sx)/zoom,dy=(e.clientY-sy)/zoom;
       if(Math.hypot(dx,dy)<3&&!moved)return;
       moved=true;
-      if(mode==='scale')changes.scale=Math.max(.5,Math.min(1.8,base.scale*(1+2*((e.clientX-sx)*rect.width+(e.clientY-sy)*rect.height)/Math.max(1,rect.width**2+rect.height**2))));
-      else{changes.x=Math.max(-240,Math.min(240,Math.round(base.x+dx)));changes.y=Math.max(-240,Math.min(240,Math.round(base.y+dy)));}
+      if(mode==='scale'){changes.scale=Math.max(.5,Math.min(1.8,base.scale*(1+2*((e.clientX-sx)*rect.width+(e.clientY-sy)*rect.height)/Math.max(1,rect.width**2+rect.height**2))));clearStudioCanvasGuides();}
+      else{changes.x=Math.max(-240,Math.min(240,Math.round(base.x+dx)));changes.y=Math.max(-240,Math.min(240,Math.round(base.y+dy)));
+        const snapped=applyStudioCanvasSnap(el,snapContext,changes.x,changes.y);
+        changes.x=Math.max(-240,Math.min(240,Math.round(snapped.x)));changes.y=Math.max(-240,Math.min(240,Math.round(snapped.y)));}
       el.style.transform=`translate(${changes.x}px,${changes.y}px) rotate(${changes.rotate}deg) scale(${changes.scale})`;
     };
     const finish=e=>{
       handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',finish);handle.removeEventListener('pointercancel',finish);
       if(handle.hasPointerCapture?.(ev.pointerId))handle.releasePointerCapture(ev.pointerId);
+      clearStudioCanvasGuides();
       if(e.type==='pointercancel'||!moved){el.style.transform=original;return;}
       changes.scale=Number(changes.scale.toFixed(2));
       for(const [key,value] of Object.entries(changes))el.dataset['design'+key[0].toUpperCase()+key.slice(1)]=String(value);

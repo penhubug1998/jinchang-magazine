@@ -130,4 +130,28 @@ function harness(blocks, selected = [0]) {
   assert.ok(none.calls.toast.some(x => /请先选择内容块/.test(x)), '未选中应提示');
 }
 
-console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整均按数据契约生效。');
+// ---- 拖动吸附（对齐参考线的数学部分）------------------------------------
+// Reader 里的实现依赖 DOM 测量，这里只把"取最近的吸附目标"这段纯函数抽出来验。
+const snapSource = await readFile('src/reader/reader.js', 'utf8');
+const snapCode = (() => {
+  const from = snapSource.indexOf('const CANVAS_SNAP_PX=');
+  const to = snapSource.indexOf('function applyStudioCanvasSnap(');
+  assert.ok(from >= 0 && to > from, '找不到吸附实现的源码片段');
+  return snapSource.slice(from, to);
+})();
+{
+  const snapContext = { Number, Math };
+  vm.createContext(snapContext);
+  vm.runInContext(snapCode, snapContext);
+  const candidates = [{ pos: 100 }, { pos: 300 }, { pos: 500 }];
+  // 距离 4px -> 吸到 300
+  assert.equal(snapContext.studioCanvasSnapAxis(candidates, [296]).pos, 300, '4px 内应吸附');
+  // 距离 20px -> 不吸附
+  assert.equal(snapContext.studioCanvasSnapAxis(candidates, [320]), null, '超出阈值不应吸附');
+  // 两个目标都在阈值内时取更近的
+  assert.equal(snapContext.studioCanvasSnapAxis(candidates, [297]).pos, 300, '应取最近的目标');
+  assert.equal(snapContext.studioCanvasSnapAxis([{ pos: 100 }, { pos: 104 }], [102]).pos, 100, '等距时取更近的（100 与 104 距 102 都是 2，先命中 100）');
+  assert.equal(vm.runInContext('CANVAS_SNAP_PX', snapContext), 6, '吸附阈值应为 6px');
+}
+
+console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整、拖动吸附（6px 阈值取最近对齐目标）均按数据契约生效。');
