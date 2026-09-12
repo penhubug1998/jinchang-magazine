@@ -17,6 +17,8 @@ jobs:
   # tags not found", "reading 'openIssue'") - they reported drift in the
   # harness, not a defect in the product, and had never once passed in CI.
   # A suite that fails twice for a non-product reason is retired, not repaired.
+  # test:v31-canvas-marquee-browser was added on 2026-09-12: the canvas free-editing
+  # layer (marquee select, drag readout) has no other browser-level coverage.
   # Retired suites keep their npm scripts; run one explicitly when touching its
   # area. See RETIRED-BROWSER-SUITES.md.
   verify:
@@ -55,7 +57,7 @@ jobs:
         # Each is reported individually so one run yields the whole failure list.
         run: |
           set -uo pipefail
-          suites="test:browser:001 test:browser test:beta1-browser test:v31-alpha1-browser test:v31-alpha2-browser test:v31-alpha16-browser test:v31-alpha22-browser test:v31-alpha23-browser test:v31-alpha26-browser test:v31-alpha10-browser"
+          suites="test:browser:001 test:browser test:beta1-browser test:v31-alpha1-browser test:v31-alpha2-browser test:v31-alpha16-browser test:v31-alpha22-browser test:v31-alpha23-browser test:v31-alpha26-browser test:v31-alpha10-browser test:v31-canvas-marquee-browser"
           failed=0
           for suite in $suites; do
             log="$(mktemp)"
