@@ -30,7 +30,8 @@ const containerWeight=blockWeight({type:'container',columns:[{blocks:[{type:'par
 assert(containerWeight>=530,'container weight must include nested image/text instead of collapsing to a tiny flat weight');
 const importSource=await readFile('scripts/lib-v3-import.mjs','utf8');
 assert(importSource.includes('function rebalanceRichPublicationPages('),'DOCX rich-object pagination reflow is missing');
-assert(importSource.includes('const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages)'),'periodical pagination must rebalance after merging Word images/tables');
+assert(/const balancedPages=mergeUnderfilledPages\(rebalanceRichPublicationPages\(pages,target,maxPages\),target\)/.test(importSource),'periodical pagination must rebalance after merging Word images/tables and then merge under-filled pages');
+assert(importSource.includes('function mergeUnderfilledPages('),'under-filled page merge is missing');
 assert(importSource.includes("hasRich=blocks.some(b=>['image','table'].includes(b?.type)&&b?.sourceRef?.format==='docx')"),'rich-object reflow must be scoped to DOCX image/table pages');
 
 const catalog=issueTemplateCatalog();

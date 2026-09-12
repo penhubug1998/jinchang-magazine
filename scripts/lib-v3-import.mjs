@@ -60,6 +60,8 @@ function itemBlock(text,badge='•',tone='default') { const m=String(text).match
 function paragraphBlock(text,style='body'){return {type:'paragraph',style,text:cleanText(text)}}
 function quoteBlock(text){return {type:'quote',text:cleanText(text)}}
 function headingLevel(style=''){const m=String(style).match(/heading\s*([1-6])/i);return m?Number(m[1]):0;}
+function bareMarker(text=''){return cleanText(text).replace(/^[★☆📖📌\s]+/,'').replace(/[\s\u3000]/g,'').length<=8;}
+function sameText(a='',b=''){return cleanText(a).replace(/[\s\u3000]/g,'')===cleanText(b).replace(/[\s\u3000]/g,'');}
 function stripNumberPrefix(text=''){return cleanText(text).replace(/^[一二三四五六七八九十百\d]+[、.．]\s*/,'').trim();}
 function isSourceText(text=''){return /^(资料来源|来源)[：:]/.test(cleanText(text));}
 function isPrefaceHeading(text=''){return /卷首语/.test(cleanText(text));}
@@ -127,13 +129,18 @@ function semanticBlocksBasic(paras=[],pageType='article'){
 
 export function detectPublicationStructure(paras=[],title=''){
   let preface=null,closing=null,currentSection=null,currentArticle=null;let prefaceStore=null,closingStore=null;const sections=[];
+  // 结构标记会被当作元数据消费（版块名 / 文章标题），页面标题会把它显示出来。
+  // 因此"文字原样保留"的标题不在正文里重复；元数据无法表达的部分（版块标语、
+  // 被剥掉序号前缀的标题、只作为标记存在的标题）记在 retained 上，由分页阶段
+  // 落回页面正文。这里不允许静默丢内容。
+  const keep=(target,p,represented)=>{target.retained=target.retained||[];const text=cleanText(p.text);if(represented==null||!sameText(represented,text))target.retained.push({text,level:Number(p.level||2),links:Array.isArray(p.links)?p.links:[]});};
   const addPara=p=>{if(closing){closing.paras.push(p);return;}if(preface&&!currentSection){preface.paras.push(p);return;}if(currentArticle){currentArticle.paras.push(p);return;}if(currentSection){currentSection.intro.push(p);}};
   for(const p0 of paras){const p={...p0,text:cleanText(p0.text),level:Number(p0.level||headingLevel(p0.style))};if(!p.text)continue;if(title&&p.text===title&&p.level===1)continue;
-    if(isPrefaceHeading(p.text)&&p.level<=2){prefaceStore=preface={title:'卷首语',paras:[]};currentSection=null;currentArticle=null;closing=null;continue;}
-    if(isClosingHeading(p.text)&&p.level<=2){closingStore=closing={title:p.text.replace(/^[📌\s]+/,''),paras:[]};currentSection=null;currentArticle=null;preface=null;continue;}
-    if(currentSection&&p.level===1&&/^[☆★]/.test(p.text)&&!currentArticle&&currentSection.articles.length===0){currentSection.feature=p.text.replace(/^[☆★]\s*/,'').trim();continue;}
-    const sec=genericSectionHeading(p.text,p.level);if(sec){currentSection={...sec,pageType:'article',semanticType:'general',semanticLabel:'通用栏目',semanticConfidence:'low',semanticReason:'待分析',suggestedLayout:'single-focus',feature:'',intro:[],articles:[]};sections.push(currentSection);currentArticle=null;preface=null;closing=null;continue;}
-    if(currentSection&&(p.level===2||(p.level===1&&/^[☆★]/.test(p.text)))){currentArticle={title:p.text.replace(/^[☆★]\s*/,''),level:p.level,paras:[]};currentSection.articles.push(currentArticle);continue;}
+    if(isPrefaceHeading(p.text)&&p.level<=2&&bareMarker(p.text)){prefaceStore=preface={title:'卷首语',paras:[],retained:[]};currentSection=null;currentArticle=null;closing=null;continue;}
+    if(isClosingHeading(p.text)&&p.level<=2&&bareMarker(p.text)){closingStore=closing={title:p.text.replace(/^[📌\s]+/,''),paras:[],retained:[]};currentSection=null;currentArticle=null;preface=null;continue;}
+    if(currentSection&&p.level===1&&/^[☆★]/.test(p.text)&&!currentArticle&&currentSection.articles.length===0){currentSection.feature=p.text.replace(/^[☆★]\s*/,'').trim();keep(currentSection,p,currentSection.feature);continue;}
+    const sec=genericSectionHeading(p.text,p.level);if(sec){const created={...sec,pageType:'article',semanticType:'general',semanticLabel:'通用栏目',semanticConfidence:'low',semanticReason:'待分析',suggestedLayout:'single-focus',feature:'',intro:[],articles:[],retained:[]};sections.push(created);currentSection=created;currentArticle=null;preface=null;closing=null;keep(currentSection,p,null);continue;}
+    if(currentSection&&(p.level===2||(p.level===1&&/^[☆★]/.test(p.text)))){const article={title:p.text.replace(/^[☆★]\s*/,''),level:p.level,paras:[],retained:[]};currentSection.articles.push(article);currentArticle=article;keep(article,p,article.title);continue;}
     addPara(p);
   }
   for(const section of sections){const semantic=classifySectionSemantic(section);section.semanticType=semantic.id;section.semanticLabel=semantic.label;section.semanticConfidence=semantic.confidence;section.semanticReason=semantic.reason;section.suggestedLayout=semantic.layoutPreset;section.pageType=semantic.pageType;}
@@ -298,6 +305,35 @@ function semanticUnitPages({title,navTitle,kicker,section,pageType,paras},target
   const blocks=semanticBlocks(paras,pageType);const groups=groupSemanticBlocks(blocks,target),cont=continuationLabel(title);return groups.map((pageBlocks,i)=>({type:pageType,navTitle:i?`${section?`${section}｜`:''}${cont}（续${i}）`:navTitle,title:i?`${cont}（续${i}）`:title,kicker,section,blocks:pageBlocks}));
 }
 export { rebalanceContinuationGroups };
+// 合并内容偏少的相邻内容页。整期识别会把每篇文章都当成一个单元，遇到短篇就会
+// 产出大量半空页；编辑拿到 60 多页还得手工合并。这里只在同一版块内、且合并后
+// 不超过上限时合并，并把两页的导航标题串起来。封面/目录/尾页不参与。
+function mergeUnderfilledPages(pages=[],target=900){
+  const ceiling=Math.max(1100,Math.round(target*1.25));
+  const blockCeiling=12;
+  const titleCeiling=48;
+  const out=[];
+  for(const page of pages){
+    const prev=out.at(-1);
+    const mergeable=prev
+      &&page?.type===prev?.type
+      &&page?.section&&page.section===prev.section
+      &&!['cover','toc','closing'].includes(String(page.type))
+      &&(prev.blocks||[]).length&&(page.blocks||[]).length;
+    if(!mergeable){out.push(page);continue;}
+    const combinedBlocks=[...(prev.blocks||[]),...(page.blocks||[])];
+    const combinedWeight=combinedBlocks.reduce((n,b)=>n+blockWeight(b),0);
+    const shortJoin=[prev.title,page.title].filter(Boolean).filter((x,i,a)=>a.indexOf(x)===i).join(' · ');
+    // 标题必须仍然可读：合并后标题过长会把页面标题变成一整段正文，也会触发
+    // PAGE_TITLE_LONG。这种时候保留前一页标题，把后一页标题作为正文小标题接上，
+    // 信息不丢、标题也不会变成一长串。块数过多同样会触发 BLOCK_DENSITY_HIGH。
+    const useShortJoin=(shortJoin||'').length<=titleCeiling;
+    const mergedBlocks=useShortJoin?combinedBlocks:[{type:'paragraph',style:'subhead',text:cleanText(page.title||page.navTitle||'')},...combinedBlocks];
+    if(combinedWeight>ceiling||mergedBlocks.length>blockCeiling){out.push(page);continue;}
+    out[out.length-1]={...prev,title:useShortJoin?(shortJoin||prev.title):prev.title,blocks:mergedBlocks,mergedPages:[...(prev.mergedPages||[prev.navTitle||prev.title]),page.navTitle||page.title].filter(Boolean)};
+  }
+  return out;
+}
 function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){
   const limit=Math.max(780,Math.min(1100,Math.round(target*.95))),out=[];
   for(const page of pages){
@@ -312,16 +348,73 @@ function rebalanceRichPublicationPages(pages=[],target=900,maxPages=80){
   if(out.length>maxPages)throw new Error(`整期结构识别在合并 Word 图片/表格后将生成 ${out.length} 页，超过单次导入 ${maxPages} 页上限，请拆分文件`);
   return out;
 }
+// 把结构识别消费掉、但元数据无法表达的标记补回正文。页面标题会显示 article.title
+// 与 section.name，所以只有"文字会消失"的标记才需要落回正文，避免重复。
+function restoreRetainedMarkers(pub={}){
+  const add=(bucket,rows)=>{for(const row of rows||[]){const text=cleanText(row.text);if(!text||textAlreadyVisible(bucket,text))continue;const links=Array.isArray(row.links)?row.links:[];bucket.paras.unshift({text,style:'Subhead',level:Number(row.level)||2,links,richText:null,list:false,restoredMarker:true});}};
+  for(const sec of pub.sections||[]){if(!Array.isArray(sec.intro))sec.intro=[];add({paras:sec.intro},sec.retained);for(const article of sec.articles||[]){if(!Array.isArray(article.paras))article.paras=[];add({paras:article.paras},article.retained);}}
+  if(pub.preface&&Array.isArray(pub.preface.paras))add(pub.preface,pub.preface.retained);
+  if(pub.closing&&Array.isArray(pub.closing.paras))add(pub.closing,pub.closing.retained);
+}
+function textAlreadyVisible(bucket,text){
+  const key=normalizeMarkerText(text);
+  if(!key)return true;
+  if(bucket&&Array.isArray(bucket.paras)&&bucket.paras.some(p=>normalizeMarkerText(p.text)===key))return true;
+  return false;
+}
+function normalizeMarkerText(value=''){return cleanText(value).replace(/[\s\u3000]/g,'');}
+// 导入完整性对账：源块的文字必须能在成刊页面里找到。任何对不上的块都要报出来，
+// 不允许静默丢弃。页面文字索引按页收集，每页保留成一个可分页对照的片段。
+function markerKey(value=''){return cleanText(value).replace(/[\s\u3000]/g,'');}
+function blockTextFragments(block){
+  if(!block||typeof block!=='object')return [];
+  const out=[block.text,block.title,block.badge,block.caption,block.alt,block.case,block.warning].filter(Boolean).map(String);
+  // Some blocks fold a source paragraph into structured fields (title + text,
+  // case + warning). The folded form still carries the source wording, so the
+  // joined form is a valid representation of the source paragraph.
+  const folded=[block.title,block.badge,block.text,block.case,block.warning].filter(Boolean).map(String);
+  if(folded.length>=2)out.push(folded.join(''));
+  for(const item of block.items||[]){if(typeof item==='string')out.push(item);else if(item&&typeof item==='object'){if(item.text)out.push(String(item.text));if(item.title)out.push(String(item.title));if(item.body)out.push(String(item.body));}}
+  for(const column of block.columns||[])for(const child of column.blocks||[])out.push(...blockTextFragments(child));
+  return out;
+}
+function pageTextIndex(pages=[]){
+  return (pages||[]).map(page=>{
+    const parts=[page?.title,page?.navTitle,...(page?.blocks||[]).flatMap(blockTextFragments)].filter(Boolean).map(String);
+    return parts.join('\u0001').replace(/[\s\u3000]/g,'');
+  });
+}
+export function importCompletenessReport(doc={},pages=[]){
+  const pageChunks=pageTextIndex(pages);
+  const missing=[];
+  for(const [index,block] of (doc.blocks||[]).entries()){
+    const text=cleanText(block?.text||block?.title||'');
+    if(!text)continue;
+    const candidates=[markerKey(text)];
+    const bare=cleanText(text).replace(/^[★☆📖📌\s]+/,'').replace(/^【[^】]*】/,'');
+    if(bare)candidates.push(markerKey(bare));
+    const numbered=stripNumberPrefix(text);
+    if(numbered)candidates.push(markerKey(numbered));
+    // 卡片化会把「前缀——正文」折成 badge+title+text（视觉分隔符换成 •），
+    // 文字的等价形式也要算作保留。
+    const folded=markerKey(text.replace(/^(.{1,16}?)[———]{1,2}/,'$1•'));
+    if(folded&&folded!==markerKey(text))candidates.push(folded);
+    const found=pageChunks.some(chunk=>chunk&&candidates.some(candidate=>candidate.length>=2&&chunk.includes(candidate)));
+    if(!found)missing.push({index,text,style:block?.style||'',type:block?.type||''});
+  }
+  return {sourceBlocks:(doc.blocks||[]).length,pageBlocks:(pages||[]).reduce((n,p)=>n+((p?.blocks||[]).length),0),missing};
+}
 export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}){
-  const pub=doc.publication;if(!pub)throw new Error('未识别到整期期刊结构');const requested=Math.max(420,Math.min(1400,Number(targetChars)||760));const target=Math.max(900,Math.round(requested*1.28));const pages=[];
+  const pub=doc.publication;restoreRetainedMarkers(pub);if(!pub)throw new Error('未识别到整期期刊结构');const requested=Math.max(420,Math.min(1400,Number(targetChars)||760));const target=Math.max(900,Math.round(requested*1.28));const pages=[];
   if(pub.preface?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:'卷首语',kicker:'卷首语',section:'',pageType:'article',paras:pub.preface.paras},target));}
-  for(const sec of pub.sections){const kicker=sec.display||sec.name;const introBlocks=semanticBlocks(sec.intro,sec.pageType);const introWeight=introBlocks.reduce((n,b)=>n+blockWeight(b),0);if(introBlocks.length&&(introWeight>=160||sec.feature)){const introTitle=sec.feature||sec.tagline||`${sec.name}导读`;pages.push(...semanticUnitPages({title:introTitle,navTitle:`${sec.name}｜导读`,kicker,section:sec.name,pageType:sec.pageType,paras:sec.intro},Math.max(target,900)));}
+  for(const sec of pub.sections){const kicker=sec.display||sec.name;const introBlocks=semanticBlocks(sec.intro,sec.pageType);const introWeight=introBlocks.reduce((n,b)=>n+blockWeight(b),0);const hasRestoredMarker=(sec.intro||[]).some(p=>p&&p.restoredMarker);if(introBlocks.length&&(introWeight>=160||sec.feature||hasRestoredMarker)){const introTitle=sec.feature||sec.tagline||`${sec.name}导读`;pages.push(...semanticUnitPages({title:introTitle,navTitle:`${sec.name}｜导读`,kicker,section:sec.name,pageType:sec.pageType,paras:sec.intro},Math.max(target,900)));}
     for(const article of sec.articles){const cleanTitle=stripNumberPrefix(article.title)||article.title;pages.push(...semanticUnitPages({title:cleanTitle,navTitle:`${sec.name}｜${cleanTitle}`,kicker,section:sec.name,pageType:sec.pageType,paras:article.paras},target));}
   }
-  if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){closeTitle=cleanText(closeParas.shift().text).replace(/[。！？!?]$/,'');}pages.push({type:'closing',navTitle:'尾刊寄语',kicker:'尾刊寄语',title:closeTitle,section:'',blocks:semanticBlocks(closeParas,'article')});}
-  mergeRichDocxObjects(doc,pages);const balancedPages=rebalanceRichPublicationPages(pages,target,maxPages);
+  if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';let closingRetained=[];if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){const source=cleanText(closeParas.shift().text);closeTitle=source.replace(/[。！？!?]$/,'');if(!sameText(source,closeTitle))closingRetained.push({text:source,level:2,links:[]});}if(closingRetained.length)closeParas.unshift(...closingRetained.map(r=>({text:r.text,style:'BodyText',level:r.level,links:r.links||[],richText:null,list:false})));
+    pages.push({type:'closing',navTitle:'尾刊寄语',kicker:'尾刊寄语',title:closeTitle,section:'',blocks:semanticBlocks(closeParas,'article')});}
+  mergeRichDocxObjects(doc,pages);const balancedPages=mergeUnderfilledPages(rebalanceRichPublicationPages(pages,target,maxPages),target);
   if(balancedPages.length>maxPages)throw new Error(`整期结构识别将生成 ${balancedPages.length} 页，超过单次导入 ${maxPages} 页上限，请调整分页密度或拆分文件`);
-  return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length};
+  const completeness=importCompletenessReport(doc,balancedPages);return {pages:balancedPages,recommendedPages:balancedPages.length,targetChars:requested,semanticTarget:target,totalWeight:balancedPages.flatMap(p=>p.blocks||[]).reduce((n,b)=>n+blockWeight(b),0),strategy:'periodical-structure',structure:pub.summary,articles:doc.articles||{},linkCount:Object.keys(doc.articles||{}).length,completeness};
 }
 export function paginateImportedDocument(doc,{targetChars=760,maxPages=80,pageType='article',section='',kicker='',structureMode='auto'}={}) {
   if(structureMode!=='article'&&doc.publication&&(structureMode==='periodical'||structureMode==='auto'))return paginatePublicationDocument(doc,{targetChars,maxPages});
