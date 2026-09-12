@@ -488,7 +488,7 @@ function studioAllTargets(){return [...document.querySelectorAll('#stage .studio
 function findStudioBlockById(blocks=[],id=''){const wanted=String(id||'');for(const block of blocks){if(String(block?.id||'')===wanted)return block;if(block?.type==='container')for(const column of block.columns||[]){const found=findStudioBlockById(column?.blocks||[],wanted);if(found)return found;}}return null;}
 function clearStudioCanvasGuides(){document.querySelectorAll('.studio-canvas-guide').forEach(x=>x.remove());}
 function studioCanvasGuide(kind,pos){let line=document.querySelector(`.studio-canvas-guide.${kind}`);if(!line){line=document.createElement('i');line.className=`studio-canvas-guide ${kind}`;document.body.appendChild(line);}if(kind==='vertical')line.style.left=`${pos}px`;else line.style.top=`${pos}px`;}
-function syncStudioCanvasTargets(){document.body.classList.toggle('studio-canvas-mode',Boolean(studioEmbed&&state.canvasMode));for(const el of studioAllTargets()){const i=Number(el.dataset.designBlock),id=el.dataset.blockId||'';el.classList.toggle('studio-canvas-selected',state.canvasSelectedBlockIds.has(id)||(!el.dataset.designColumn&&!el.dataset.designChild&&state.canvasSelectedBlocks.has(i)));}updateStudioMediaToolbar();updateStudioCanvasTransformToolbar();}
+function syncStudioCanvasTargets(){document.body.classList.toggle('studio-canvas-mode',Boolean(studioEmbed&&state.canvasMode));bindStudioCanvasMarquee();for(const el of studioAllTargets()){const i=Number(el.dataset.designBlock),id=el.dataset.blockId||'';el.classList.toggle('studio-canvas-selected',state.canvasSelectedBlockIds.has(id)||(!el.dataset.designColumn&&!el.dataset.designChild&&state.canvasSelectedBlocks.has(i)));}updateStudioMediaToolbar();updateStudioCanvasTransformToolbar();}
 let activeRichTextEditor=null;
 let activeRichTextMeta=null;
 let activeRichTextNode=null;
@@ -617,6 +617,26 @@ function applyStudioCanvasSnap(el,snap,proposedX,proposedY){
   if(h)studioCanvasGuide('horizontal',snap.pageRect.top+h.pos*snap.zoom);
   return {x:proposedX+(v?v.delta:0),y:proposedY+(h?h.delta:0)};
 }
+// 拖动时显示位移与尺寸提示：PPT 里拖动会给出实时数值，编辑才知道自己对没对齐。
+function ensureStudioCanvasHud(){
+  let hud=document.getElementById('studioCanvasHud');
+  if(!hud){hud=document.createElement('div');hud.id='studioCanvasHud';hud.className='studio-canvas-hud';hud.hidden=true;document.body.appendChild(hud);}
+  return hud;
+}
+function updateStudioCanvasHud(el,changes){
+  const hud=ensureStudioCanvasHud();
+  const x=Number(changes?.x)||0,y=Number(changes?.y)||0;
+  const rotate=Number(changes?.rotate)||0,scale=Number(changes?.scale)||1;
+  const parts=[`x ${x>=0?'+':''}${Math.round(x)}`,`y ${y>=0?'+':''}${Math.round(y)}`];
+  if(rotate)parts.push(`${Math.round(rotate)}°`);
+  if(scale&&Math.abs(scale-1)>0.001)parts.push(`${Math.round(scale*100)}%`);
+  hud.textContent=parts.join('  ·  ');
+  const rect=el.getBoundingClientRect();
+  hud.style.left=`${Math.round(rect.left+rect.width/2)}px`;
+  hud.style.top=`${Math.round(rect.top-26)}px`;
+  hud.hidden=false;
+}
+function hideStudioCanvasHud(){const hud=document.getElementById('studioCanvasHud');if(hud)hud.hidden=true;}
 function bindStudioCanvasTransformDrag(handle,index,blockId,el=handle,mode='move'){
   handle.onpointerdown=ev=>{
     if(!state.canvasMode||ev.button!==0)return;
@@ -635,12 +655,13 @@ function bindStudioCanvasTransformDrag(handle,index,blockId,el=handle,mode='move
       else{changes.x=Math.max(-240,Math.min(240,Math.round(base.x+dx)));changes.y=Math.max(-240,Math.min(240,Math.round(base.y+dy)));
         const snapped=applyStudioCanvasSnap(el,snapContext,changes.x,changes.y);
         changes.x=Math.max(-240,Math.min(240,Math.round(snapped.x)));changes.y=Math.max(-240,Math.min(240,Math.round(snapped.y)));}
+      updateStudioCanvasHud(el,changes);
       el.style.transform=`translate(${changes.x}px,${changes.y}px) rotate(${changes.rotate}deg) scale(${changes.scale})`;
     };
     const finish=e=>{
       handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',finish);handle.removeEventListener('pointercancel',finish);
       if(handle.hasPointerCapture?.(ev.pointerId))handle.releasePointerCapture(ev.pointerId);
-      clearStudioCanvasGuides();
+      clearStudioCanvasGuides();hideStudioCanvasHud();
       if(e.type==='pointercancel'||!moved){el.style.transform=original;return;}
       changes.scale=Number(changes.scale.toFixed(2));
       for(const [key,value] of Object.entries(changes))el.dataset['design'+key[0].toUpperCase()+key.slice(1)]=String(value);
@@ -648,6 +669,71 @@ function bindStudioCanvasTransformDrag(handle,index,blockId,el=handle,mode='move
     };
     handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',finish);handle.addEventListener('pointercancel',finish);
   };
+}
+// 框选：在页面空白处拖出矩形，选中与矩形相交的内容块。
+// 这是 PPT 手感里"一次拿住一片"的关键，之前只能逐个 Shift/⌘ 点选。
+function ensureStudioMarquee(){
+  let box=document.getElementById('studioCanvasMarquee');
+  if(!box){box=document.createElement('i');box.id='studioCanvasMarquee';box.className='studio-canvas-marquee';box.hidden=true;document.body.appendChild(box);}
+  return box;
+}
+function studioMarqueeTargets(page){
+  const index=Number(page?.dataset?.pageIndex);
+  return studioAllTargets().filter(el=>Number(el.dataset.designPage)===index);
+}
+function bindStudioCanvasMarquee(){
+  if(!studioEmbed)return;
+  for(const page of document.querySelectorAll('#stage .page[data-page-index]')){
+    if(page.dataset.marqueeBound==='1')continue;
+    page.dataset.marqueeBound='1';
+    page.addEventListener('pointerdown',event=>{
+      if(!state.canvasMode||event.button!==0)return;
+      // 点在内容块或交互控件上时不启动框选，交给原有的选择/编辑逻辑。
+      if(event.target.closest('.studio-design-target'))return;
+      if(event.target.closest('button,a,input,select,textarea,[contenteditable="true"]'))return;
+      const box=ensureStudioMarquee(),rect=page.getBoundingClientRect();
+      const addToSelection=Boolean(event.metaKey||event.ctrlKey);
+      const already=new Set(addToSelection?[...state.canvasSelectedBlockIds]:[]);
+      const start={x:event.clientX,y:event.clientY};
+      let moved=false;
+      const point=e=>{
+        const left=Math.min(start.x,e.clientX),top=Math.min(start.y,e.clientY);
+        const width=Math.abs(e.clientX-start.x),height=Math.abs(e.clientY-start.y);
+        box.style.left=`${left}px`;box.style.top=`${top}px`;box.style.width=`${width}px`;box.style.height=`${height}px`;box.hidden=false;
+        return {left,top,right:left+width,bottom:top+height};
+      };
+      let lastHits=[];
+      const move=e=>{
+        if(Math.hypot(e.clientX-start.x,e.clientY-start.y)<4&&!moved)return;
+        moved=true;
+        const area=point(e);
+        const hits=[];
+        for(const el of studioMarqueeTargets(page)){
+          const r=el.getBoundingClientRect();
+          const intersects=r.left<area.right&&r.right>area.left&&r.top<area.bottom&&r.bottom>area.top;
+          el.classList.toggle('studio-marquee-hit',intersects);
+          if(intersects&&el.dataset.blockId)hits.push(el.dataset.blockId);
+        }
+        lastHits=hits;
+        void rect;
+      };
+      const finish=e=>{
+        page.removeEventListener('pointermove',move);
+        page.removeEventListener('pointerup',finish);
+        page.removeEventListener('pointercancel',finish);
+        box.hidden=true;
+        for(const el of studioMarqueeTargets(page))el.classList.remove('studio-marquee-hit');
+        if(e.type==='pointercancel'||!moved||!lastHits.length)return;
+        const ids=[...new Set([...already,...lastHits])];
+        postStudio('canvas-select',{blockIds:ids,additive:false,marquee:true});
+      };
+      box.hidden=true;
+      page.addEventListener('pointermove',move);
+      page.addEventListener('pointerup',finish);
+      page.addEventListener('pointercancel',finish);
+      event.preventDefault();
+    });
+  }
 }
 function bindStudioCanvasDirectEditing(){
   if(!studioEmbed)return;

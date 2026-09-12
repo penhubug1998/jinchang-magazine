@@ -18,6 +18,11 @@ const extract = (start, end) => {
   return source.slice(from, to);
 };
 
+const historyCode = [
+  extract('function issuesEqual(a,b)', 'function resetHistory()'),
+  extract('function captureHistory(group=', 'function updateDraftBadge(')
+].join('\n');
+
 const code = [
   extract('function selectedBlockRows()', 'function duplicateSelectedBlocks()'),
   extract('function duplicateSelectedBlocks()', 'function deleteSelectedBlocks()'),
@@ -248,4 +253,27 @@ const snapCode = (() => {
   assert.ok(html.includes('z 5'), '图层行应显示层级值');
 }
 
-console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整、拖动吸附（6px 阈值取最近对齐目标）、对齐/分布/图层列表均按数据契约生效。');
+// ---- 撤销粒度：连续微调合并为一个撤销点 ------------------------------------
+{
+  const state = { issue: { id: '001', pages: [{ blocks: [{ type: 'paragraph', text: 'A' }] }] }, historyCurrent: null, historyLastAt: 0, historyGroup: '', undoStack: [], redoStack: [] };
+  const context = { state, Date, JSON, console, updateStateBadges: () => {}, clearDesignHistory: () => {}, cloneData: v => JSON.parse(JSON.stringify(v)) };
+  // issuesEqual 需要 cloneData/JSON，captureHistory 依赖 issuesEqual
+  vm.createContext(context);
+  vm.runInContext('function cloneData(v){return JSON.parse(JSON.stringify(v))}\n' + historyCode, context);
+  const mutate = () => { state.issue.pages[0].blocks[0].design = { x: (state.issue.pages[0].blocks[0].design?.x || 0) + 1 }; };
+  // 第一次：historyCurrent 为空 -> 只建立基线，不产生撤销点
+  mutate(); context.captureHistory('canvas-nudge');
+  assert.equal(state.undoStack.length, 0, '第一次只建立历史基线');
+  // 同组连续三次（650ms 窗口内）-> 只产生 1 个撤销点
+  for (let i = 0; i < 3; i++) { mutate(); context.captureHistory('canvas-nudge'); }
+  assert.equal(state.undoStack.length, 1, '同组连续微调应合并为一个撤销点');
+  // 换组 -> 产生新的撤销点
+  mutate(); context.captureHistory('canvas-align-left');
+  assert.equal(state.undoStack.length, 2, '换操作组应产生独立的撤销点');
+  // 同组但超时（模拟间隔 > 650ms）-> 产生新的撤销点
+  mutate(); state.historyLastAt = state.historyLastAt - 2000;
+  context.captureHistory('canvas-nudge');
+  assert.equal(state.undoStack.length, 3, '超过合并窗口后应产生新的撤销点');
+}
+
+console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整、拖动吸附（6px 阈值取最近对齐目标）、对齐/分布/图层列表、连续微调的撤销合并均按数据契约生效。');
