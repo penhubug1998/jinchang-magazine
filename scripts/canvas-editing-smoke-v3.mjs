@@ -21,7 +21,8 @@ const extract = (start, end) => {
 const code = [
   extract('function selectedBlockRows()', 'function duplicateSelectedBlocks()'),
   extract('function duplicateSelectedBlocks()', 'function deleteSelectedBlocks()'),
-  extract('function nudgeSelectedCanvasBlocks(', '// 画布快捷键：')
+  extract('function nudgeSelectedCanvasBlocks(', '// 画布快捷键：'),
+  extract('function canvasAlignTargets(){', 'function canvasClipboardActive(){')
 ].join('\n');
 
 function harness(blocks, selected = [0]) {
@@ -45,6 +46,9 @@ function harness(blocks, selected = [0]) {
     cloneData: value => JSON.parse(JSON.stringify(value)),
     currentPage: () => page,
     validSelectedBlockIndices: () => [...state.selectedBlocks].filter(i => Number.isInteger(i) && i >= 0 && i < page.blocks.length).sort((a, b) => a - b),
+    selectedBlockObjects: () => [...state.selectedBlocks].filter(i => Number.isInteger(i) && i >= 0 && i < page.blocks.length).sort((a, b) => a - b).map(index => ({ index, block: page.blocks[index] })),
+    BLOCK_NAMES: { paragraph: '正文', image: '图片', video: '视频', table: '表格', container: '容器' },
+    escText: value => String(value ?? ''),
     regenerateBlockIdentity: block => { block.id = `block_new_${++context.__idSeq}`; return block; },
     markDirty: () => { calls.dirty++; },
     syncJsonFromPage: () => { calls.json++; },
@@ -154,4 +158,94 @@ const snapCode = (() => {
   assert.equal(vm.runInContext('CANVAS_SNAP_PX', snapContext), 6, '吸附阈值应为 6px');
 }
 
-console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整、拖动吸附（6px 阈值取最近对齐目标）均按数据契约生效。');
+// ---- 对齐 / 分布 ---------------------------------------------------------
+{
+  const mk = () => ([
+    { type: 'paragraph', text: 'A', design: { x: -20, y: 50 } },
+    { type: 'paragraph', text: 'B', design: { x: 0, y: 0 } },
+    { type: 'paragraph', text: 'C', design: { x: 20, y: 100 } }
+  ]);
+  {
+    const { context: c, page } = harness(mk(), [0, 1, 2]);
+    assert.equal(c.alignSelectedBlocks('left'), 2, '左对齐：A 本已在最小 x，只有 B、C 发生字段变化');
+    assert.deepEqual(page.blocks.map(b => b.design.x), [-20, -20, -20], '左对齐应取最小 x');
+    // canvasWriteDesign 会把 0 归一化成"无偏移"，所以 B 的 y:0 变成 undefined
+    assert.deepEqual(page.blocks.map(b => b.design?.y), [50, undefined, 100], '水平对齐不应改 y（0 归一化为无偏移）');
+  }
+  {
+    const { context: c, page } = harness(mk(), [0, 1, 2]);
+    assert.equal(c.alignSelectedBlocks('right'), 2, '右对齐：C 本已在最大 x，只有 A、B 发生字段变化');
+    assert.deepEqual(page.blocks.map(b => b.design.x), [20, 20, 20], '右对齐应取最大 x');
+  }
+  {
+    const { context: c, page } = harness(mk(), [0, 1, 2]);
+    assert.equal(c.alignSelectedBlocksVertical('top'), 3, '顶对齐：y 归一化后三个块都发生字段变化');
+    assert.deepEqual(page.blocks.map(b => b.design?.y), [undefined, undefined, undefined], '顶对齐到 0 时 y 归一化为无偏移');
+  }
+  {
+    // 刻意用不均匀数据：y = 50 / 0 / 80，中间块应从 0 移到 65
+    const uneven = () => ([
+      { type: 'paragraph', text: 'A', design: { y: 50 } },
+      { type: 'paragraph', text: 'B', design: { y: 0 } },
+      { type: 'paragraph', text: 'C', design: { y: 80 } }
+    ]);
+    const { context: c, page } = harness(uneven(), [0, 1, 2]);
+    assert.equal(c.distributeSelectedBlocks(), 1, '只有中间块需要移动');
+    // 等距后：0 与 80 之间放一个块 -> 40。文档顺序下是 [40, 0, 80]
+    assert.deepEqual(page.blocks.map(b => b.design?.y), [40, 0, 80], '分布后 y 应为 40 / 0 / 80（按文档顺序）');
+    assert.equal(page.blocks[0].design.y, 40, '中间的块（y 原为 50）应移到 40');
+    assert.equal(page.blocks[2].design.y, 80, '末个块不应移动');
+  }
+  {
+    // 4 块：y = 0 / 100 / 50 / 80 -> 排序后 0,50,80,100 -> 等距 0,33,67,100
+    const { context: c, page } = harness([
+      { type: 'paragraph', text: 'A', design: { y: 0 } },
+      { type: 'paragraph', text: 'B', design: { y: 100 } },
+      { type: 'paragraph', text: 'C', design: { y: 50 } },
+      { type: 'paragraph', text: 'D', design: { y: 80 } }
+    ], [0, 1, 2, 3]);
+    c.distributeSelectedBlocks();
+    assert.deepEqual(page.blocks.map(b => b.design?.y), [0, 100, 33, 67], '4 块等距：0 / 33 / 67 / 100（按文档顺序）');
+  }
+  {
+    // 已经等距时不应产生无意义的改动
+    const { context: c, page } = harness(mk(), [0, 1, 2]);
+    assert.equal(c.distributeSelectedBlocks(), 0, '已经等距时不应改动');
+  }
+  {
+    const { context: c, page } = harness(mk(), [0, 1, 2]);
+    c.alignSelectedBlocks('center');
+    assert.deepEqual(page.blocks.map(b => b.design?.x), [undefined, undefined, undefined], '水平居中到 0 时 x 归一化为无偏移');
+  }
+  // 归零删除：对齐到 0 时不应留下 x:0
+  {
+    const { context: c, page } = harness([{ type: 'paragraph', text: 'A', design: { x: 0 } }, { type: 'paragraph', text: 'B', design: { x: 0 } }], [0, 1]);
+    c.alignSelectedBlocks('left');
+    assert.equal(page.blocks[0].design?.x, undefined, '对齐到 0 应删除 x 字段');
+  }
+  // 守卫
+  {
+    const single = harness([{ type: 'paragraph', text: 'A' }], [0]);
+    assert.equal(single.context.alignSelectedBlocks('left'), undefined, '少于 2 个应只提示不改动');
+    assert.ok(single.calls.toast.some(x => /至少选择 2 个/.test(x)));
+    const two = harness([{ type: 'paragraph', text: 'A' }, { type: 'paragraph', text: 'B' }], [0, 1]);
+    assert.equal(two.context.distributeSelectedBlocks(), undefined, '少于 3 个不应分布');
+    assert.ok(two.calls.toast.some(x => /至少选择 3 个/.test(x)));
+  }
+}
+
+// ---- 图层列表 -----------------------------------------------------------
+{
+  const { context: c, page } = harness([
+    { type: 'paragraph', text: '底' },
+    { type: 'paragraph', text: '中', design: { z: 2 } },
+    { type: 'paragraph', text: '顶', design: { z: 5 } }
+  ], [2]);
+  const rows = c.layerPanelRows();
+  assert.deepEqual(rows.map(r => r.index), [2, 1, 0], '图层列表应按 z 从高到低排序，z 相同保持文档顺序');
+  const html = c.renderLayerPanel();
+  assert.ok(html.includes('data-layer-block="2"'), '图层行需要携带块索引供点击选中');
+  assert.ok(html.includes('z 5'), '图层行应显示层级值');
+}
+
+console.log('画布编辑回归通过：方向键微调（1px/Shift 10px）、复制粘贴（新 id + 偏移）、原位复制、层级调整、拖动吸附（6px 阈值取最近对齐目标）、对齐/分布/图层列表均按数据契约生效。');
