@@ -161,8 +161,17 @@ export function ttsGenerationDigests(issue){
   return narrationPageDigests(issue).map(text=>crypto.createHash('sha256').update(JSON.stringify([text,n.voice||'zh-CN-XiaoxiaoNeural',Number(n.rate)||1])).digest('hex'));
 }
 export function changedTtsPages(issue){
-  const n=issue.features?.narration||{},current=ttsGenerationDigests(issue);
-  return current.flatMap((value,i)=>n.generationDigests?.[i]===value?[]:[i+1]);
+  const n=issue.features?.narration||{},current=ttsGenerationDigests(issue),pageDigests=narrationPageDigests(issue);
+  const generated=Array.isArray(n.generationDigests)?n.generationDigests:[];
+  const baseline=Array.isArray(n.pageDigests)?n.pageDigests:[];
+  if(n.generationConfigChanged)return current.map((_,i)=>i+1);
+  return current.flatMap((value,i)=>{
+    // Newer issues have a generation digest that includes the page text,
+    // voice and rate. Older issues only recorded page text; keep that legacy
+    // baseline usable instead of forcing a needless full-issue regeneration.
+    const same=generated[i]?generated[i]===value:baseline.length===pageDigests.length&&baseline[i]===pageDigests[i];
+    return same?[]:[i+1];
+  });
 }
 
 export async function listFilesRecursive(dir) {

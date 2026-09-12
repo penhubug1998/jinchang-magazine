@@ -1034,10 +1034,21 @@ async function replaceTtsFile(bin,target,text,options){
   }finally{await rm(temporary,{force:true});}
 }
 async function generateTtsForIssue(id,data,bin,report=()=>{}){
-  const issueFile=path.join(root,'issues',id,'issue.json'),issue=await readJson(issueFile),rows=Array.isArray(data.pages)?data.pages.slice(0,200):[];
+  const issueFile=path.join(root,'issues',id,'issue.json'),issue=await readJson(issueFile);
   data={...data,voice:data.voice||issue.features?.narration?.voice||'zh-CN-XiaoxiaoNeural',rate:data.rate??issue.features?.narration?.rate??1};
-  if(!rows.length)throw Object.assign(new Error('没有可生成的页面正文'),{statusCode:400,code:'TTS_NO_PAGES'});
-  const pattern=ttsOutputPattern(issue,bin),base=managedAssetRoot(id),snapshot=await snapshotIssue(id,'tts-generate-before'),generated=[],failed=[];await mkdir(path.join(base,'tts'),{recursive:true});
+  const pattern=ttsOutputPattern(issue,bin),base=managedAssetRoot(id),generated=[],failed=[];let detectedPages=[];
+  let rows=Array.isArray(data.pages)?data.pages.slice(0,200):[];
+  if(data.autoDetect){
+    const detectedIssue={...issue,features:{...(issue.features||{}),narration:{...(issue.features?.narration||{}),voice:data.voice,rate:data.rate}}};
+    const changed=new Set(changedTtsPages(detectedIssue));
+    rows=[];
+    for(let page=1;page<=(issue.pages?.length||0);page++){
+      const rel=ttsOutputPath(pattern,page),file=path.resolve(base,rel);
+      if(changed.has(page)||!(await exists(file))){rows.push({page});detectedPages.push(page);}
+    }
+  }
+  if(!rows.length){report({stage:'TTS 已是最新，无需重新生成',percent:95});return {ok:true,snapshot:null,pattern,generated,failed,detected:detectedPages,skipped:'unchanged',narration:issue.features?.narration||null,issue:null,source:null};}
+  const snapshot=await snapshotIssue(id,'tts-generate-before');await mkdir(path.join(base,'tts'),{recursive:true});
   for(const [index,row] of rows.entries()){
     const page=Number(row.page),text=serverNarrationPageText(issue.pages?.[page-1]||{},issue.articles||{},{scope:issue.features?.narration?.scope});report({stage:`生成 TTS：第 ${page||'?'} 页`,percent:Math.min(90,5+Math.round((index/Math.max(1,rows.length))*80))});
     if(!Number.isInteger(page)||page<1||page>(issue.pages?.length||0)||!text){failed.push({page,error:'页面编号或正文无效'});continue;}
@@ -1050,11 +1061,11 @@ async function generateTtsForIssue(id,data,bin,report=()=>{}){
     n.generationDigests=(n.generationDigests||[]).slice(0,current.length);
     for(const row of generated)n.generationDigests[row.page-1]=current[row.page-1];
     if(current.every((digest,i)=>n.generationDigests[i]===digest)){
-      n.sourceDigest=narrationSourceDigest(issue);n.pageDigests=narrationPageDigests(issue);n.baselinedAt=new Date().toISOString();
+      n.sourceDigest=narrationSourceDigest(issue);n.pageDigests=narrationPageDigests(issue);n.baselinedAt=new Date().toISOString();delete n.generationConfigChanged;
     }
     await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');
   }
-  const source=generated.length?await writeSourceReceipt(id,issue,{reason:'tts-generate',snapshot}):null;report({stage:'TTS 结果已写入',percent:95});return {ok:Boolean(generated.length),snapshot,pattern,generated,failed,narration:issue.features?.narration||null,issue:generated.length?issue:null,source};
+  const source=generated.length?await writeSourceReceipt(id,issue,{reason:'tts-generate',snapshot}):null;report({stage:'TTS 结果已写入',percent:95});return {ok:Boolean(generated.length),snapshot,pattern,detected:detectedPages,generated,failed,narration:issue.features?.narration||null,issue:generated.length?issue:null,source};
 }
 
 function issueSourceFingerprint(issue){return createHash('sha256').update(JSON.stringify(issue||{})).digest('hex');}
@@ -1281,9 +1292,9 @@ const server=http.createServer(async(req,res)=>{try{
       const bin=resolveTtsGenerator();if(!bin)return send(res,501,{error:'服务器未配置 TTS 生成器。请在服务环境安装 espeak-ng，或设置 V3_TTS_BIN 与 V3_TTS_ARGS；浏览器朗读回退仍可用。',code:'TTS_GENERATOR_UNAVAILABLE'});
       const data=await body(req,2*MiB);
       if(data.async){const job=enqueueBackgroundJob({kind:'tts-generate',issueId:id,payload:data,sourceFingerprint:issueSourceFingerprint(issue),task:report=>generateTtsForIssue(id,data,bin,report)});return send(res,202,backgroundJobResponse(job));}
-      try{const result=await generateTtsForIssue(id,data,bin);return send(res,result.generated.length&&result.failed.length?207:result.generated.length?200:422,result);}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'TTS_GENERATE_FAILED'});}
+      try{const result=await generateTtsForIssue(id,data,bin);return send(res,result.generated.length&&result.failed.length?207:result.failed.length?422:200,result);}catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'TTS_GENERATE_FAILED'});}
     }
-    if (seg[3]==='tts'&&seg[4]==='baseline'&&req.method==='POST') { const refs=collectReferencedAssets(issue).filter(x=>x.kind==='tts');const base=issueAssetRoot(issue,id);const missing=[];for(const ref of refs)if(!(await exists(path.join(base,ref.path))))missing.push(ref.page);if(missing.length)return send(res,409,{error:`TTS 尚未补齐，缺失 ${missing.length} 页`,code:'TTS_INCOMPLETE',missingPages:missing});const snap=await snapshotIssue(id,'tts-baseline-before');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.sourceDigest=narrationSourceDigest(issue);issue.features.narration.pageDigests=narrationPageDigests(issue);issue.features.narration.baselinedAt=new Date().toISOString();await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');const source=await writeSourceReceipt(id,issue,{reason:'tts-baseline',snapshot:snap});return send(res,200,{ok:true,snapshot:snap,narration:issue.features.narration,source}); }
+    if (seg[3]==='tts'&&seg[4]==='baseline'&&req.method==='POST') { const refs=collectReferencedAssets(issue).filter(x=>x.kind==='tts');const base=issueAssetRoot(issue,id);const missing=[];for(const ref of refs)if(!(await exists(path.join(base,ref.path))))missing.push(ref.page);if(missing.length)return send(res,409,{error:`TTS 尚未补齐，缺失 ${missing.length} 页`,code:'TTS_INCOMPLETE',missingPages:missing});const snap=await snapshotIssue(id,'tts-baseline-before');issue.features ||= {};issue.features.narration ||= {};issue.features.narration.sourceDigest=narrationSourceDigest(issue);issue.features.narration.pageDigests=narrationPageDigests(issue);issue.features.narration.generationDigests=ttsGenerationDigests(issue);issue.features.narration.baselinedAt=new Date().toISOString();delete issue.features.narration.generationConfigChanged;await writeFile(issueFile,`${JSON.stringify(issue,null,2)}\n`,'utf8');const source=await writeSourceReceipt(id,issue,{reason:'tts-baseline',snapshot:snap});return send(res,200,{ok:true,snapshot:snap,narration:issue.features.narration,source}); }
     if (seg[3]==='assets'&&seg[4]==='upload'&&req.method==='POST') {
       if(!isManagedAssetRoot(issue,id))return send(res,409,{error:'当前期刊使用历史/外部 assetSource，制作中心按只读处理。请在新一期自身 assets 目录中上传资源。',code:'ASSET_SOURCE_READONLY'});
       const kind=String(u.searchParams.get('kind')||''); const rule=uploadRules[kind]; if(!rule)return send(res,400,{error:'不支持的媒体类型',code:'VALIDATION_ERROR'});

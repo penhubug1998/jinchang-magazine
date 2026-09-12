@@ -1360,7 +1360,7 @@ async function loadMediaAssets() {
 function mediaKindLabel(kind){return ({image:'图片',video:'视频',music:'音乐',tts:'朗读',other:'其他'})[kind]||kind;}
 function formatDuration(seconds){const n=Number(seconds);if(!Number.isFinite(n)||n<=0)return '—';const m=Math.floor(n/60),s=Math.round(n%60);return m?`${m}:${String(s).padStart(2,'0')}`:`${s} 秒`;}
 function renderMediaSummary(){const d=state.mediaAssets||{};const s=d.summary||{};$('#mediaSummary').innerHTML=`<div><span>资源总数</span><b>${s.total??(d.items||[]).length}</b></div><div><span>已引用</span><b>${s.used??0}</b></div><div><span>未引用</span><b>${s.unused??0}</b></div><div><span>媒体总量</span><b>${escText(s.size||'0 B')}</b></div><div><span>精选素材</span><b>${CURATED_STOCK_ASSETS.length}</b></div>`;}
-function renderTtsStatus(){const scopeNote=$('#ttsScopeNote');if(scopeNote)scopeNote.textContent=state.issue?.features?.narration?.scope==='page'?'本期朗读：页面正文（弹出文章可单独阅读）':'本期朗读：页面正文及关联文章全文';const tts=state.mediaAssets?.tts,box=$('#ttsStatus');if(!tts||!tts.expected){box.className='tts-status';box.innerHTML='<div class="tts-copy"><b>未配置预生成朗读</b><span>当前期刊没有 narration.pattern，将使用浏览器语音回退；可在下方一键生成。</span></div>';return;}const complete=tts.found===tts.expected;box.className=`tts-status ${tts.stale?'stale':complete?'good':''}`;const stateText=!complete?`缺失 ${tts.expected-tts.found} 页${tts.missingPages?.length?`：${tts.missingPages.join('、')}`:''}`:tts.stale?'音频文件齐全，但页面正文/顺序已改变':'音频文件与当前页面基线一致';box.innerHTML=`<div class="tts-copy"><b>TTS ${tts.found}/${tts.expected}${tts.stale?' · 需要重新生成':''}</b><span>${escText(stateText)}${tts.baselinedAt?` · 基线 ${escText(fmtTime(tts.baselinedAt))}`:''}</span></div><button type="button" id="ttsBaselineBtn" ${!complete||state.dirty?'disabled':''}>确认朗读已重新生成</button>`;$('#ttsBaselineBtn')?.addEventListener('click',confirmTtsBaseline);}
+function renderTtsStatus(){const scopeNote=$('#ttsScopeNote');if(scopeNote)scopeNote.textContent=state.issue?.features?.narration?.scope==='page'?'本期朗读：页面正文（弹出文章可单独阅读）':'本期朗读：页面正文及关联文章全文';const tts=state.mediaAssets?.tts,box=$('#ttsStatus');if(!tts||!tts.expected){box.className='tts-status';box.innerHTML='<div class="tts-copy"><b>未配置预生成朗读</b><span>当前期刊没有 narration.pattern，将使用浏览器语音回退；可在下方一键生成。</span></div>';return;}const complete=tts.found===tts.expected,pending=[...new Set([...(tts.changedPages||[]),...(tts.missingPages||[]).map(Number)])].filter(Number.isInteger).sort((a,b)=>a-b);box.className=`tts-status ${pending.length?'stale':complete?'good':''}`;const stateText=!complete?`缺失 ${tts.expected-tts.found} 页${tts.missingPages?.length?`：${tts.missingPages.join('、')}`:''}`:pending.length?`仅需更新第 ${pending.join('、')} 页`:'音频文件与当前页面基线一致';box.innerHTML=`<div class="tts-copy"><b>TTS ${tts.found}/${tts.expected}${pending.length?' · 需要更新':''}</b><span>${escText(stateText)}${tts.baselinedAt?` · 基线 ${escText(fmtTime(tts.baselinedAt))}`:''}</span></div><button type="button" id="ttsBaselineBtn" ${!complete||state.dirty?'disabled':''}>确认朗读已重新生成</button>`;$('#ttsBaselineBtn')?.addEventListener('click',confirmTtsBaseline);}
 const EDGE_TTS_VOICE_OPTIONS=[
   ['zh-CN-XiaoxiaoNeural','晓晓 · 女声（默认）'],
   ['zh-CN-YunxiNeural','云希 · 男声'],
@@ -1382,6 +1382,8 @@ async function saveTtsSettings(){
   const voice=String($('#ttsVoiceInput')?.value||'zh-CN-XiaoxiaoNeural');
   const rate=Math.max(.5,Math.min(2,Number($('#ttsRateInput')?.value)||1));
   state.issue.features ||= {};state.issue.features.narration ||= {};
+  const narration=state.issue.features.narration,oldVoice=String(narration.voice||'zh-CN-XiaoxiaoNeural'),oldRate=Number(narration.rate)||1;
+  if((oldVoice!==voice||oldRate!==rate)&&(!Array.isArray(narration.generationDigests)||narration.generationDigests.length!==(state.issue.pages||[]).length))narration.generationConfigChanged=true;
   state.issue.features.narration.voice=voice;state.issue.features.narration.rate=rate;
   markDirty({preview:false,historyGroup:'tts-settings',forceHistory:true});
   const button=$('#ttsSettingsSave');if(button){button.disabled=true;button.textContent='保存中…';}
@@ -2243,11 +2245,11 @@ async function preparePublicationUi(options={}){
     state.publicationBusy='准备发布：读取资源…';renderPublicationCenter();await loadMediaAssets();
     const tts=state.mediaAssets?.tts,pages=state.issue.pages||[];
     if(tts?.expected){
-      const missing=new Set(tts.missingPages||[]),indices=tts.stale?pages.map((_,i)=>i):pages.map((_,i)=>i).filter(i=>missing.has(i+1));
+      const missing=new Set(tts.missingPages||[]),changed=new Set(tts.changedPages||[]),affected=new Set([...missing,...changed]),indices=pages.map((_,i)=>i).filter(i=>affected.has(i+1));
       if(indices.length){
-        state.publicationBusy=tts.stale?'准备发布：重新生成过期 TTS…':'准备发布：补齐缺失 TTS…';renderPublicationCenter();
+        state.publicationBusy=`准备发布：更新 ${indices.length} 页 TTS…`;renderPublicationCenter();
         const payload=indices.map(i=>({page:i+1,text:narrationPageText(pages[i])})).filter(x=>x.text);
-        const start=await api(`/api/issues/${encodeURIComponent(state.issue.id)}/tts/generate`,{method:'POST',body:JSON.stringify({pages:payload,rate:state.issue.features?.narration?.rate||1,async:true}),allowError:true}),r=await waitForBackgroundJob(start,'TTS 生成');
+        const start=await api(`/api/issues/${encodeURIComponent(state.issue.id)}/tts/generate`,{method:'POST',body:JSON.stringify({pages:payload,autoDetect:true,voice:state.issue.features?.narration?.voice,rate:state.issue.features?.narration?.rate||1,async:true}),allowError:true}),r=await waitForBackgroundJob(start,'TTS 生成');
         if(!r.ok||r.error)throw new Error(r.error||'TTS 生成失败');
         generated=r.generated?.length||0;if(r.failed?.length)throw new Error(`TTS 生成失败：第 ${r.failed.map(x=>x.page).join('、')} 页`);
         if(r.issue){state.issue=cloneData(r.issue);state.originalIssue=cloneData(r.issue);state.dirty=false;state.auditStale=Boolean(state.audit);state.sourceStatus=r.source||state.sourceStatus;state.sourceFingerprint=String(r.source?.fingerprint||state.sourceFingerprint||'');renderSourceStatus();resetHistory();}await loadMediaAssets();
