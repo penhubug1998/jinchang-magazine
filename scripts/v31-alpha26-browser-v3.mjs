@@ -36,6 +36,25 @@ try{
  for(const vp of [{w:1024,h:768},{w:1366,h:768},{w:1920,h:1080}]){
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:vp.w,height:vp.h,deviceScaleFactor:1,mobile:false});await ev('window.dispatchEvent(new Event("resize"))');await sleep(80);const desktop=await ev(`({active:window.__V3_STUDIO__.state.mobileStudioActive,body:document.body.classList.contains('mobile-studio-mode'),dock:getComputedStyle(document.getElementById('mobileStudioDock')).display,overflow:document.documentElement.scrollWidth>innerWidth+1})`);assert(!desktop.active&&!desktop.body&&desktop.dock==='none'&&!desktop.overflow,`desktop restore ${vp.w}x${vp.h} failed ${JSON.stringify(desktop)}`);
  }
+
+ // With a sheet open the shell must stay reachable. The sheet used to sit on
+ // top of the 116px dock and the backdrop covered the header, so tapping
+ // 返回 / 保存 / ‹ / › / P1编辑 did nothing while editing. The health pill was
+ // also display:none, leaving page health unreachable on a phone.
+ await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+ await ev('window.dispatchEvent(new Event("resize"))');await sleep(220);
+ const reach=await ev(`(async()=>{const api=window.__V3_STUDIO__;api.openMobileSheet('page');await new Promise(r=>setTimeout(r,260));
+   const reachable=el=>{const r=el.getBoundingClientRect(),x=Math.round(r.x+r.width/2),y=Math.round(r.y+r.height/2);if(x<0||y<0||x>=innerWidth||y>=innerHeight)return false;const t=document.elementFromPoint(x,y);return Boolean(t)&&(t===el||el.contains(t)||t.contains(el))};
+   const ids=['mobileStudioBack','mobileStudioPagePicker','mobileStudioHealth','mobileStudioSave','mobilePrevPage','mobileNextPage','mobileEditSummary'];
+   const blocked=ids.filter(id=>{const el=document.getElementById(id);return el&&!reachable(el)});
+   const health=document.getElementById('mobileStudioHealth');
+   return {blocked,healthVisible:Boolean(health&&health.getBoundingClientRect().width),healthW:Math.round(health?health.getBoundingClientRect().width:0),healthH:Math.round(health?health.getBoundingClientRect().height:0)}})()`);
+ assert(!reach.blocked.length,`an open sheet blocks shell controls: ${JSON.stringify(reach.blocked)}`);
+ assert(reach.healthVisible&&reach.healthW>=44&&reach.healthH>=44,`health pill not a usable target ${JSON.stringify(reach)}`);
+ await ev('window.__V3_STUDIO__.closeMobileSheet()');
+ const tabToggle=await ev(`(async()=>{const api=window.__V3_STUDIO__,sleep=ms=>new Promise(r=>setTimeout(r,ms));api.openMobileSheet('layout');await sleep(160);document.querySelector('[data-mobile-tab="layout"]').click();await sleep(160);return api.state.mobileSheetOpen})()`);
+ assert(tabToggle===false,'tapping the active dock tab should close the sheet');
+
  const errors=await ev('window.__BROWSER_ERRORS__');assert(!errors.length,`browser errors ${JSON.stringify(errors)}`);
  console.log('V3.1-alpha26 浏览器回归通过：320/390/768 Reader-first 边界、四 Bottom Sheet、Reader 编辑桥接、媒体/布局/页面流程，以及 1024/1366/1920 桌面自动恢复均正常。');
 }finally{cdp?.close();if(chrome?.pid)try{process.kill(-chrome.pid,'SIGTERM')}catch{};server?.kill('SIGTERM');await sleep(180);if(userDataDir)await rm(userDataDir,{recursive:true,force:true}).catch(()=>{})}
