@@ -14,7 +14,13 @@ assert(reader.includes('webkitfullscreenchange'),'Safari fullscreenchange fallba
 assert(readerCss.includes('-webkit-backdrop-filter'),'Safari backdrop-filter 前缀缺失');
 assert(readerCss.includes('max-height:88vh;max-height:88dvh'),'Reader dvh fallback 缺失');
 assert(studio.includes('Accept-Ranges')&&studio.includes("res.writeHead(206"),'Studio 音视频 Range/206 支持缺失');
-assert(build.includes('?v=${V3_VERSION}'),'构建产物未加入 Reader 版本 cache-bust');
+// b7bce38 之后 asset tag 由 `${V3_VERSION}` 改为 `${V3_VERSION}-${reader 内容 sha256 前 12 位}`：
+// nginx 对 reader.js/reader.css 下发 max-age=3600, must-revalidate，只按版本号打标签会让
+// "改了代码但没换版本" 的部署在浏览器里看起来没生效。这里改为校验新契约——tag 必须同时绑定
+// 版本与内容，且四个 Reader 资源都必须带上该 tag。
+assert(build.includes('createHash("sha256")'),'构建产物未按 Reader 内容计算 asset tag');
+assert(build.includes('const readerAssetTag = `${V3_VERSION}-${readerTagHash'),'构建产物未加入 Reader 版本 cache-bust');
+for(const asset of ['reader.css','reader.js','rich-text.js','layout-engine.js'])assert(build.includes(asset+'?v=${readerAssetTag}'),`构建产物未对 ${asset} 应用 cache-bust`);
 assert(publish.includes('writeDeploymentArtifacts')&&publish.includes('nginx-cache-snippet.conf'),'发布包缺少完整性/缓存策略');
 assert(deployLib.includes('treeSha256')&&deployLib.includes('must-revalidate'),'部署完整性或缓存策略不完整');
 for(const script of ['deployment-readiness-v3.mjs','full-media-check-v3.mjs','beta2-production-rehearsal-v3.mjs'])assert(pkg.scripts&&await readFile(path.join(root,'scripts',script),'utf8'),'Beta2 必需脚本缺失');
