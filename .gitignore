@@ -8,6 +8,10 @@ node_modules/
 .idea/
 *.log
 .tmp-v3-*/
+# v3.1 browser suites write .tmp-v31-*-browser/, which ".tmp-v3-*/" does not
+# match (that pattern needs the literal ".tmp-v3-"), so these were untracked
+# but not ignored.
+.tmp-v31-*/
 .v3-drafts/
 .v3-snapshots/
 .v3-templates/
