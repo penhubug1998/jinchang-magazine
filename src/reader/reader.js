@@ -48,6 +48,7 @@ async function exitDocumentFullscreen() {
 
 const state = {
   issue: null,
+  issueCatalog: [],
   pageIndex: 0,
   fontScale: 1,
   networkMode: "normal",
@@ -742,12 +743,41 @@ function issuePathFor(issueId) {
 
 function configureIssueLinks() {
   const currentId = String(state.issue?.id || "");
+  const catalog = new Map((state.issueCatalog || []).map((item) => [String(item?.id || ""), item]));
   document.querySelectorAll("[data-issue-id]").forEach((link) => {
     const id = String(link.dataset.issueId || "");
+    const subtitle = link.querySelector("[data-issue-subtitle]");
+    const label = link.querySelector("[data-issue-label]");
+    const item = catalog.get(id);
+    if (label) label.textContent = String((id === currentId ? state.issue?.label : item?.label) || id);
+    if (subtitle) {
+      const value = id === currentId ? state.issue?.subtitle : item?.subtitle;
+      subtitle.textContent = String(value || "主题暂未发布");
+    }
     link.href = issuePathFor(id);
     link.classList.toggle("current", id === currentId);
     link.setAttribute("aria-current", id === currentId ? "page" : "false");
   });
+}
+
+async function loadIssueCatalog() {
+  // Every published V3 Reader lives one directory below the archive root.
+  // Reading the shared catalog keeps the switcher aligned with the same
+  // metadata source used by the archive and prevents stale hard-coded titles.
+  try {
+    const response = await fetch("../catalog.json", { cache: "no-store" });
+    if (!response.ok) throw new Error(`catalog HTTP ${response.status}`);
+    const catalog = await response.json();
+    if (!Array.isArray(catalog)) throw new Error("catalog is not an array");
+    state.issueCatalog = catalog.filter((item) => item && item.id).map((item) => ({
+      id: String(item.id),
+      label: String(item.label || item.id),
+      subtitle: String(item.subtitle || ""),
+    }));
+  } catch {
+    state.issueCatalog = [];
+  }
+  configureIssueLinks();
 }
 
 function openIssueDialog() {
@@ -1336,6 +1366,8 @@ async function loadIssue() {
   }
   if (!Array.isArray(issue.pages) || issue.pages.length === 0) throw new Error("期刊没有可显示页面");
   state.issue = issue;
+  configureIssueLinks();
+  void loadIssueCatalog();
   state.publishingPlan = buildPublishingPlan(issue);
   applyIssueDesign(issue);
   if (studioEmbed) {

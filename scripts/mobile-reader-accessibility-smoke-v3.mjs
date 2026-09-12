@@ -9,6 +9,8 @@ const assert=(condition,message)=>{if(!condition)throw new Error(message)};
 
 for(const token of ['id="networkStatus"','id="networkRetry"'])assert(html.includes(token),`Reader shell missing ${token}`);
 for(const token of ['fetchIssueWithRetry','currentNetworkMode','networkConnection','saveData','effectiveType','media-load-error','data-media-retry'])assert(js.includes(token),`Reader logic missing ${token}`);
+for(const token of ['loadIssueCatalog','../catalog.json','data-issue-subtitle','state.issueCatalog'])assert(js.includes(token)||html.includes(token),`Issue switch metadata sync missing ${token}`);
+assert(!html.includes('银发初心映秋色 · 清风正气润晚晴'),'issue switcher must not retain stale hard-coded third-issue subtitle');
 assert(!html.includes('seniorButton')&&!html.includes('seniorDialogButton')&&!js.includes('seniorMode')&&!css.includes('senior-mode'),'senior mode must be removed from the Reader');
 assert(js.includes('state.networkMode!=="normal"')&&js.includes('video.preload="none"'),'weak network video preload downgrade missing');
 assert(js.includes('startMusic({manual:true})'),'explicit music override missing');
