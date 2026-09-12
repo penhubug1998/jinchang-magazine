@@ -1,3 +1,4 @@
+import { assetTagPattern } from './lib-v3-browser-page.mjs';
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { spawn, spawnSync } from 'node:child_process';
 import os from 'node:os';
@@ -51,7 +52,7 @@ const issue = JSON.parse(issueRaw);
 const version = JSON.parse(pkgRaw).version;
 const safeIssue = JSON.stringify(issue).replaceAll('<', '\\u003c');
 const readerDoc = readerHtml
-  .replace('<link rel="stylesheet" href="./reader.css">', `<style>${readerCss}</style>`)
+  .replace(assetTagPattern('link','reader.css'), `<style>${readerCss}</style>`)
   .replace(
     '<script type="module" src="./reader.js"></script>',
     `<script>window.__ISSUE_DATA__=${safeIssue};window.fetch=async()=>new Response(JSON.stringify(window.__ISSUE_DATA__),{status:200,headers:{'Content-Type':'application/json'}})</script><script type="module">${readerJs}</script>`,
@@ -74,7 +75,7 @@ window.fetch=async(input,opts={})=>{
 };
 </script>`;
 const doc = html
-  .replace('<link rel="stylesheet" href="./rc1-acceptance.css">', `<style>${css}</style>`)
+  .replace(assetTagPattern('link','rc1-acceptance.css'), `<style>${css}</style>`)
   .replace('<script src="./rc1-acceptance.js" type="module"></script>', `${mock}<script type="module">${js}</script>`);
 
 const debugPort = 10080 + Math.floor(Math.random() * 100);
