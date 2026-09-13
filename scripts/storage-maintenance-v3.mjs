@@ -68,6 +68,7 @@ const add = (category, target, bytes, action, reason, group = '') => plan.push({
 
 // 1) 可再生产物：dist-v3（含 preview-*），删掉只会让下次打开时重建
 for (const name of await entries(derivedRoots['dist-v3'])) {
+  if (name.startsWith('.')) continue;              // 临时/隐藏目录交给下面的"原子替换残留"处理
   const target = path.join(derivedRoots['dist-v3'], name);
   const bytes = await dirBytes(target);
   if (isPreview(name)) add('regenerable', target, bytes, 'delete', '预览构建产物，可随时重建', 'dist-v3');
@@ -80,9 +81,26 @@ for (const name of await entries(derivedRoots['dist-v3'])) {
 for (const [label, dir] of Object.entries(derivedRoots)) {
   if (label === 'dist-v3') continue;
   for (const name of await entries(dir)) {
+    if (name.startsWith('.')) continue;            // 临时/隐藏目录交给下面的"原子替换残留"处理
     if (liveIssues.has(name)) continue;
     const target = path.join(dir, name);
     add('orphan', target, await dirBytes(target), 'quarantine', `issues/${name} 已不存在`, label);
+  }
+}
+
+// 2.5) 原子替换留下的临时目录：.<期号>.previous-* / .<期号>.staging-*
+// 正常的 rename 交换结束后会被清掉；进程中途被杀就会留下来（生产上真的躺着一个 63 MB 的）。
+// 只有当对应的正式目录已经存在（说明交换已完成）才按残留删除，否则只报告、交给人工判断。
+for (const [label, dir] of Object.entries(derivedRoots)) {
+  for (const name of (await readdir(dir, { withFileTypes: true }).catch(() => []))) {
+    if (!name.isDirectory() || !name.name.startsWith('.')) continue;
+    const match = name.name.match(/^\.([^.]+)\.(previous|staging)-/);
+    if (!match) continue;
+    const target = path.join(dir, name.name);
+    const live = path.join(dir, match[1]);
+    const bytes = await dirBytes(target);
+    if (await exists(live)) add('transient', target, bytes, 'delete', `${match[2]} 临时目录，正式目录已就位`, label);
+    else add('transient', target, bytes, 'report', `${match[2]} 临时目录，但找不到对应的正式目录 ${label}/${match[1]}`);
   }
 }
 
@@ -114,6 +132,7 @@ for (const group of await entries(trashRoot)) {
 }
 
 const totals = {
+  transient: plan.filter(x => x.category === 'transient').reduce((n, x) => n + x.bytes, 0),
   regenerable: plan.filter(x => x.category === 'regenerable').reduce((n, x) => n + x.bytes, 0),
   orphan: plan.filter(x => x.category === 'orphan').reduce((n, x) => n + x.bytes, 0),
   snapshot: plan.filter(x => x.category === 'snapshot').reduce((n, x) => n + x.bytes, 0),
@@ -126,8 +145,8 @@ if (asJson) {
   console.log(`存储维护${apply ? '（执行）' : '（预演，未改动任何文件）'} · 工程根目录：${root}`);
   console.log(`源稿期号：${[...liveIssues].sort().join(', ') || '（无）'}`);
   console.log('');
-  const labels = { regenerable: '可再生产物（删除）', orphan: '孤儿产物（进隔离区）', snapshot: '超额快照（进隔离区）', trash: '隔离区过期（保留期回收）' };
-  for (const key of ['regenerable', 'orphan', 'snapshot', 'trash']) {
+  const labels = { transient: '原子替换残留（删除/报告）', regenerable: '可再生产物（删除）', orphan: '孤儿产物（进隔离区）', snapshot: '超额快照（进隔离区）', trash: '隔离区过期（保留期回收）' };
+  for (const key of ['transient', 'regenerable', 'orphan', 'snapshot', 'trash']) {
     const rows = plan.filter(x => x.category === key);
     console.log(`${labels[key]}：${rows.length} 项 · ${humanBytes(totals[key])}`);
     for (const row of rows.slice(0, 12)) console.log(`   ${row.action === 'delete' ? '删除' : row.action === 'quarantine' ? '隔离' : '仅报告'}  ${humanBytes(row.bytes).padStart(9)}  ${row.path}  （${row.reason}）`);
@@ -135,7 +154,7 @@ if (asJson) {
   }
   const freed = apply ? plan.filter(x => x.action === 'delete').reduce((n, x) => n + x.bytes, 0) : 0;
   console.log('');
-  console.log(`可回收合计：${humanBytes(totals.regenerable + totals.orphan + totals.snapshot + (pruneTrash ? totals.trash : 0))}` +
+  console.log(`可回收合计：${humanBytes(totals.transient + totals.regenerable + totals.orphan + totals.snapshot + (pruneTrash ? totals.trash : 0))}` +
     (pruneTrash ? '' : `（另有隔离区过期 ${humanBytes(totals.trash)}，需显式 --prune-trash）`));
   if (apply) console.log(`本次实际释放：${humanBytes(freed)}`);
   else console.log('预演结束。确认后加 --apply 执行；隔离区回收需再加 --prune-trash。');
