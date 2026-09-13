@@ -970,3 +970,12 @@ dialog.publication-center-dialog:not([open]){display:none}
 .publication-danger-actions .login-status{margin:0}
 .danger-lite{border-color:#e0b4ae;color:#9c2f26;background:#fff6f4}
 @media(max-width:600px){.publication-danger-actions{align-items:stretch;flex-direction:column}.publication-danger-actions input,.publication-danger-actions button{width:100%}}
+
+/* iOS Safari 在聚焦 font-size < 16px 的输入框时会自动放大整个页面（实测 1.142×），
+   放大后页面会横向溢出、按钮跑到屏幕外。制作中心里大量输入框沿用桌面端的
+   12–14px 字号，这里在手机尺寸下统一兜到 16px。
+   只在手机断点生效（与 mobile-studio 的宽度/高度断点一致），桌面端不受影响；
+   必须用 !important 才能压过各组件自己的 font:inherit。 */
+@media (max-width: 820px), (max-height: 500px) {
+  input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px !important; }
+}

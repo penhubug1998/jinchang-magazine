@@ -21,7 +21,10 @@ export const STATUS_PENDING = 'pending';
 export const STATUS_ACTIVE = 'active';
 export const STATUS_DISABLED = 'disabled';
 
-export function userDbDir(root) { return path.join(root, '.v3-users'); }
+// V3_USERS_DIR 用来把账号库挪出工程目录：浏览器/端到端套件跑在仓库根目录上，
+// 一旦真的在仓库里建出 admin 账号，后续依赖"本地免登录"的套件会全部 401。
+// 生产不设置这个变量，仍然落在 <root>/.v3-users。
+export function userDbDir(root) { return process.env.V3_USERS_DIR ? path.resolve(process.env.V3_USERS_DIR) : path.join(root, '.v3-users'); }
 export function userDbFile(root) { return path.join(userDbDir(root), 'users.db'); }
 
 // ---------- 密码 ----------

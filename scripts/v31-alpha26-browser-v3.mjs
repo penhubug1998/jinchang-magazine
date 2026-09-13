@@ -4,12 +4,21 @@ import { spawn } from 'node:child_process';
 import { access,mkdtemp,readFile,rm } from 'node:fs/promises';
 import os from 'node:os';import path from 'node:path';
 const root=process.cwd(),sleep=ms=>new Promise(r=>setTimeout(r,ms)),assert=(c,m)=>{if(!c)throw new Error(m)};
+const pathExists=async p=>{try{await access(p);return true}catch{return false}};
 let chromium=null;for(const c of [process.env.CHROMIUM,'/usr/bin/chromium','/usr/bin/chromium-browser','/usr/bin/google-chrome','/usr/bin/google-chrome-stable'].filter(Boolean)){try{await access(c);chromium=c;break}catch{}}
 if(!chromium){console.warn('V3.1-alpha26 浏览器回归跳过：未找到 Chromium。');process.exit(0)}
 async function waitJson(url,timeout=15000){const st=Date.now();while(Date.now()-st<timeout){try{const r=await fetch(url);if(r.ok)return await r.json()}catch{}await sleep(80)}throw new Error(`timeout ${url}`)}
 async function waitTab(url,timeout=15000){const st=Date.now();while(Date.now()-st<timeout){try{const rows=await waitJson(url,1000),tab=rows.find?.(x=>x.type==='page')||rows[0];if(tab?.webSocketDebuggerUrl)return tab}catch{}await sleep(80)}throw new Error(`timeout tab ${url}`)}
 class CDP{constructor(url){this.url=url;this.id=0;this.pending=new Map();this.events=[]}async connect(){this.ws=new WebSocket(this.url);await new Promise((r,j)=>{this.ws.onopen=r;this.ws.onerror=j});this.ws.onmessage=e=>{const m=JSON.parse(e.data);if(!m.id){this.events.push(m);return}const p=this.pending.get(m.id);if(!p)return;this.pending.delete(m.id);m.error?p.reject(new Error(m.error.message)):p.resolve(m.result)}}send(method,params={}){const id=++this.id;this.ws.send(JSON.stringify({id,method,params}));return new Promise((resolve,reject)=>this.pending.set(id,{resolve,reject}))}close(){try{this.ws?.close()}catch{}}}
-const port=4992,server=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,stdio:'ignore'});let chrome,cdp,userDataDir;
+// 配一个管理员密码：不加的话 /api/auth/session 会回 authenticated:true，
+// 登录页会立刻 location.replace 回制作中心，登录页断言就量不到了。
+// 这个套件跑在仓库根目录上。历史上出现过一次真实事故：套件带着 STUDIO_ADMIN_PASSWORD
+// 启动服务，服务就在仓库 .v3-users/users.db 里建出了 admin，后面所有依赖"本地免登录"
+// 的套件接着全部 401。所以账号库必须挪到临时目录，并且在结束时断言仓库没被写脏。
+const repoUsersDir=path.join(root,'.v3-users');
+const repoUsersExisted=await pathExists(repoUsersDir);
+const loginUsersDir=await mkdtemp(path.join(os.tmpdir(),'jinchang-v31a26-users-'));
+const port=4992,server=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,stdio:'ignore',env:{...process.env,STUDIO_ADMIN_PASSWORD:'alpha26-login-check-1',V3_USERS_DIR:loginUsersDir}});let chrome,cdp,userDataDir;
 try{
  const health=await waitJson(`http://127.0.0.1:${port}/api/health`);assert(health.version===V3_VERSION,`health ${JSON.stringify(health)}`);
  const [html,css,studioJs,presetJs,recommenderJs,pubJs,mobileJs,issue]=await Promise.all([readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('src/studio/studio.js','utf8'),readFile('src/studio/design-presets.js','utf8'),readFile('src/studio/layout-recommender.js','utf8'),readFile('src/studio/publication-center.js','utf8'),readFile('src/studio/mobile-studio.js','utf8'),readFile('issues/001/issue.json','utf8').then(JSON.parse)]);
@@ -92,6 +101,33 @@ try{
  const tabToggle=await ev(`(async()=>{const api=window.__V3_STUDIO__,sleep=ms=>new Promise(r=>setTimeout(r,ms));api.openMobileSheet('layout');await sleep(160);document.querySelector('[data-mobile-tab="layout"]').click();await sleep(160);return api.state.mobileSheetOpen})()`);
  assert(tabToggle===false,'tapping the active dock tab should close the sheet');
 
+ assert(await pathExists(repoUsersDir)===repoUsersExisted,'浏览器套件不得在仓库里新建 .v3-users（账号库必须走 V3_USERS_DIR 临时目录）');
  const errors=await ev('window.__BROWSER_ERRORS__');assert(!errors.length,`browser errors ${JSON.stringify(errors)}`);
- console.log('V3.1-alpha26 浏览器回归通过：320/390/768 Reader-first 边界、四 Bottom Sheet、Reader 编辑桥接、媒体/布局/页面流程，以及 1024/1366/1920 桌面自动恢复均正常。');
-}finally{cdp?.close();if(chrome?.pid)try{process.kill(-chrome.pid,'SIGTERM')}catch{};server?.kill('SIGTERM');await sleep(180);if(userDataDir)await rm(userDataDir,{recursive:true,force:true}).catch(()=>{})}
+
+ // 登录页是所有人的第一屏，而且它不在制作中心里，历次移动端回归都没覆盖过。
+ // 实测过一次真实事故：输入框 12px → iOS Safari 聚焦时自动放大 1.14×，页面横向溢出。
+ // 这里真的导航到 /login（用注入 HTML 的话内联脚本不会执行，点页签点不动）。
+ await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});
+ await cdp.send('Page.navigate',{url:`http://127.0.0.1:${port}/login`});
+ let loginReady=false;
+ for(let i=0;i<120;i++){if(await ev(`Boolean(document.getElementById('tabForgot'))`).catch(()=>false)){loginReady=true;break}await sleep(60)}
+ assert(loginReady,'登录页没有加载出来');
+ await sleep(200);
+ const login=await ev(`(()=>{const de=document.documentElement,r=el=>{const b=el.getBoundingClientRect();return {w:Math.round(b.width),h:Math.round(b.height),l:Math.round(b.left),r:Math.round(b.right)}};
+   const tabs=[...document.querySelectorAll('.login-tab')];
+   const visible=el=>{const b=el.getBoundingClientRect();return b.width>0&&b.height>0};
+   const fields=sel=>[...document.querySelectorAll(sel)].filter(visible).map(f=>({id:f.id,...r(f),font:parseFloat(getComputedStyle(f).fontSize)}));
+   const loginPane=fields('#paneLogin input');          // 点页签前可见的登录表单
+   document.getElementById('tabForgot').click();
+   const forgotOpen=!document.getElementById('paneForgot').hidden;
+   const forgotPane=fields('#paneForgot input');        // 点之后应该露出来的重置表单
+   return {overflow:de.scrollWidth-de.clientWidth,tabs:tabs.map(t=>({t:t.textContent.trim(),...r(t)})),fields:[...loginPane,...forgotPane],forgotOpen}})()`);
+ assert(login.forgotOpen,`登录页「忘记密码」面板打不开 ${JSON.stringify(login)}`);
+ assert(login.tabs.length===3&&login.tabs.every(t=>t.h>=38&&t.l>=-1&&t.r<=391),`登录页三个页签异常 ${JSON.stringify(login.tabs)}`);
+ assert(login.overflow<=1,`登录页在 390×844 下横向溢出 ${login.overflow}px`);
+ assert(login.fields.length>=7,`登录页可见输入框数量异常（登录 2 + 重置 5）${JSON.stringify(login.fields)}`);
+ assert(login.fields.every(f=>f.font>=16),`登录页输入框字号必须 ≥16px（否则 iOS 聚焦会整页放大）${JSON.stringify(login.fields)}`);
+ assert(login.fields.every(f=>f.h>=44),`登录页输入框高度必须 ≥44px ${JSON.stringify(login.fields)}`);
+
+ console.log('V3.1-alpha26 浏览器回归通过：320/390/768 Reader-first 边界、四 Bottom Sheet、Reader 编辑桥接、媒体/布局/页面流程、登录页手机字号，以及 1024/1366/1920 桌面自动恢复均正常。');
+}finally{cdp?.close();if(chrome?.pid)try{process.kill(-chrome.pid,'SIGTERM')}catch{};server?.kill('SIGTERM');await sleep(180);if(userDataDir)await rm(userDataDir,{recursive:true,force:true}).catch(()=>{});if(loginUsersDir)await rm(loginUsersDir,{recursive:true,force:true}).catch(()=>{})}
