@@ -219,6 +219,19 @@ try {
   assert.equal(myIssue.body.publication, '二号单位电子期刊', `新建期刊应使用用户自定义刊名：${myIssue.body.publication}`);
   console.log(`  创作空间隔离 ✓（既有 ${owned.body.issues.length} 期归管理员，新用户只看到自己创建的 ${myId}）`);
 
+  // 14.8) 管理界面接线：管理员登录后能拿到内含用户管理界面的制作中心页面
+  const studioPage = await fetch(base + '/', { headers: { Cookie: admin.cookie } });
+  const studioHtml = await studioPage.text();
+  assert.equal(studioPage.status, 200, '管理员应能打开制作中心');
+  for (const id of ['userAdminBtn', 'userAdminDialog', 'userAdminList', 'mySpaceDialog', 'mySpaceJournalName']) {
+    assert.ok(studioHtml.includes(id), `制作中心缺少多用户界面元素 ${id}`);
+  }
+  const studioJs = await (await fetch(base + '/studio.js', { headers: { Cookie: admin.cookie } })).text();
+  for (const token of ['data-user-action', '/api/admin/users', '/api/me/profile', '/api/me/password']) {
+    assert.ok(studioJs.includes(token), `制作中心脚本缺少多用户接线 ${token}`);
+  }
+  console.log('  制作中心多用户界面接线 ✓');
+
   // 15) 审计留痕
   const audit = await call(base, '/api/admin/audit?limit=100', { cookie: admin.cookie });
   assert.equal(audit.status, 200, '管理员应能读取审计记录');

@@ -948,3 +948,18 @@ dialog.publication-center-dialog:not([open]){display:none}
 .layer-copy b{font-size:10px;color:#4a3a2c}
 .layer-copy small{color:#8b7c6c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .layer-z{color:#a3927f;font-size:9px;font-variant-numeric:tabular-nums}
+/* 用户管理列表：每行一个账号，右侧是可用操作 */
+.user-admin-list{display:grid;gap:8px;max-height:min(52vh,460px);overflow:auto;padding:2px}
+.user-admin-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #e7dbcd;border-radius:12px;background:#fffdf9}
+.user-admin-row.is-pending{background:#fff8e8;border-color:#e8d5a8}
+.user-admin-row.is-disabled{background:#f6f2ee;opacity:.75}
+.user-admin-main{display:grid;gap:3px;min-width:0}
+.user-admin-main strong{font-size:13px}
+.user-admin-main small{color:#8a796d;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.user-admin-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+.user-admin-tag{padding:2px 7px;border-radius:999px;background:#f1e9df;color:#6d5c4f;font-size:10.5px}
+.user-admin-tag.ok{background:#e8f5eb;color:#2d6b42}
+.user-admin-tag.warn{background:#fff1d6;color:#8a5a00}
+.user-admin-tag.bad{background:#fde8e6;color:#a32922}
+.user-admin-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.user-admin-actions button{min-height:34px;padding:6px 11px;font-size:11.5px;border-radius:9px}
