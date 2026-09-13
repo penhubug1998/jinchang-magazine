@@ -65,6 +65,11 @@ try{
  // 手机面板里的输入控件必须 ≥16px，这条在 Chromium 里可通过 computed style 稳定断言。
  const inputFonts=await ev(`(()=>{const bad=[];for(const el of document.querySelectorAll('#mobileBottomSheet input,#mobileBottomSheet textarea,#mobileBottomSheet select')){const fs=parseFloat(getComputedStyle(el).fontSize)||0;if(fs<16)bad.push({tag:el.tagName.toLowerCase(),fontSize:fs});}return bad})()`);
  assert(!inputFonts.length,`手机面板里有 ${inputFonts.length} 个字号 <16px 的输入控件（iOS 会自动放大页面）：${JSON.stringify(inputFonts)}`);
+ // 手机壳层容器必须只在壳层激活时显示。曾经这三条规则只按屏幕宽度生效，
+ // 结果手机上打开管理页也会挂着顶栏与底部工具栏（死按钮），
+ // 真机实测管理页 dock/header 都是可见的。
+ const leak=await ev(`(()=>{const b=document.body,had=b.classList.contains('mobile-studio-mode');b.classList.remove('mobile-studio-mode');const g=id=>{const el=document.getElementById(id);return el?getComputedStyle(el).display:null};const out={dock:g('mobileStudioDock'),header:g('mobileStudioHeader'),sheet:g('mobileBottomSheet')};if(had)b.classList.add('mobile-studio-mode');return out})()`);
+ assert(leak.dock==='none'&&leak.header==='none'&&leak.sheet==='none',`未激活手机壳层时容器仍然显示（管理页会挂一条死工具栏）：${JSON.stringify(leak)}`);
  for(const vp of [{w:1024,h:768},{w:1366,h:768},{w:1920,h:1080}]){
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:vp.w,height:vp.h,deviceScaleFactor:1,mobile:false});await ev('window.dispatchEvent(new Event("resize"))');await sleep(80);const desktop=await ev(`({active:window.__V3_STUDIO__.state.mobileStudioActive,body:document.body.classList.contains('mobile-studio-mode'),dock:getComputedStyle(document.getElementById('mobileStudioDock')).display,overflow:document.documentElement.scrollWidth>innerWidth+1})`);assert(!desktop.active&&!desktop.body&&desktop.dock==='none'&&!desktop.overflow,`desktop restore ${vp.w}x${vp.h} failed ${JSON.stringify(desktop)}`);
  }

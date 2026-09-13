@@ -61,3 +61,16 @@ export function mobileWorkflowItems({ auditOpen = 0, auditBlockers = 0, canPubli
     { id:'publish', label:'发布中心', state: canPublish ? 'ready' : 'pending' },
   ];
 }
+
+
+// 手机尺寸：窄（竖屏）或矮（横屏）。抽成纯函数便于门禁断言。
+export function isPhoneSizedViewport(width, height = 0) {
+  return isMobileStudioViewport(width, { height });
+}
+
+// 手机上选完一期直接进工作区（省掉「进入工作区」这一步）。
+// 桌面端保持原样；已经在工作区里、或已经在跳转中，都不再触发。
+export function shouldAutoEnterWorkspace({ workspaceMode = false, width = 0, height = 0, entering = false } = {}) {
+  if (workspaceMode || entering) return false;
+  return isPhoneSizedViewport(width, height);
+}
