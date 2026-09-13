@@ -145,6 +145,12 @@ async function auditOne(dirName) {
     if(title&&placeholderRe.test(title))pushProblem(strictNow,blockers,warnings,'PLACEHOLDER_CONTENT',`第 ${n} 页主标题仍含占位文字：“${title.slice(0,80)}”`,loc('title'));
     if(nav&&placeholderRe.test(nav))pushProblem(strictNow,blockers,warnings,'PLACEHOLDER_CONTENT',`第 ${n} 页导航标题仍含占位文字：“${nav.slice(0,80)}”`,loc('navTitle'));
     if(kicker&&placeholderRe.test(kicker))pushProblem(strictNow,blockers,warnings,'PLACEHOLDER_CONTENT',`第 ${n} 页眉题仍含占位文字：“${kicker.slice(0,80)}”`,loc('kicker'));
+    // U+FFFD 替换字符是"文本在写入之前就已经损坏"的痕迹（原文的某个字在复制/导入
+    // 途中丢掉了）。它看着像乱码方块，但它是真实字符：删掉它周围的文字不会让它消失，
+    // 只有重新输入整段才会消失。2026-09-13 第三期有 2 个这样的字符被发布上线，
+    // 之前没有任何检查会提示，所以这里让它在发布前就露面。
+    {const broken=textValues(p).filter(x=>String(x.text||'').includes('\uFFFD')).slice(0,3);
+     if(broken.length)pushProblem(strictNow,blockers,warnings,'TEXT_REPLACEMENT_CHAR',`第 ${n} 页有无法解码的字符（U+FFFD）：${broken.map(x=>String(x.text).replace(/[\s\u3000]+/g,' ').slice(0,60)).join(' / ')}`,{...loc('blocks'),fix:'选中整段文字重新输入；只删除相邻文字不会去掉这个字符。'});}
     if(title.length>34)add(warnings,'warning','PAGE_TITLE_LONG',`第 ${n} 页主标题 ${title.length} 字：${title.slice(0,48)}`,loc('title'));
     if(nav.length>42)add(warnings,'warning','PAGE_NAV_LONG',`第 ${n} 页导航标题 ${nav.length} 字`,loc('navTitle'));
     if(kicker.length>42)add(warnings,'warning','PAGE_KICKER_LONG',`第 ${n} 页眉题 ${kicker.length} 字`,loc('kicker'));
