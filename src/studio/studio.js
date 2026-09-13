@@ -1238,10 +1238,41 @@ async function openMySpaceDialog(){
     $('#mySpaceDisplayName').value=account.displayName||'';
     $('#mySpaceJournalName').value=account.journalName||'';
     $('#mySpaceStatus').textContent='';$('#mySpacePasswordStatus').textContent='';
+    void renderMySessions();
     $('#mySpaceCurrentPassword').value='';$('#mySpaceNewPassword').value='';
     dialog.showModal();
   }catch(error){toast(error.message||'读取账号信息失败',3200);}
 }
+// ---- 登录设备（会话可见性）----
+// 会话只存 token 的 sha256，服务端用 rowid 当编号；这里展示设备/时间/IP，并提供"退出其他设备"。
+function sessionRowHtml(row){
+  const tag=row.current?userAdminTag('当前设备','ok'):'';
+  const meta=[row.device||'未知设备',row.ip||'',`最近活动 ${fmtTime(row.lastSeenAt)}`,row.expiresAtIso?`有效期至 ${fmtTime(row.expiresAtIso)}`:''].filter(Boolean).join(' · ');
+  return `<article class="user-admin-row" data-session-row="${row.id}"><div class="user-admin-main"><strong>${escText(row.device||'未知设备')}</strong><small>${escText(meta)}</small><div class="user-admin-tags">${tag}</div></div><div class="user-admin-actions">${row.current?'':`<button type="button" data-session-revoke="${row.id}">退出该设备</button>`}</div></article>`;
+}
+async function renderMySessions(){
+  const list=$('#mySpaceSessionList');if(!list)return;
+  const summary=$('#mySpaceSessionSummary'),status=$('#mySpaceSessionStatus');
+  if(status){status.className='login-status';status.textContent='';}
+  try{
+    const data=await api('/api/me/sessions');
+    const rows=data?.sessions||[];
+    if(summary)summary.textContent=rows.length?`共 ${rows.length} 个登录设备`:'没有可显示的会话';
+    list.innerHTML=rows.map(sessionRowHtml).join('')||'<div class="user-admin-tag">当前是免登录本地模式</div>';
+  }catch(error){if(summary)summary.textContent='读取失败';if(status)status.textContent=error.message||'读取登录设备失败';}
+}
+$('#mySpaceSessionsRefresh')?.addEventListener('click',renderMySessions);
+$('#mySpaceLogoutOthers')?.addEventListener('click',async()=>{
+  const status=$('#mySpaceSessionStatus');if(!confirm('退出除当前设备以外的所有登录？其他设备需要重新登录。'))return;
+  try{const r=await api('/api/me/sessions/logout-others',{method:'POST'});if(status){status.className='login-status success';status.textContent=`已退出 ${r?.revoked??0} 个设备。`;}await renderMySessions();}
+  catch(error){if(status){status.className='login-status';status.textContent=error.message||'操作失败';}}
+});
+$('#mySpaceSessionList')?.addEventListener('click',async event=>{
+  const button=event.target.closest('[data-session-revoke]');if(!button)return;
+  const status=$('#mySpaceSessionStatus');button.disabled=true;
+  try{await api(`/api/me/sessions/${Number(button.dataset.sessionRevoke)}`,{method:'DELETE'});if(status){status.className='login-status success';status.textContent='该设备已退出登录。';}await renderMySessions();}
+  catch(error){if(status){status.className='login-status';status.textContent=error.message||'操作失败';}button.disabled=false;}
+});
 $('#mySpaceBtn')?.addEventListener('click',openMySpaceDialog);
 $('#mySpaceSave')?.addEventListener('click',async()=>{
   const status=$('#mySpaceStatus');status.className='login-status';status.textContent='保存中…';
@@ -1280,6 +1311,7 @@ function userAdminRow(user) {
       ? `<button type="button" data-user-action="revoke" data-user-id="${user.id}">收回发布权</button>`
       : `<button type="button" data-user-action="grant" data-user-id="${user.id}">授予发布权</button>`);
     actions.push(`<button type="button" data-user-action="password" data-user-id="${user.id}">重置密码</button>`);
+    actions.push(`<button type="button" data-user-action="sessions" data-user-id="${user.id}">登录设备</button>`);
     actions.push(`<button type="button" data-user-action="delete" data-user-id="${user.id}">删除</button>`);
   }
   const cls = user.status === 'pending' ? 'is-pending' : user.status === 'disabled' ? 'is-disabled' : '';
@@ -1369,6 +1401,20 @@ $('#userAdminList')?.addEventListener('click', async event => {
     const value = prompt('为该账号设置新密码（至少 8 位，含字母和数字）：');
     if (!value) return;
     return call(`/api/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({ password: value }) });
+  }
+  if (action === 'sessions') {
+    button.disabled = true;
+    try {
+      const data = await api(`/api/admin/users/${id}/sessions`);
+      const rows = data?.sessions || [];
+      if (!rows.length) { if (status) { status.className = 'login-status'; status.textContent = '该账号当前没有登录会话。'; } return; }
+      const text = `该账号 ${rows.length} 个登录设备：\n${rows.map(r => `· ${r.device || '未知设备'}  ${r.ip || ''}  最近 ${fmtTime(r.lastSeenAt)}`).join('\n')}\n\n确定强制下线（吊销全部会话）？`;
+      if (!confirm(text)) return;
+      const r = await api(`/api/admin/users/${id}/logout`, { method: 'POST' });
+      if (status) { status.className = 'login-status success'; status.textContent = `已吊销 ${r?.revoked ?? 0} 个会话。`; }
+    } catch (error) { if (status) { status.className = 'login-status'; status.textContent = error.message || '操作失败'; } }
+    finally { button.disabled = false; }
+    return;
   }
   if (action === 'delete') {
     if (!confirm('确定删除该账号？该账号将立即无法登录。')) return;

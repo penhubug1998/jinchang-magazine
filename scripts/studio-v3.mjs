@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
-import {openUserDb,userDbDir,bootstrapAdmin,purgeExpiredSessions,purgeStaleResetRequests,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,removeIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,requestPasswordReset,listPasswordResets,issueResetCode,cancelPasswordReset,consumeResetCode,RESET_CODE_TTL_MS,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
+import {openUserDb,userDbDir,bootstrapAdmin,purgeExpiredSessions,purgeStaleResetRequests,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,listUserSessions,destroyOtherSessions,destroyUserSession,destroyAllUserSessions,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,removeIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,requestPasswordReset,listPasswordResets,issueResetCode,cancelPasswordReset,consumeResetCode,RESET_CODE_TTL_MS,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
 import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -1569,6 +1569,33 @@ const server=http.createServer(async(req,res)=>{try{
       const fresh=createSession(userDb,session.userId,{userAgent:String(req.headers['user-agent']||''),ip:requestIp(req)});
       return send(res,200,{ok:true},'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,fresh.token,fresh.ttlMs/1000)});
     }
+  // 会话可见性：让用户看到"谁在登录"，并能一键退出其他设备。
+  // 会话表只存 token 的 sha256，这里对外用 rowid 当编号，不泄露任何令牌信息。
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='me'&&seg[2]==='sessions'&&!seg[3]&&req.method==='GET'){
+    const session=adminSession(req);
+    if(!session)return send(res,401,{error:'需要登录',code:'AUTH_REQUIRED'});
+    if(session.unprotected)return send(res,200,{ok:true,sessions:[],unprotected:true});
+    return send(res,200,{ok:true,sessions:listUserSessions(userDb,session.userId,{currentToken:session.sessionToken||''})});
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='me'&&seg[2]==='sessions'&&seg[3]==='logout-others'&&req.method==='POST'){
+    const session=adminSession(req);
+    if(!session)return send(res,401,{error:'需要登录',code:'AUTH_REQUIRED'});
+    if(session.unprotected)return send(res,200,{ok:true,revoked:0,unprotected:true});
+    const revoked=destroyOtherSessions(userDb,session.userId,session.sessionToken||'');
+    audit(userDb,{actor:session.user,actorId:session.userId,action:'session.logout-others',target:session.user,detail:String(revoked)});
+    return send(res,200,{ok:true,revoked});
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='me'&&seg[2]==='sessions'&&seg[3]&&req.method==='DELETE'){
+    const session=adminSession(req);
+    if(!session)return send(res,401,{error:'需要登录',code:'AUTH_REQUIRED'});
+    if(session.unprotected)return send(res,200,{ok:true});
+    const id=Number(seg[3]);
+    if(!Number.isInteger(id))return send(res,400,{error:'会话编号无效',code:'INVALID_SESSION_ID'});
+    const removed=destroyUserSession(userDb,session.userId,id);
+    if(!removed)return send(res,404,{error:'会话不存在或已过期',code:'SESSION_NOT_FOUND'});
+    audit(userDb,{actor:session.user,actorId:session.userId,action:'session.revoke',target:session.user,detail:String(id)});
+    return send(res,200,{ok:true});
+  }
     return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
   }
   if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='users'){
@@ -1593,6 +1620,19 @@ const server=http.createServer(async(req,res)=>{try{
       let data;try{data=await body(req,8*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
       try{const row=setUserPassword(userDb,targetId,String(data?.password||''),session.user);return send(res,200,{ok:true,user:publicUser(row)});}
       catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_PASSWORD'});}
+    }
+    // 管理员查看/吊销某个账号的登录会话（"这个账号到底在哪几台设备上登录着"）
+    if(seg[3]&&seg[4]==='sessions'&&!seg[5]&&req.method==='GET'){
+      const target=findUserById(userDb,targetId);
+      if(!target)return send(res,404,{error:'用户不存在',code:'USER_NOT_FOUND'});
+      return send(res,200,{ok:true,username:String(target.username),sessions:listUserSessions(userDb,targetId,{})});
+    }
+    if(seg[3]&&seg[4]==='logout'&&req.method==='POST'){
+      const target=findUserById(userDb,targetId);
+      if(!target)return send(res,404,{error:'用户不存在',code:'USER_NOT_FOUND'});
+      const revoked=destroyAllUserSessions(userDb,targetId);
+      audit(userDb,{actor:session.user,action:'user.sessions.revoke',target:String(target.username),detail:String(revoked)});
+      return send(res,200,{ok:true,revoked});
     }
     // 签发一次性重置码：明文只在这里返回一次，库里只留 sha256。
     if(seg[3]&&seg[4]==='reset-code'&&req.method==='POST'){

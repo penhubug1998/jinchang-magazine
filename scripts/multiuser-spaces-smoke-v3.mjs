@@ -327,6 +327,31 @@ try {
   assert.equal(liveDelete.body?.derived?.failed?.length || 0, 0, `派生数据隔离不应有失败项：${JSON.stringify(liveDelete.body?.derived?.failed)}`);
   console.log('  期刊删除隔离区、作者/管理员权限分级、公开目录回收、派生数据清理与归档重建 ✓');
 
+  // ---------- 4.5) 登录设备可见性与一键退出 ----------
+  const second = await login(base, 'Alice', 'AliceNew123');
+  assert.equal(second.status, 200, '同一账号第二个设备登录失败');
+  const sessions = await call(base, '/api/me/sessions', { cookie: second.cookie });
+  assert.equal(sessions.status, 200, '会话列表接口不可用');
+  // 前面"重置码试错后仍能登录"那一步也留下了一个会话，所以这里不断言固定条数
+  const sessionCount = sessions.body.sessions.length;
+  assert.ok(sessionCount >= 2, `应看到多个登录设备，实际 ${sessionCount}`);
+  assert.equal(sessions.body.sessions.filter(x => x.current).length, 1, '必须且只能标记一个当前设备');
+  assert.ok(sessions.body.sessions.every(x => x.device && !('tokenHash' in x)), '会话列表应带设备描述且不含令牌信息');
+  const revoked = await call(base, '/api/me/sessions/logout-others', { method: 'POST', cookie: second.cookie });
+  assert.equal(revoked.status, 200, '退出其他设备失败');
+  assert.equal(revoked.body.revoked, sessionCount - 1, `应吊销 ${sessionCount - 1} 个会话，实际 ${revoked.body.revoked}`);
+  assert.equal((await call(base, '/api/me/sessions', { cookie: reLogin.cookie })).status, 401, '被吊销的设备应立即失效');
+  assert.equal((await call(base, '/api/me/sessions', { cookie: second.cookie })).body.sessions.length, 1, '当前设备必须保留');
+
+  // 管理员强制下线
+  assert.equal((await call(base, `/api/admin/users/${alice.id}/sessions`, { cookie: second.cookie })).status, 403, '普通用户不能查看他人的登录设备');
+  const adminSessions = await call(base, `/api/admin/users/${alice.id}/sessions`, { cookie: admin.cookie });
+  assert.equal(adminSessions.body.sessions.length, 1, `管理员应看到该账号仅剩 1 个登录设备，实际 ${adminSessions.body.sessions.length}`);
+  const kick = await call(base, `/api/admin/users/${alice.id}/logout`, { method: 'POST', cookie: admin.cookie });
+  assert.equal(kick.body.revoked, 1, '管理员强制下线应吊销全部会话');
+  assert.equal((await call(base, '/api/me/sessions', { cookie: second.cookie })).status, 401, '被强制下线的设备应立即失效');
+  console.log('  登录设备可见性、退出其他设备、管理员强制下线 ✓');
+
   // ---------- 5) 账号删除时素材库一起进隔离区 ----------
   assert.ok(await exists(path.join(dir, '.v3-users', 'libraries', String(alice.id))), '删除账号前素材库目录应存在');
   const dropAlice = await call(base, `/api/admin/users/${alice.id}`, { method: 'DELETE', cookie: admin.cookie });

@@ -313,6 +313,54 @@ export function purgeExpiredSessions(db) {
   return Number(info.changes || 0);
 }
 
+// ---------- 会话可见性 ----------
+// 会话表以 token_hash 为主键，这里用 rowid 作为对外可见的会话编号（不含任何令牌信息）。
+function sessionRow(row, currentHash) {
+  const ua = String(row.user_agent || '');
+  return {
+    id: Number(row.id),
+    createdAt: String(row.created_at || ''),
+    lastSeenAt: String(row.last_seen_at || ''),
+    expiresAt: Number(row.expires_at || 0),
+    expiresAtIso: row.expires_at ? new Date(Number(row.expires_at)).toISOString() : null,
+    ip: String(row.ip || ''),
+    userAgent: ua.slice(0, 200),
+    device: describeUserAgent(ua),
+    current: currentHash ? String(row.token_hash) === currentHash : false,
+  };
+}
+// 只做粗分类，够用户认出"这是不是我自己的设备"即可。
+export function describeUserAgent(ua) {
+  const text = String(ua || '');
+  if (!text) return '未知设备';
+  const os = /iPhone|iPad|iPod/i.test(text) ? 'iOS' : /Android/i.test(text) ? 'Android'
+    : /Macintosh|Mac OS X/i.test(text) ? 'macOS' : /Windows/i.test(text) ? 'Windows' : /Linux/i.test(text) ? 'Linux' : '其他系统';
+  const browser = /Edg\//i.test(text) ? 'Edge' : /OPR\//i.test(text) ? 'Opera' : /Chrome\//i.test(text) ? 'Chrome'
+    : /Safari\//i.test(text) ? 'Safari' : /Firefox\//i.test(text) ? 'Firefox' : '浏览器';
+  return `${os} · ${browser}`;
+}
+export function listUserSessions(db, userId, { currentToken = '' } = {}) {
+  const hash = currentToken ? sha256(currentToken) : '';
+  const rows = db.prepare('SELECT rowid AS id, * FROM sessions WHERE user_id = ? ORDER BY last_seen_at DESC').all(Number(userId));
+  return rows.map(row => sessionRow(row, hash));
+}
+// 退出其他设备：保留当前这条会话，其余全部吊销。
+export function destroyOtherSessions(db, userId, currentToken = '') {
+  const hash = currentToken ? sha256(currentToken) : '';
+  const info = hash
+    ? db.prepare('DELETE FROM sessions WHERE user_id = ? AND token_hash != ?').run(Number(userId), hash)
+    : db.prepare('DELETE FROM sessions WHERE user_id = ?').run(Number(userId));
+  return Number(info.changes || 0);
+}
+export function destroyUserSession(db, userId, sessionId) {
+  const info = db.prepare('DELETE FROM sessions WHERE user_id = ? AND rowid = ?').run(Number(userId), Number(sessionId));
+  return Number(info.changes || 0) > 0;
+}
+export function destroyAllUserSessions(db, userId) {
+  const info = db.prepare('DELETE FROM sessions WHERE user_id = ?').run(Number(userId));
+  return Number(info.changes || 0);
+}
+
 export function sessionCountForUser(db, userId) {
   const row = db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').get(Number(userId));
   return Number(row?.n || 0);
