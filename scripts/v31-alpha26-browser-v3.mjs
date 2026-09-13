@@ -60,6 +60,11 @@ try{
  const small=await ev(`(()=>{const out=[];for(const el of document.querySelectorAll('button,a[href],input,textarea,select,[role="button"]')){const r=el.getBoundingClientRect(),cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||r.width===0||r.height===0)continue;if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)continue;if(r.width<40||r.height<40)out.push({label:(el.id||el.textContent||el.tagName).trim().slice(0,18),w:Math.round(r.width),h:Math.round(r.height)});}return out})()`);
  assert(!small.length,`手机面板里有 ${small.length} 个小于 40px 的触控目标：${JSON.stringify(small.slice(0,5))}`);
  await ev('window.__V3_STUDIO__.closeMobileSheet()');
+ // iOS Safari 会在聚焦 font-size < 16px 的输入框时自动放大页面（真机实测 14px 时放大到 1.142 倍，
+ // 可视宽度 402→352，右侧内容被挤出屏幕，连「保存文字」按钮都会被挤出可视区）。
+ // 手机面板里的输入控件必须 ≥16px，这条在 Chromium 里可通过 computed style 稳定断言。
+ const inputFonts=await ev(`(()=>{const bad=[];for(const el of document.querySelectorAll('#mobileBottomSheet input,#mobileBottomSheet textarea,#mobileBottomSheet select')){const fs=parseFloat(getComputedStyle(el).fontSize)||0;if(fs<16)bad.push({tag:el.tagName.toLowerCase(),fontSize:fs});}return bad})()`);
+ assert(!inputFonts.length,`手机面板里有 ${inputFonts.length} 个字号 <16px 的输入控件（iOS 会自动放大页面）：${JSON.stringify(inputFonts)}`);
  for(const vp of [{w:1024,h:768},{w:1366,h:768},{w:1920,h:1080}]){
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:vp.w,height:vp.h,deviceScaleFactor:1,mobile:false});await ev('window.dispatchEvent(new Event("resize"))');await sleep(80);const desktop=await ev(`({active:window.__V3_STUDIO__.state.mobileStudioActive,body:document.body.classList.contains('mobile-studio-mode'),dock:getComputedStyle(document.getElementById('mobileStudioDock')).display,overflow:document.documentElement.scrollWidth>innerWidth+1})`);assert(!desktop.active&&!desktop.body&&desktop.dock==='none'&&!desktop.overflow,`desktop restore ${vp.w}x${vp.h} failed ${JSON.stringify(desktop)}`);
  }
