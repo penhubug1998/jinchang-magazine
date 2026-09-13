@@ -61,7 +61,19 @@ export function usernameProblem(username) {
 // ---------- 数据库 ----------
 export function openUserDb(root) {
   const dir = userDbDir(root);
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true, mode: 0o700 });
+  if (!existsSync(dir)) {
+    try { mkdirSync(dir, { recursive: true, mode: 0o700 }); }
+    catch (error) {
+      // 生产实测：应用根目录属主是 root、权限 755 时，以 www-data 运行的服务
+      // 无法在根目录下新建目录，服务会在启动时直接退出。这里给出可操作的提示，
+      // 而不是让运维去猜 EACCES。
+      if (error?.code === 'EACCES' || error?.code === 'EPERM') {
+        throw new Error(`无法创建用户数据库目录 ${dir}（${error.code}）。请先以 root 执行：`
+          + `mkdir -p ${dir} && chown www-data:www-data ${dir} && chmod 700 ${dir}`);
+      }
+      throw error;
+    }
+  }
   try { chmodSync(dir, 0o700); } catch { }
   const file = userDbFile(root);
   const db = new DatabaseSync(file);
