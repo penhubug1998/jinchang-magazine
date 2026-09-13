@@ -263,6 +263,10 @@ export function deleteUser(db, id, actor = '') {
   const row = findUserById(db, id);
   if (!row) throw Object.assign(new Error('用户不存在'), { code: 'USER_NOT_FOUND' });
   if (row.role === ROLE_ADMIN) throw Object.assign(new Error('不能删除管理员账号'), { code: 'CANNOT_DELETE_ADMIN' });
+  // 名下还有期刊时先别删：issue_owners 会随外键级联消失，期刊随即变成"无主"，
+  // 下一次启动的归属对齐会把它挂到管理员名下 —— 已发布的用户分区也会因此变位置。
+  const owned = Number(db.prepare('SELECT COUNT(*) AS n FROM issue_owners WHERE owner_id = ?').get(Number(id))?.n || 0);
+  if (owned > 0) throw Object.assign(new Error(`该账号名下还有 ${owned} 期期刊，请先把这些期刊转移给其他账号或删除，再删除账号`), { code: 'USER_HAS_ISSUES', count: owned });
   db.prepare('DELETE FROM users WHERE id = ?').run(Number(id));   // 会话由外键级联删除
   audit(db, { actor, action: 'user.delete', target: row.username });
   return true;

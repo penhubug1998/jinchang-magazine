@@ -1520,7 +1520,7 @@ const server=http.createServer(async(req,res)=>{try{
     }
     if(seg[3]&&!seg[4]&&req.method==='DELETE'){
       try{deleteUser(userDb,targetId,session.user);return send(res,200,{ok:true});}
-      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:(e.code==='CANNOT_DELETE_ADMIN'?409:400),{error:e.message||String(e),code:e.code||'DELETE_FAILED'});}
+      catch(e){return send(res,['USER_NOT_FOUND'].includes(e.code)?404:['CANNOT_DELETE_ADMIN','USER_HAS_ISSUES'].includes(e.code)?409:400,{error:e.message||String(e),code:e.code||'DELETE_FAILED'});}
     }
     return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
   }

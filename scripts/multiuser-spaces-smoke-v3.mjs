@@ -133,6 +133,11 @@ try {
   assert.equal((await call(base, `/api/admin/issues/003/owner`, { method: 'POST', cookie: admin.cookie, data: { userId: alice.id } })).status, 200);
   assert.equal((await call(base, `/api/admin/issues/005/owner`, { method: 'POST', cookie: admin.cookie, data: { userId: alice.id } })).status, 200);
 
+  // 名下还有期刊时不允许删除账号（否则期刊归属会被级联清掉、已发布的用户分区会移位）
+  const prematureDelete = await call(base, `/api/admin/users/${alice.id}`, { method: 'DELETE', cookie: admin.cookie });
+  assert.equal(prematureDelete.status, 409, '名下还有期刊的账号不得被直接删除');
+  assert.equal(prematureDelete.body.code, 'USER_HAS_ISSUES');
+
   const aliceStyle = { name: '爱丽丝主题', scope: 'theme', contextType: 'theme', payload: { accent: '#315f4a', paper: '#fbfcf7' } };
   const saved = await call(base, '/api/design-library', { method: 'POST', cookie: aliceSession.cookie, data: aliceStyle });
   assert.equal(saved.status, 201, `用户保存样式失败 ${JSON.stringify(saved.body)}`);
