@@ -27,7 +27,9 @@ const ALLOWED_LARGE = new Map([
 ]);
 
 const JUNK = [/(^|\/)\.DS_Store$/, /\.bak$/i, /\.bak-/i, /\.orig$/i, /~$/, /\.tmp$/i, /(^|\/)npm-debug\.log$/i, /\.log$/i];
-const SECRETS = [/(^|\/)\.env($|\.)/, /\.pem$/i, /\.key$/i, /(^|\/)id_rsa/, /\.dump$/i, /\.sql$/i];
+const SECRETS = [/(^|\/)\.env($|\.)/, /\.pem$/i, /\.key$/i, /(^|\/)id_rsa/, /\.dump$/i, /\.sql$/i,
+  // 运行时数据库：含密码哈希与会话，绝不能进仓库（2026-09-13 真的漏提交过一次 users.db）
+  /\.db$/i, /\.db-wal$/i, /\.db-shm$/i, /\.sqlite3?$/i, /(^|\/)\.v3-users\//];
 
 function trackedFiles() {
   const result = spawnSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });

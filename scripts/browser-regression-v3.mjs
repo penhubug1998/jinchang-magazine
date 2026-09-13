@@ -224,11 +224,16 @@ try {
     const initialReadyMs = await setPage(1);
     let m = await metrics();
     // Device emulation can deliver the media-query transition a frame after __V3_READY__.
-    // Wait for the expected one-page/two-slot structure instead of racing the responsive render.
+    // 这里必须等到"槽位数**和页码**都符合预期"，而不只是槽位数：只等槽位数时，
+    // 响应式切换可能已经完成而翻页还没落位，读到的 pageIndexes 会是 (1,2) 而不是 (-1,0)，
+    // 于是间歇性报 "first spread must be blank + cover"。断言检查什么就等到什么。
+    const expectedSlots = viewport.width <= 760 ? 1 : 2;
+    const indexesSettled = () => expectedSlots === 1
+      ? (m.pageIndexes.length === 1 && m.pageIndexes[0] === 0)
+      : (m.pageIndexes.length === 2 && m.pageIndexes[0] === -1 && m.pageIndexes[1] === 0);
     const responsiveStarted = Date.now();
-    while (Date.now() - responsiveStarted < 1800) {
-      const expectedSlots = viewport.width <= 760 ? 1 : 2;
-      if (m.pageIndexes.length === expectedSlots) break;
+    while (Date.now() - responsiveStarted < 3000) {
+      if (indexesSettled()) break;
       await sleep(40);
       m = await metrics();
     }
