@@ -26,7 +26,16 @@ import { PUBLICATION_OUTPUT_ROOT } from './lib-v3-publication.mjs';
 const args = parseArgs();
 const apply = Boolean(args.apply);
 const pruneTrash = Boolean(args['prune-trash']);
-const retentionDays = Number(args['retention-days'] || 90);
+// 保留天数没有技术上限，纯粹是"反悔窗口"有多长：90 只是建议起点。
+// 必须显式校验 —— 之前 `Number(x || 90)` 会把 0 静默变成 90、负数变成"永不过期"、
+// 非数字变成 NaN 导致"什么都没过期"，三种情况都不报错，属于会骗人的默认值。
+const retentionRaw = args['retention-days'] === undefined ? 90 : Number(args['retention-days']);
+if (!Number.isInteger(retentionRaw) || retentionRaw < 1) {
+  console.error(`--retention-days 必须是不小于 1 的整数（收到 ${JSON.stringify(args['retention-days'])}）。`);
+  console.error('想永久保留隔离区就不要加 --prune-trash；想立刻清空请先人工确认后再执行。');
+  process.exit(2);
+}
+const retentionDays = retentionRaw;
 const asJson = Boolean(args.json);
 const keepSnapshots = Number(args['keep-snapshots'] || 0);   // 0 = 不动快照
 
@@ -118,18 +127,32 @@ for (const issueId of await entries(derivedRoots['.v3-snapshots'])) {
 
 // 4) 隔离区自身的保留期（只有 --apply --prune-trash 才会动）
 const cutoff = Date.now() - retentionDays * 24 * 3600 * 1000;
+// 隔离区有两处：应用目录与公开根目录，各自留在自己的文件系统里，回收时两边都要看。
+const publicMagazineRoot = process.env.V3_PUBLIC_MAGAZINE_ROOT ? path.resolve(process.env.V3_PUBLIC_MAGAZINE_ROOT) : '';
+const trashRoots = [{ label: 'app', dir: trashRoot }];
+if (publicMagazineRoot) trashRoots.push({ label: 'public', dir: path.join(publicMagazineRoot, '.v3-trash') });
+const AGE_BUCKETS = [30, 90, 365];
 const trashEntries = [];
-for (const group of await entries(trashRoot)) {
-  for (const name of await entries(path.join(trashRoot, group))) {
-    const target = path.join(trashRoot, group, name);
-    const info = await stat(target).catch(() => null);
-    if (!info) continue;
-    const bytes = await dirBytes(target);
-    const expired = info.mtimeMs < cutoff;
-    trashEntries.push({ group, name, bytes, expired, mtime: new Date(info.mtimeMs).toISOString() });
-    if (expired) add('trash', target, bytes, pruneTrash ? 'delete' : 'report', `隔离超过 ${retentionDays} 天`, group);
+for (const { label, dir } of trashRoots) {
+  for (const group of await entries(dir)) {
+    for (const name of await entries(path.join(dir, group))) {
+      const target = path.join(dir, group, name);
+      const info = await stat(target).catch(() => null);
+      if (!info) continue;
+      const bytes = await dirBytes(target);
+      const ageDays = Math.floor((Date.now() - info.mtimeMs) / (24 * 3600 * 1000));
+      const expired = info.mtimeMs < cutoff;
+      trashEntries.push({ side: label, group, name, bytes, ageDays, expired, mtime: new Date(info.mtimeMs).toISOString() });
+      if (expired) add('trash', target, bytes, pruneTrash ? 'delete' : 'report', `隔离 ${ageDays} 天（超过 ${retentionDays} 天）`, `${label}/${group}`);
+    }
   }
 }
+const trashTotal = trashEntries.reduce((n, x) => n + x.bytes, 0);
+const ageBuckets = AGE_BUCKETS.map(days => ({
+  days,
+  bytes: trashEntries.filter(x => x.ageDays >= days).reduce((n, x) => n + x.bytes, 0),
+  count: trashEntries.filter(x => x.ageDays >= days).length,
+}));
 
 const totals = {
   transient: plan.filter(x => x.category === 'transient').reduce((n, x) => n + x.bytes, 0),
@@ -140,7 +163,7 @@ const totals = {
 };
 
 if (asJson) {
-  console.log(JSON.stringify({ version: V3_VERSION, root: posix(root), apply, pruneTrash, retentionDays, liveIssues: [...liveIssues].sort(), plan, totals, trashEntries, snapshotCounts }, null, 2));
+  console.log(JSON.stringify({ version: V3_VERSION, root: posix(root), apply, pruneTrash, retentionDays, liveIssues: [...liveIssues].sort(), plan, totals, trashEntries, ageBuckets, retentionDays, snapshotCounts }, null, 2));
 } else {
   console.log(`存储维护${apply ? '（执行）' : '（预演，未改动任何文件）'} · 工程根目录：${root}`);
   console.log(`源稿期号：${[...liveIssues].sort().join(', ') || '（无）'}`);
@@ -152,6 +175,9 @@ if (asJson) {
     for (const row of rows.slice(0, 12)) console.log(`   ${row.action === 'delete' ? '删除' : row.action === 'quarantine' ? '隔离' : '仅报告'}  ${humanBytes(row.bytes).padStart(9)}  ${row.path}  （${row.reason}）`);
     if (rows.length > 12) console.log(`   … 其余 ${rows.length - 12} 项`);
   }
+  console.log('');
+  console.log(`隔离区合计：${humanBytes(trashTotal)}（${trashEntries.length} 项）· ` +
+    ageBuckets.map(b => `≥${b.days} 天 ${humanBytes(b.bytes)}/${b.count} 项`).join(' · '));
   const freed = apply ? plan.filter(x => x.action === 'delete').reduce((n, x) => n + x.bytes, 0) : 0;
   console.log('');
   console.log(`可回收合计：${humanBytes(totals.transient + totals.regenerable + totals.orphan + totals.snapshot + (pruneTrash ? totals.trash : 0))}` +
