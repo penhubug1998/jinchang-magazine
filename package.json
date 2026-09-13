@@ -30,6 +30,7 @@
     "test:reader-capabilities": "node scripts/reader-capabilities-smoke-v3.mjs",
     "test:publication-hygiene": "node scripts/publication-hygiene-smoke-v3.mjs",
     "test:repo-hygiene": "node scripts/repo-hygiene-smoke-v3.mjs",
+    "hooks:install": "git config core.hooksPath .githooks && echo \"已启用 .githooks（pre-push 会在推送 main 前跑 verify:gate）\"",
     "test:publication-pdf": "node scripts/publication-pdf-smoke-v3.mjs",
     "production:preflight": "node scripts/production-preflight-v3.mjs",
     "test:production-preflight": "node scripts/production-preflight-smoke-v3.mjs",

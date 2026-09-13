@@ -1,10 +1,18 @@
 export const MOBILE_STUDIO_BREAKPOINT = 820;
+// 手机横屏时宽度会超过 820（iPhone 844/926），只按宽度判断会退回桌面界面：
+// 实测 844×390 下 60 个可见按钮有 28 个落在视口外，块列表高 817px 塞进 390px 视口。
+// 因此再加一条"视口高度不足"的判定——竖屏手机、横屏手机都走手机界面，
+// 而 768 高的 iPad 横屏（1024×768）与桌面窗口仍是桌面界面。
+export const MOBILE_STUDIO_HEIGHT_BREAKPOINT = 500;
 
 const TEXT_TYPES = new Set(['paragraph','quote','textFlow','sectionHeading','title','heading']);
 const MEDIA_TYPES = new Set(['image','video']);
 
-export function isMobileStudioViewport(width, { force = false } = {}) {
-  return Boolean(force || Number(width) <= MOBILE_STUDIO_BREAKPOINT);
+export function isMobileStudioViewport(width, { force = false, height = 0 } = {}) {
+  if (force) return true;
+  if (Number(width) <= MOBILE_STUDIO_BREAKPOINT) return true;
+  const h = Number(height);
+  return Number.isFinite(h) && h > 0 && h <= MOBILE_STUDIO_HEIGHT_BREAKPOINT;
 }
 
 export function mobileTextTargets(page) {

@@ -33,6 +33,33 @@ try{
   assert(bounds.active&&!bounds.overflow&&bounds.sheet.l>=-1&&bounds.sheet.r<=bounds.w+1&&bounds.sheet.t>=-1&&bounds.sheet.b<=bounds.h+1&&bounds.dock.l>=-1&&bounds.dock.r<=bounds.w+1&&bounds.dock.b<=bounds.h+1&&bounds.head.l>=-1&&bounds.head.r<=bounds.w+1,`mobile bounds ${vp.w}x${vp.h} failed ${JSON.stringify(bounds)}`);
   await ev('window.__V3_STUDIO__.closeMobileSheet()');
  }
+ // 手机横屏：iPhone 横屏宽度是 844/926，超过 820 的宽度断点。曾经只按宽度判断，
+ // 结果横屏退回桌面界面——实测 844×390 下 60 个可见按钮有 28 个落在视口外。
+ // 现在"矮视口"同样按手机界面处理，这里把两个横屏尺寸固定成断言。
+ for(const vp of [{w:844,h:390},{w:926,h:428}]){
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:vp.w,height:vp.h,deviceScaleFactor:1,mobile:true});await ev('window.dispatchEvent(new Event("resize"))');await sleep(160);
+  const land=await ev(`(()=>{const api=window.__V3_STUDIO__,de=document.documentElement;const vis=id=>{const el=document.getElementById(id);if(!el)return false;const b=el.getBoundingClientRect();return b.width>0&&b.height>0&&b.bottom>0&&b.top<innerHeight};const disp=sel=>{const el=document.querySelector(sel);return el?getComputedStyle(el).display:null};const dock=document.getElementById('mobileStudioDock'),head=document.getElementById('mobileStudioHeader');const gb=el=>{if(!el)return null;const b=el.getBoundingClientRect();return {t:Math.round(b.top),b:Math.round(b.bottom),l:Math.round(b.left),r:Math.round(b.right)}};return {mobile:api.state.mobileStudioActive,overflow:de.scrollWidth-de.clientWidth,vh:innerHeight,vw:innerWidth,save:vis('mobileStudioSave'),pages:vis('mobileStudioPagePicker'),health:vis('mobileStudioHealth'),back:vis('mobileStudioBack'),dock:gb(dock),head:gb(head),canvas:disp('.block-canvas'),preview:disp('#previewCard'),editor:disp('#visualEditor')}})()`);
+  assert(land.mobile,`横向 ${vp.w}×${vp.h} 未进入手机界面（横屏手机应走手机壳层）`);
+  assert(land.overflow<=1,`横向 ${vp.w}×${vp.h} 文档横向溢出 ${land.overflow}px`);
+  assert(land.save&&land.pages&&land.health&&land.back,`横向 ${vp.w}×${vp.h} 手机壳层控件不可见 ${JSON.stringify(land)}`);
+  // 关键回归特征：横屏曾经退回桌面界面（桌面的画布/预览面板铺开、按钮大量落在视口外）。
+  // 与竖屏同一条契约（见上面的 mobile shell 断言）：桌面画布必须隐藏，Reader 预览保留。
+  assert(land.canvas==='none'&&land.preview!=='none',`横向 ${vp.w}×${vp.h} 桌面画布未隐藏或预览缺失 canvas=${land.canvas} preview=${land.preview}`);
+  assert(land.dock&&land.dock.t>=-1&&land.dock.b<=land.vh+1,`横向 ${vp.w}×${vp.h} 底部工具栏不在视口内 ${JSON.stringify(land.dock)}`);
+  assert(land.head&&land.head.t>=-1&&land.head.b<=land.vh+1,`横向 ${vp.w}×${vp.h} 顶栏不在视口内 ${JSON.stringify(land.head)}`);
+  await ev('window.__V3_STUDIO__.closeMobileSheet()');
+  await sleep(60);
+ }
+ await cdp.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await ev('window.dispatchEvent(new Event("resize"))');await sleep(120);
+ // 手机端"真的能改字"：走完 打开文字面板 → 改输入框 → 保存 → 模型变化 的往返
+ const edit=await ev(`(async()=>{const api=window.__V3_STUDIO__,sleep=ms=>new Promise(r=>setTimeout(r,ms));const pages=api.state.issue.pages;let hit=null;for(let pi=0;pi<pages.length&&!hit;pi++){const bs=pages[pi].blocks||[];for(let bi=0;bi<bs.length;bi++){const b=bs[bi];if(b&&!b.richText&&typeof b.text==='string'&&b.text.trim()){hit={pi,bi};break}}}if(!hit)return {error:'no-editable-block'};api.goToPage(hit.pi);await sleep(80);api.openMobileSheet('text');await sleep(300);const ta=document.querySelector('#mobileSheetBody [data-mobile-quick-text]');const btn=document.querySelector('#mobileSheetBody [data-mobile-save-text]');if(!ta||!btn)return {error:'no-textarea-or-button',ta:Boolean(ta),btn:Boolean(btn)};const marker='手机端编辑回归标记';ta.value=marker;btn.click();await sleep(220);return {changed:api.state.issue.pages[hit.pi].blocks[hit.bi].text===marker,pi:hit.pi,bi:hit.bi}})()`);
+ assert(edit&&edit.changed,`手机端文字编辑往返失败 ${JSON.stringify(edit)}`);
+ await ev('window.__V3_STUDIO__.closeMobileSheet()');
+ // 触控目标：手机模式下可见的可点控件不得小于 40px（实测过 34px 的「保存文字」按钮）
+ await ev(`window.__V3_STUDIO__.openMobileSheet('text')`);await sleep(300);
+ const small=await ev(`(()=>{const out=[];for(const el of document.querySelectorAll('button,a[href],input,textarea,select,[role="button"]')){const r=el.getBoundingClientRect(),cs=getComputedStyle(el);if(cs.display==='none'||cs.visibility==='hidden'||r.width===0||r.height===0)continue;if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)continue;if(r.width<40||r.height<40)out.push({label:(el.id||el.textContent||el.tagName).trim().slice(0,18),w:Math.round(r.width),h:Math.round(r.height)});}return out})()`);
+ assert(!small.length,`手机面板里有 ${small.length} 个小于 40px 的触控目标：${JSON.stringify(small.slice(0,5))}`);
+ await ev('window.__V3_STUDIO__.closeMobileSheet()');
  for(const vp of [{w:1024,h:768},{w:1366,h:768},{w:1920,h:1080}]){
   await cdp.send('Emulation.setDeviceMetricsOverride',{width:vp.w,height:vp.h,deviceScaleFactor:1,mobile:false});await ev('window.dispatchEvent(new Event("resize"))');await sleep(80);const desktop=await ev(`({active:window.__V3_STUDIO__.state.mobileStudioActive,body:document.body.classList.contains('mobile-studio-mode'),dock:getComputedStyle(document.getElementById('mobileStudioDock')).display,overflow:document.documentElement.scrollWidth>innerWidth+1})`);assert(!desktop.active&&!desktop.body&&desktop.dock==='none'&&!desktop.overflow,`desktop restore ${vp.w}x${vp.h} failed ${JSON.stringify(desktop)}`);
  }
