@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
-import {openUserDb,userDbDir,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,removeIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,requestPasswordReset,listPasswordResets,issueResetCode,cancelPasswordReset,consumeResetCode,RESET_CODE_TTL_MS,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
+import {openUserDb,userDbDir,bootstrapAdmin,purgeExpiredSessions,purgeStaleResetRequests,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,removeIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,requestPasswordReset,listPasswordResets,issueResetCode,cancelPasswordReset,consumeResetCode,RESET_CODE_TTL_MS,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
 import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -47,6 +47,7 @@ const bootstrapResult = bootstrapAdmin(userDb, { username: adminLoginUser, passw
 if (bootstrapResult.created) console.log(`多用户：已用环境变量创建管理员账号 ${bootstrapResult.user.username}`);
 else if (bootstrapResult.promoted) console.log(`多用户：已把既有账号 ${bootstrapResult.user.username} 提升为管理员`);
 purgeExpiredSessions(userDb);
+{const purged=purgeStaleResetRequests(userDb);if(purged)console.log(`多用户：已清理 ${purged} 条无人处理且过期的密码重置申请`);}
 // 把磁盘上已有的期刊挂到管理员名下（没有归属记录的期刊只有管理员可见），
 // 保证引入多用户不会让既有期刊"消失"，也不会漏给普通用户。
 try {
@@ -60,6 +61,14 @@ try {
 // 是否必须登录：配置了环境变量密码，或库里已有可用账号（本地测试目录两者都没有 → 免登录）
 function authRequired() { return adminLoginEnabled || countUsers(userDb, { status: STATUS_ACTIVE }) > 0; }
 const loginAttempts = new Map();
+// 登录 / 重置码 / 找回申请各自独立限速。
+// 共用一个桶会带来两个真问题：忘记密码的人连错几次会把"登录"一起锁掉；
+// /auth/forgot 成功时顺手清掉登录失败计数，等于给暴力破解留了一条解锁后门。
+const resetAttempts = new Map();
+const forgotAttempts = new Map();
+function bucketRow(map,ip){const now=Date.now();const row=map.get(ip)||{count:0,lockedUntil:0};if(row.lockedUntil&&row.lockedUntil<=now){row.count=0;row.lockedUntil=0}return row;}
+function bucketLocked(map,ip){return bucketRow(map,ip).lockedUntil>Date.now();}
+function bucketCount(map,ip,max,windowMs){const row=bucketRow(map,ip);row.count++;if(row.count>=max)row.lockedUntil=Date.now()+windowMs;map.set(ip,row);return row;}
 const aiConfigFile = path.join(root,'.v3-ai-config.json');
 const aiSummaryCacheDir = path.join(root,'.v3-ai-cache');
 const aiSummaryInflight = new Map();
@@ -1126,6 +1135,60 @@ async function rebuildPublicArchives({removedIssue='',actor=''}={}){
 //   issues/<id>            → .v3-trash/issues/<id>-<时间戳>/（并写入 .deleted.json 说明来源与操作人）
 //   公开目录 <命名空间>/<NN> → .v3-trash/public/<id>-<时间戳>/，随后重建归档页摘掉入口
 // 已上线（status=published / 有公开部署回执 / 公开目录存在）的期刊只有管理员能删，且必须显式 force=1。
+// 删除一期时，除了期刊源本身，还要处理这一期派生出来的一堆产物：
+//   dist-v3/<id>（构建）、release-v3/<id>（正式发布包）、outputs-v3/<id>（预览/PDF/归档 + 发布证据）、
+//   .v3-snapshots/<id>（快照）、.v3-source-ledger/<id>（源稿台账）、草稿、内容计划、审校工作区与交接、
+//   reports/ 下带期号的报告、公开根 .v3-deployments 下这一期的回执与部署备份。
+// 全部搬进隔离区（应用目录与公开根各自留在自己的文件系统里），不做物理删除；
+// 单项失败只记录不阻断 —— 期刊源那时已经删掉了，回滚没有意义。
+function issueNameMatches(name,id){
+  const token=String(id).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  return new RegExp(`(^|[-_])${token}([-_.]|$)`).test(String(name));
+}
+async function quarantineIssueDerived(id,stamp){
+  const moved=[],failed=[];
+  // 每一项都是"源路径 → 隔离区里的标签"，同文件系统 rename。
+  const relocate=async(source,target,label)=>{
+    try{
+      if(!(await exists(source)))return;
+      await mkdir(path.dirname(target),{recursive:true});
+      await rename(source,target);
+      moved.push(label);
+    }catch(error){failed.push(`${label}:${String(error?.message||error)}`);}
+  };
+  const appTrash=path.join(root,'.v3-trash','derived',`${id}-${stamp}`);
+  const appEntries=[
+    ['dist-v3',path.join(root,'dist-v3',id)],
+    ['release-v3',path.join(root,'release-v3',id)],
+    ['outputs',path.join(PUBLICATION_OUTPUT_ROOT,id)],
+    ['snapshots',path.join(root,'.v3-snapshots',id)],
+    ['source-ledger',path.join(root,'.v3-source-ledger',id)],
+    ['draft',draftFile(id)],
+    ['editorial-plan',editorialPlanFile(id)],
+    ['review-workspace',reviewWorkspaceFile(id)],
+    ['review-handoffs',reviewHandoffFile(id)]
+  ];
+  for(const [label,source] of appEntries)await relocate(source,path.join(appTrash,label),label);
+  // reports/ 下带这一期期号的报告（发布审计 HTML/JSON、公开部署回执等）
+  const reportsDir=path.join(root,'reports');
+  for(const name of await readdir(reportsDir).catch(()=>[])){
+    if(!issueNameMatches(name,id))continue;
+    await relocate(path.join(reportsDir,name),path.join(appTrash,'reports',name),`reports/${name}`);
+  }
+  // 公开根：这一期的部署回执与部署备份（和公开副本一样留在公开根的文件系统里）
+  if(publicMagazineRoot){
+    const pubTrash=path.join(publicMagazineRoot,'.v3-trash','derived',`${id}-${stamp}`);
+    const control=path.join(publicMagazineRoot,'.v3-deployments');
+    const receipts=path.join(control,'receipts');
+    for(const name of await readdir(receipts).catch(()=>[])){
+      if(!issueNameMatches(name,id))continue;
+      await relocate(path.join(receipts,name),path.join(pubTrash,'receipts',name),`receipts/${name}`);
+    }
+    await relocate(path.join(control,'backups',id),path.join(pubTrash,'backups'),'deploy-backups');
+  }
+  return {quarantine:posix(path.relative(root,appTrash)),moved,failed};
+}
+
 async function deleteIssueToQuarantine(id,{actor='',isAdmin=false,force=false,issue=null}={}){
   const dir=path.join(root,'issues',id);
   if(!(await exists(path.join(dir,'issue.json'))))throw Object.assign(new Error(`找不到 issues/${id}`),{code:'ISSUE_NOT_FOUND',statusCode:404});
@@ -1154,6 +1217,8 @@ async function deleteIssueToQuarantine(id,{actor='',isAdmin=false,force=false,is
   await mkdir(path.dirname(trashIssue),{recursive:true});
   if(publicTrashRoot&&(publicExists||spaceDir)){await mkdir(path.join(publicTrashRoot,'public'),{recursive:true});await mkdir(path.join(publicTrashRoot,'spaces'),{recursive:true});}
   await rename(dir,trashIssue);
+  // 期刊源搬走之后，再收拾这一期的派生数据（构建/发布包/快照/报告/部署回执…）
+  const derived=await quarantineIssueDerived(id,stamp).catch(error=>({quarantine:null,moved:[],failed:[String(error?.message||error)]}));
   let publicRemoved=false,spaceRemoved=false,publicError=null,archives=null;
   if(publicExists){
     try{
@@ -1166,12 +1231,12 @@ async function deleteIssueToQuarantine(id,{actor='',isAdmin=false,force=false,is
       }
     }catch(error){publicError=String(error?.message||error);console.error(`删除公开副本失败：${publicError}`);}
   }
-  const manifest={version:1,kind:'issue-delete',issueId:id,label:String(source.label||''),sourceStatus:String(source.status||''),deletedAt:new Date().toISOString(),actor:String(actor||''),reason:live?'published-force-delete':'draft-delete',fileCount:files.length,live,publicRemotePath:publicExists?relPath:null,publicQuarantine:publicRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashPublic)):null,spaceQuarantine:spaceRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashSpace)):null,publicError,publicDeployment:deployment?{url:deployment.url||null,deployedAt:deployment.deployedAt||null}:null};
+  const manifest={version:1,kind:'issue-delete',issueId:id,label:String(source.label||''),sourceStatus:String(source.status||''),deletedAt:new Date().toISOString(),actor:String(actor||''),reason:live?'published-force-delete':'draft-delete',fileCount:files.length,live,publicRemotePath:publicExists?relPath:null,publicQuarantine:publicRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashPublic)):null,spaceQuarantine:spaceRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashSpace)):null,publicError,derived,publicDeployment:deployment?{url:deployment.url||null,deployedAt:deployment.deployedAt||null}:null};
   await writeFile(path.join(trashIssue,'.deleted.json'),`${JSON.stringify(manifest,null,2)}\n`,'utf8');
   removeIssueOwner(userDb,id);
-  audit(userDb,{actor,action:'issue.delete',target:id,detail:`files=${files.length} live=${live?'1':'0'} public=${publicRemoved?'1':publicExists?'failed':'0'}`});
+  audit(userDb,{actor,action:'issue.delete',target:id,detail:`files=${files.length} live=${live?'1':'0'} public=${publicRemoved?'1':publicExists?'failed':'0'} derived=${derived.moved.length}${derived.failed.length?`/failed=${derived.failed.length}`:''}`});
   if(publicRemoved)archives=await rebuildPublicArchives({removedIssue:id,actor}).catch(error=>({ok:false,error:String(error?.message||error)}));
-  return {ok:true,issueId:id,quarantined:posix(path.relative(root,trashIssue)),fileCount:files.length,publicRemoved,spaceRemoved,publicError,archives,deletedAt:manifest.deletedAt};
+  return {ok:true,issueId:id,quarantined:posix(path.relative(root,trashIssue)),fileCount:files.length,publicRemoved,spaceRemoved,publicError,derived,archives,deletedAt:manifest.deletedAt};
 }
 
 async function ensurePublicationWeb(id){
@@ -1436,27 +1501,27 @@ const server=http.createServer(async(req,res)=>{try{
   // 两个接口都按 IP 限速，并且永远不回答"这个用户名是否存在"。
   if(!acceptanceOnly&&u.pathname==='/api/auth/forgot'&&req.method==='POST'){
     if(!authRequired())return send(res,503,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
-    const ip=requestIp(req),rate=loginRate(ip);
-    if(rate.lockedUntil>Date.now())return send(res,429,{error:'操作过于频繁，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    const ip=requestIp(req);
+    if(bucketLocked(forgotAttempts,ip))return send(res,429,{error:'提交过于频繁，请 15 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    bucketCount(forgotAttempts,ip,10,15*60*1000);   // 这是写接口，正常提交也计数
     let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
     const username=String(data?.username||'').trim();
     if(!username)return send(res,400,{error:'请填写用户名',code:'VALIDATION_ERROR'});
     const result=requestPasswordReset(userDb,{username,ip});
-    clearLoginFailures(ip);
     return send(res,200,{ok:true,registered:Boolean(result.requested),
       message:'重置申请已提交。请联系管理员获取一次性重置码，然后在登录页选择「用重置码改密」。'});
   }
   if(!acceptanceOnly&&u.pathname==='/api/auth/reset'&&req.method==='POST'){
     if(!authRequired())return send(res,503,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
-    const ip=requestIp(req),rate=loginRate(ip);
-    if(rate.lockedUntil>Date.now())return send(res,429,{error:'尝试次数过多，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    const ip=requestIp(req);
+    if(bucketLocked(resetAttempts,ip))return send(res,429,{error:'重置码尝试次数过多，请 15 分钟后重试',code:'AUTH_RATE_LIMITED'});
     let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
     try{
       consumeResetCode(userDb,{username:String(data?.username||'').trim(),code:String(data?.code||''),newPassword:String(data?.newPassword||'')});
-      clearLoginFailures(ip);
+      resetAttempts.delete(ip);   // 只清重置桶，绝不动登录失败计数
       return send(res,200,{ok:true,message:'密码已重设，请用新密码登录。'});
     }catch(e){
-      recordLoginFailure(ip);
+      bucketCount(resetAttempts,ip,8,15*60*1000);
       return send(res,e.code==='INVALID_PASSWORD'?400:403,{error:e.message||String(e),code:e.code||'RESET_FAILED'});
     }
   }

@@ -979,3 +979,6 @@ dialog.publication-center-dialog:not([open]){display:none}
 @media (max-width: 820px), (max-height: 500px) {
   input:not([type="checkbox"]):not([type="radio"]), textarea, select { font-size: 16px !important; }
 }
+
+/* 手机壳层里明确说明哪些是桌面功能：之前用户会以为设计器/媒体库"按钮点了没反应" */
+.mobile-studio-mode .mobile-richtext-note b{color:#4a3a2c}

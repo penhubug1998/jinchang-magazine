@@ -17,6 +17,7 @@ import path from 'node:path';
 import { createTestWorkspace, startTestStudio, stopTestStudio, removeTestWorkspace, freePort } from './lib-v3-test-workspace.mjs';
 import { V3_VERSION } from './lib-v3-production.mjs';
 import { writeDeploymentArtifacts } from './lib-v3-deploy.mjs';
+import { openUserDb, purgeStaleResetRequests } from './lib-v3-users.mjs';
 
 const ADMIN_PW = 'AdminPass123';
 const ALICE_PW = 'AlicePass123';
@@ -98,6 +99,9 @@ try {
   await writeIssue('005', { title: '爱丽丝的草稿', publication: '银龄文苑', status: 'draft' });
   await writeRelease('001', { title: '平台第一期', publication: '金昌离退休干部电子期刊' });
   await writeRelease('003', { title: '爱丽丝的创刊号', publication: '银龄文苑' });
+  // 构建产物也要有：删除时应当和发布包、报告、回执一起进隔离区
+  await mkdir(path.join(dir, 'dist-v3', '003'), { recursive: true });
+  await writeFile(path.join(dir, 'dist-v3', '003', 'index.html'), '<!doctype html><title>build</title>', 'utf8');
 
   studio = await startTestStudio(dir, {
     STUDIO_ADMIN_PASSWORD: ADMIN_PW,
@@ -242,7 +246,26 @@ try {
   const reuse = await call(base, '/api/auth/reset', { method: 'POST', data: { username: 'Alice', code: issued.body.code, newPassword: 'AliceOther123' } });
   assert.equal(reuse.status, 403, '重置码用过必须失效');
   assert.equal((await call(base, '/api/admin/reset-requests', { cookie: admin.cookie })).body.requests.length, 0, '已使用的申请应从待处理列表消失');
-  console.log('  忘记密码申请、一次性重置码、旧会话失效、码不可复用 ✓');
+
+  // 重置码试错必须有自己的限速桶：连错几次不能把"登录"一起锁掉
+  for (let i = 0; i < 8; i += 1) await call(base, '/api/auth/reset', { method: 'POST', data: { username: 'Alice', code: 'ZZZZZ-ZZZZZ', newPassword: 'AliceWrong123' } });
+  const lockedReset = await call(base, '/api/auth/reset', { method: 'POST', data: { username: 'Alice', code: 'ZZZZZ-ZZZZZ', newPassword: 'AliceWrong123' } });
+  assert.equal(lockedReset.status, 429, '重置码连错达到上限后应限速');
+  const stillLogin = await login(base, 'Alice', 'AliceNew123');
+  assert.equal(stillLogin.status, 200, '重置码试错不得连带锁死登录（共用限速桶会让用户彻底进不去）');
+
+  // 没人处理的过期申请要能被清理（否则待办列表永远挂着）
+  await call(base, '/api/auth/forgot', { method: 'POST', data: { username: 'Alice' } });
+  const resetDb = openUserDb(dir);
+  const stale = resetDb.prepare("SELECT COUNT(*) AS n FROM password_resets WHERE used_at IS NULL AND code_hash IS NULL").get();
+  assert.ok(Number(stale.n) >= 1, '应有一条未签发的申请');
+  resetDb.prepare("UPDATE password_resets SET created_at = '2026-01-01T00:00:00.000Z' WHERE used_at IS NULL AND code_hash IS NULL").run();
+  const purged = purgeStaleResetRequests(resetDb, { days: 7 });
+  assert.ok(purged >= 1, `过期申请应被清理，实际清理 ${purged} 条`);
+  assert.equal(Number(resetDb.prepare('SELECT COUNT(*) AS n FROM password_resets WHERE used_at IS NULL').get().n), 0, '清理后不应残留待处理申请');
+  resetDb.close();
+  await call(base, `/api/admin/reset-requests/${1}`, { method: 'DELETE', cookie: admin.cookie }).catch(() => { });
+  console.log('  忘记密码申请、一次性重置码、旧会话失效、码不可复用、独立限速、过期申请清理 ✓');
 
   // ---------- 4) 删除期刊：隔离区 + 公开目录回收 ----------
   const draftDelete = await call(base, '/api/issues/005', { method: 'DELETE', cookie: reLogin.cookie });
@@ -286,7 +309,23 @@ try {
   assert.equal(platformIndexAfter.includes('alice'), false, '作者分区撤销后平台首页不应再出现该作者入口');
   const spacesIndexAfter = await readFile(path.join(publicRoot, 'u', 'index.html'), 'utf8');
   assert.equal(spacesIndexAfter.includes('href="./alice/"'), false, '作者空间索引不应再列出空分区');
-  console.log('  期刊删除隔离区、作者/管理员权限分级、公开目录回收与归档重建 ✓');
+  // 删除必须同时收拾这一期的派生数据：构建产物、发布包、发布证据、报告与部署回执
+  assert.equal(await exists(path.join(dir, 'release-v3', '003')), false, '正式发布包应随期刊一起进隔离区');
+  assert.equal(await exists(path.join(dir, 'dist-v3', '003')), false, '构建产物应随期刊一起进隔离区');
+  assert.equal(await exists(path.join(dir, 'outputs-v3', '003')), false, '发布证据/输出应随期刊一起进隔离区');
+  assert.equal(await exists(path.join(dir, 'reports', 'v3-public-deployment-003.json')), false, '带期号的报告应随期刊一起进隔离区');
+  const derivedNames = (await readdir(path.join(dir, '.v3-trash', 'derived'))).filter(n => n.startsWith('003-'));
+  assert.equal(derivedNames.length, 1, `派生数据隔离区应恰好一份，实际 ${JSON.stringify(derivedNames)}`);
+  const derivedTrash = path.join(dir, '.v3-trash', 'derived', derivedNames[0]);
+  for (const label of ['release-v3', 'dist-v3', 'outputs', 'reports']) {
+    assert.ok(await exists(path.join(derivedTrash, label)), `隔离区里应保留 ${label}`);
+  }
+  assert.ok(await exists(path.join(derivedTrash, 'reports', 'v3-public-deployment-003.json')), '报告内容必须保留在隔离区');
+  const derivedReceipts = await readdir(path.join(publicRoot, '.v3-trash', 'derived')).catch(() => []);
+  assert.ok(derivedReceipts.some(n => n.startsWith('003-')), '公开根的部署回执应随期刊一起隔离');
+  assert.equal((await readdir(path.join(publicRoot, '.v3-deployments', 'receipts')).catch(() => [])).some(n => n.startsWith('003-')), false, '公开根不应再留下这一期的回执');
+  assert.equal(liveDelete.body?.derived?.failed?.length || 0, 0, `派生数据隔离不应有失败项：${JSON.stringify(liveDelete.body?.derived?.failed)}`);
+  console.log('  期刊删除隔离区、作者/管理员权限分级、公开目录回收、派生数据清理与归档重建 ✓');
 
   // ---------- 5) 账号删除时素材库一起进隔离区 ----------
   assert.ok(await exists(path.join(dir, '.v3-users', 'libraries', String(alice.id))), '删除账号前素材库目录应存在');
