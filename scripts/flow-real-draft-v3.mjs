@@ -83,6 +83,11 @@ try {
   const cover = issue0.pages.find(p => p.type === 'cover'), toc = issue0.pages.find(p => p.type === 'toc');
   cover.title = doc.title || '第四期';
   cover.blocks = (cover.blocks || []).map(b => b.type === 'coverSections' ? { ...b, items: (doc.structure?.sections || []).map(x => x.name) } : b);
+  // 复刻制作中心「快速导入」里的自动刷新目录（#fastAutoToc 默认勾选）：目录项按导入后的
+  // 版块重新生成。若不刷新，新建期模板会留下 5 个默认栏目和「请填写栏目导语」占位文字，
+  // 严格审计会把第 2 页判成 PLACEHOLDER_CONTENT——那是测试脚本没走产品流程，不是稿件问题。
+  const tocBlock = (toc.blocks || []).find(b => b.type === 'toc');
+  if (tocBlock) tocBlock.items = (doc.structure?.sections || []).map((s, i) => ({ number: String(i + 1).padStart(2, '0'), title: s.name, subtitle: '', page: i + 4 }));
   issue0.pages = [cover, toc, ...pag.pages];
   issue0.subtitle = doc.title || '第四期';
   issue0.publisher = '（测试单位）';

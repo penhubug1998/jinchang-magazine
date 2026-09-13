@@ -87,6 +87,9 @@ function hasMeaningfulBlockContent(block){
   if(['image','video'].includes(type))return Boolean(String(block.src||'').trim());
   if(type==='articleLink')return Boolean(String(block.articleId||block.article||block.id||block.title||'').trim());
   if(type==='toc')return Array.isArray(block.items)&&block.items.some(item=>String(item?.title||'').trim());
+  // 表格是有效内容：只含表格的页面曾因为 rows/cells 不在 meaningfulTextKeys 里被判成
+  // 「页面没有有效内容」(PAGE_EFFECTIVELY_EMPTY)，把正常的数据页误报为需要编辑处理。
+  if(type==='table')return (Array.isArray(block.rows)?block.rows:[]).some(row=>(Array.isArray(row)?row:[row]).some(cell=>String(cell??'').trim()))||Boolean(String(block.caption||'').trim());
   return textValues(block).some(({path,text})=>{
     const key=String(path||'').split('.').at(-1)?.replace(/\[\d+\]$/,'');
     return meaningfulTextKeys.has(key)&&String(text||'').trim().length>0;

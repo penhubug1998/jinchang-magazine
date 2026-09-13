@@ -10,7 +10,12 @@ export const PUBLICATION_OUTPUT_ROOT = process.env.V3_PUBLICATION_OUTPUT_ROOT
 
 const clampPercent=value=>Math.max(0,Math.min(100,Math.round(Number(value)||0)));
 function textOfRich(node){if(!node||typeof node!=='object')return '';let out=node.type==='text'?String(node.text||''):'';for(const child of node.content||[])out+=textOfRich(child);return out;}
-function blockText(block){if(!block||typeof block!=='object')return '';if(block.richText)return textOfRich(block.richText);return [block.text,block.title,block.caption,block.badge,block.quote,block.author].filter(Boolean).join(' ');}
+function blockText(block){if(!block||typeof block!=='object')return '';if(block.richText)return textOfRich(block.richText);const base=[block.text,block.title,block.caption,block.badge,block.quote,block.author].filter(Boolean).join(' ');
+  // 表格的文字在 rows 里，不在 text/title 字段上。只取字段会让「整页就是一张表格」的数据页
+  // 被判成没有内容（hasPageContent=false），直接拉低内容完整度与页面健康，也会让编辑器
+  // 看到"这页是空的"的误导提示。
+  if(block.type==='table')return [base,...(Array.isArray(block.rows)?block.rows:[]).flatMap(row=>(Array.isArray(row)?row:[row]).map(cell=>String(cell??'')))].filter(Boolean).join(' ');
+  return base;}
 function walkBlocks(rows,fn){for(const block of rows||[]){if(!block||typeof block!=='object')continue;fn(block);if(block.type==='container')for(const col of block.columns||[])walkBlocks(col?.blocks,fn);}}
 function hasPageContent(page){let chars=0,nodes=0;walkBlocks(page?.blocks||[],b=>{nodes++;chars+=blockText(b).trim().length;if(['image','video','cards','toc','articleLink'].includes(b.type))chars+=20;});chars+=(page?.body||[]).join('').trim().length;return nodes>0&&chars>0;}
 function validHttpish(value){const raw=String(value||'').trim();if(!raw)return true;if(raw.startsWith('#')||raw.startsWith('./')||raw.startsWith('../')||raw.startsWith('/')||raw.startsWith('assets/'))return true;try{const u=new URL(raw);return ['http:','https:','mailto:','tel:'].includes(u.protocol);}catch{return false;}}
