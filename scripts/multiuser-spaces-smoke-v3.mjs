@@ -270,11 +270,17 @@ try {
   assert.equal(liveDelete.status, 200, `管理员确认删除失败 ${JSON.stringify(liveDelete.body)}`);
   assert.equal(liveDelete.body.publicRemoved, true, '公开目录必须一并移入隔离区');
   assert.equal(await exists(path.join(publicRoot, 'u', 'alice', '03')), false, '公开目录必须已撤下');
-  assert.ok((await readdir(path.join(dir, '.v3-trash', 'public'))).some(name => name.startsWith('003-')), '公开目录必须进隔离区而不是被 rm');
+  // 公开副本的隔离区必须留在公开根目录内部（同一文件系统）：生产上 /opt 与 /var/www
+  // 是不同挂载点，把公开目录 rename 到应用目录会直接 EXDEV（真实踩过一次）。
+  assert.ok((await readdir(path.join(publicRoot, '.v3-trash', 'public'))).some(name => name.startsWith('003-')), '公开目录必须进公开根目录内的隔离区（跨文件系统也成立）');
+  assert.equal(await exists(path.join(dir, '.v3-trash', 'public')), false, '公开副本不得跨文件系统搬到应用目录');
+  const publicDeleted = await json(path.join(dir, '.v3-trash', 'issues', (await readdir(path.join(dir, '.v3-trash', 'issues'))).find(n => n.startsWith('003-')), '.deleted.json'));
+  assert.equal(publicDeleted.publicError, null, '删除回执里不应有公开目录迁移错误');
+  assert.ok(String(publicDeleted.publicQuarantine || '').startsWith('.v3-trash/public/'), `隔离区路径必须记录在案：${publicDeleted.publicQuarantine}`);
   // 作者最后一期被删除后，作者分区目录（只剩归档页）也要一并隔离，
   // 否则 /u/<slug>/index.html 会永久留一条指向已删除期刊的死链接。
   assert.equal(await exists(path.join(publicRoot, 'u', 'alice')), false, '空的作者分区目录必须一并移入隔离区');
-  assert.ok((await readdir(path.join(dir, '.v3-trash', 'public'))).some(name => name.startsWith('space-alice-')), '作者分区目录也必须进隔离区而不是被 rm');
+  assert.ok((await readdir(path.join(publicRoot, '.v3-trash', 'spaces'))).some(name => name.startsWith('alice-')), '作者分区目录也必须进隔离区而不是被 rm');
   const platformIndexAfter = await readFile(path.join(publicRoot, 'index.html'), 'utf8');
   assert.ok(platformIndexAfter.includes('href="./01/"'), '删除用户期刊不得影响平台归档页');
   assert.equal(platformIndexAfter.includes('alice'), false, '作者分区撤销后平台首页不应再出现该作者入口');
