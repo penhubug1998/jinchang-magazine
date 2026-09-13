@@ -1215,7 +1215,8 @@ const server=http.createServer(async(req,res)=>{try{
   }
   if(!acceptanceOnly&&authRequired()&&!adminSession(req)&&u.pathname!=='/api/health'){
     const publicLoginAsset=['/login.html','/login.css','/login.js'].includes(u.pathname);
-    if(u.pathname==='/'||u.pathname==='/index.html')return serveFile(req,res,path.join(studioDir,'login.html'));
+    // /login 是给公开地址用的干净入口（nginx 把 /new-jc-magazine/login 反代到这里）
+    if(u.pathname==='/'||u.pathname==='/index.html'||u.pathname==='/login'||u.pathname==='/login/')return serveFile(req,res,path.join(studioDir,'login.html'));
     if(publicLoginAsset)return serveFile(req,res,path.join(studioDir,u.pathname.slice(1)));
     return send(res,401,{error:'请先登录管理端',code:'AUTH_REQUIRED'});
   }
