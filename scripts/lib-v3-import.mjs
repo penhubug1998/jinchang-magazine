@@ -102,8 +102,9 @@ function genericSectionHeading(text='',level=0){
   const explicit=parseSectionHeading(text);if(explicit)return {...explicit,source:'numbered'};if(Number(level)!==1)return null;const original=cleanText(text);if(/^[★☆📖📌]/.test(original))return null;const raw=original.replace(/^\s+/,'');if(!raw||raw.length>90)return null;const [name0,...tagParts]=raw.split(/[｜|]/);const name=name0.trim();if(!name)return null;const tagline=tagParts.join('｜').trim();return {ordinal:'',name,tagline,display:tagline?`${name}｜${tagline}`:name,source:'heading1'};
 }
 function paragraphTone(pageType){return pageType==='health'?'green':'default';}
-function semanticBodyBlock(p,pageType,{lead=false}={}){
+function semanticBodyBlock(p,pageType,{lead=false,listNo=0}={}){
   const text=cleanText(p?.text||'');if(!text)return null;
+  if(p?.list)return itemBlock(text,p.listKind==='bullet'?'•':String(Math.max(1,Number(listNo)||1)),paragraphTone(pageType));
   if(isSourceText(text))return paragraphBlock(text,'xsmall');
   if(/^★\s*/.test(text)){
     const body=text.replace(/^★\s*/,'');const first=body.match(/^(.{1,32}?[。；;])\s*(.*)$/s);return {type:'cardline',badge:'★',title:first?first[1].replace(/[。；;]$/,''):'重点提示',text:first&&first[2]?first[2]:body,tone:paragraphTone(pageType)};
@@ -122,8 +123,8 @@ function semanticBlocks(paras=[],pageType='article'){
 }
 function semanticBlocksBasic(paras=[],pageType='article'){
   if(paras.length>=3&&paras.every(p=>Number(p.level||0)>=3)){return [{type:'chips',items:paras.map(p=>({text:cleanText(p.text).replace(/^[★☆]\s*/,'').trim(),tone:pageType==='health'?'green':''})).filter(x=>x.text)},...articleLinkBlocks(paras.flatMap(p=>p.links||[]))];}
-  const out=[];let seenBody=false;
-  for(const p of paras){const text=cleanText(p.text);if(!text){if(p.links?.length)out.push(...articleLinkBlocks(p.links));continue;}if(p.level>=3){out.push(paragraphBlock(text.replace(/^[★☆]\s*/,''),'subhead'));out.push(...articleLinkBlocks(p.links||[]));continue;}const block=semanticBodyBlock(p,pageType,{lead:!seenBody&&p.style==='FirstParagraph'});if(block){out.push(block);seenBody=true;}out.push(...articleLinkBlocks(p.links||[]));}
+  const out=[];let seenBody=false,listNo=0;
+  for(const p of paras){const text=cleanText(p.text);if(!text){if(p.links?.length)out.push(...articleLinkBlocks(p.links));continue;}if(p.level>=3){listNo=0;out.push(paragraphBlock(text.replace(/^[★☆]\s*/,''),'subhead'));out.push(...articleLinkBlocks(p.links||[]));continue;}if(p.list){if(p.listKind!=='bullet')listNo++;}else listNo=0;const block=semanticBodyBlock(p,pageType,{lead:!seenBody&&p.style==='FirstParagraph',listNo});if(block){out.push(block);seenBody=true;}out.push(...articleLinkBlocks(p.links||[]));}
   return out;
 }
 
@@ -200,8 +201,8 @@ function finalizeDocument(doc) {
 
 function docxParagraphRichText(fragment=''){
   const content=[];
-  for(const rm of String(fragment).matchAll(/<w:r\b[^>]*>([\s\S]*?)<\/w:r>/g)){
-    const run=rm[1],parts=[];
+  for(const rm of String(fragment).matchAll(/<w:r\b[^>]*\/>|<w:r\b[^>]*>([\s\S]*?)<\/w:r>/g)){
+    const run=String(rm[1]||''),parts=[];
     for(const token of run.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>|<w:tab\b[^>]*\/?\s*>|<w:br\b[^>]*\/?\s*>/g)){
       if(token[1]!=null)parts.push(decodeXml(token[1]));else if(/^<w:tab/i.test(token[0]))parts.push('\t');else parts.push('\n');
     }
@@ -215,7 +216,7 @@ function docxParagraphRichText(fragment=''){
 }
 function docxCellText(fragment=''){return cleanText([...String(fragment).matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(' '));}
 function docxTableBlock(fragment='',caption='',sourceRef={}){
-  const rows=[];for(const tr of String(fragment).matchAll(/<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/g)){const row=[];for(const tc of tr[1].matchAll(/<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g))row.push(docxCellText(tc[1]).slice(0,2000));if(row.length)rows.push(row.slice(0,12));if(rows.length>=40)break;}
+  const rows=[];for(const tr of String(fragment).matchAll(/<w:tr\b[^>]*\/>|<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/g)){const row=[];for(const tc of String(tr[1]||'').matchAll(/<w:tc\b[^>]*\/>|<w:tc\b[^>]*>([\s\S]*?)<\/w:tc>/g))row.push(docxCellText(tc[1]).slice(0,2000));if(row.length)rows.push(row.slice(0,12));if(rows.length>=40)break;}
   const first=String(fragment).match(/<w:tr\b[^>]*>([\s\S]*?)<\/w:tr>/)?.[1]||'';const headerRows=/<w:b(?:\s|\/|>)/i.test(first)?1:0;
   return {type:'table',rows,headerRows,caption:String(caption||'').slice(0,300),sourceRef};
 }
@@ -228,27 +229,27 @@ function richObjectTarget(pages=[],obj={}){
 }
 function mergeRichDocxObjects(doc,pages=[]){for(const obj of doc?.richObjects||[]){if(!obj?.block)continue;const i=richObjectTarget(pages,obj);if(!pages[i])continue;pages[i].blocks ||= [];pages[i].blocks.push(JSON.parse(JSON.stringify(obj.block)));}return pages;}
 
-function parseDocxXml(xml,filename='',relationships={},embeddedAssets={}) {
+function parseDocxXml(xml,filename='',relationships={},embeddedAssets={},listStyles={}) {
   const registry=createLinkRegistry(),paras=[],blocks=[],sourceMap=[],richObjects=[];let title='',listNo=0,paragraphNo=0,tableNo=0,currentSection='',currentArticle='',pendingCaption='';
-  const body=(String(xml).match(/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/)||[])[1]||String(xml);const elements=[...body.matchAll(/<w:p\b[^>]*>[\s\S]*?<\/w:p>|<w:tbl\b[^>]*>[\s\S]*?<\/w:tbl>/g)].map(x=>x[0]);
+  const body=(String(xml).match(/<w:body\b[^>]*>([\s\S]*?)<\/w:body>/)||[])[1]||String(xml);const elements=[...body.matchAll(/<w:p\b[^>]*\/>|<w:tbl\b[^>]*\/>|<w:tbl\b[^>]*>[\s\S]*?<\/w:tbl>|<w:p\b[^>]*>[\s\S]*?<\/w:p>/g)].map(x=>x[0]);
   const addBlock=(block,source,rich=false)=>{if(!block)return;blocks.push(block);sourceMap.push({blockIndex:blocks.length-1,...source});if(rich)richObjects.push({section:currentSection,article:currentArticle,order:source.element,block});};
   for(let elementIndex=0;elementIndex<elements.length;elementIndex++){
     const element=elements[elementIndex];
     if(/^<w:tbl\b/i.test(element)){
       tableNo++;const sourceRef={format:'docx',sourceName:filename,element:elementIndex+1,table:tableNo};const table=docxTableBlock(element,pendingCaption,sourceRef);pendingCaption='';if(table.rows.length)addBlock(table,sourceRef,true);continue;
     }
-    paragraphNo++;const inner=(element.match(/^<w:p\b[^>]*>([\s\S]*?)<\/w:p>$/)||[])[1]||'';const texts=[...inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const rawText=cleanText(texts);const style=(inner.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const list=/<w:numPr\b/.test(inner),level=headingLevel(style),inline=parseInlineLinks(rawText,registry),links=[...inline.links];
+    paragraphNo++;const inner=(element.match(/^<w:p\b[^>]*>([\s\S]*?)<\/w:p>$/)||[])[1]||'';const texts=[...inner.matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join('');const rawText=cleanText(texts);const style=(inner.match(/<w:pStyle\b[^>]*w:val="([^"]+)"/)||[])[1]||'';const styleListKind=listStyles[style]||(/^listnumber/i.test(style)?'ordered':(/^listbullet/i.test(style)?'bullet':null)),list=/<w:numPr\b/.test(inner)||Boolean(styleListKind),listKind=styleListKind||(/<w:numFmt\b[^>]*w:val="bullet"/.test(inner)?'bullet':'ordered'),level=headingLevel(style),inline=parseInlineLinks(rawText,registry),links=[...inline.links];
     for(const hm of inner.matchAll(/<w:hyperlink\b[^>]*\br:id="([^"]+)"[^>]*>([\s\S]*?)<\/w:hyperlink>/g)){const label=cleanText([...hm[2].matchAll(/<w:t\b[^>]*>([\s\S]*?)<\/w:t>/g)].map(x=>decodeXml(x[1])).join(''));const item=registry.register(label,relationships[hm[1]]||'',label);if(item&&!links.some(x=>x.articleId===item.articleId))links.push(item);}
     const captionLike=/caption|题注/i.test(style)||/^图\s*[0-9一二三四五六七八九十]+[：:.、\s]/.test(rawText);
     if(captionLike&&rawText){const last=blocks.at(-1);if(last&&['image','table'].includes(last.type)&&!last.caption)last.caption=rawText;else pendingCaption=rawText;continue;}
     const sectionHeading=parseSectionHeading(rawText)||genericSectionHeading(rawText,level);if(sectionHeading){currentSection=sectionHeading.name;currentArticle='';}else if(level===2&&rawText)currentArticle=rawText;
     const sourceRef={format:'docx',sourceName:filename,element:elementIndex+1,paragraph:paragraphNo};
     const imageRels=[...inner.matchAll(/<a:blip\b[^>]*\br:embed="([^"]+)"/g)].map(x=>x[1]);
-    if(rawText){const richText=docxParagraphRichText(inner);const p={text:inline.text,style,list,level,links,richText};paras.push(p);const sl=style.toLowerCase();let block=null;
-      if(!title&&(/title|标题|heading1/.test(sl)||blocks.length===0&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE);if(/title|标题|heading1/.test(sl)){if(p.links?.length)blocks.push(...articleLinkBlocks(p.links));block=null;}else block=paragraphBlock(p.text);}
+    if(rawText){const richText=docxParagraphRichText(inner);const p={text:inline.text,style,list,listKind,level,links,richText};paras.push(p);const sl=style.toLowerCase();let block=null;
+      if(!title&&(/title|标题|heading1/.test(sl)||!blocks.some(b=>b.type!=='image')&&p.text.length<=80)){title=p.text.slice(0,MAX_TITLE);if(/title|标题|heading1/.test(sl)){if(p.links?.length)blocks.push(...articleLinkBlocks(p.links));block=null;}else block=paragraphBlock(p.text);}
       else if(/heading|标题/.test(sl))block={...paragraphBlock(p.text,'subhead'),richText};
       else if(/quote|引用/.test(sl))block={...quoteBlock(p.text),richText};
-      else if(p.list){listNo++;block=itemBlock(p.text,String(listNo));}else{listNo=0;block={...paragraphBlock(p.text),richText};}
+      else if(p.list){if(p.listKind!=='bullet')listNo++;block=itemBlock(p.text,p.listKind==='bullet'?'•':String(Math.max(1,listNo)));}else{listNo=0;block={...paragraphBlock(p.text),richText};}
       if(block){block.sourceRef=sourceRef;addBlock(block,sourceRef,false);}if(p.links?.length)for(const linkBlock of articleLinkBlocks(p.links))addBlock({...linkBlock,sourceRef},sourceRef,false);
     }
     for(const relId of imageRels){const asset=embeddedAssets[relId];if(!asset)continue;const block={type:'image',src:asset.ref,alt:docxImageAlt(inner),caption:pendingCaption,frameRatio:'auto',fit:'contain',positionX:50,positionY:50,sourceRef};pendingCaption='';addBlock(block,sourceRef,true);}
@@ -276,7 +277,11 @@ export async function parseImportedBuffer(buffer,{filename='import.txt'}={}) {
       const r=spawnSync('unzip',['-p',file,'word/document.xml'],{encoding:'utf8',maxBuffer:16*1024*1024});if(r.status!==0||!r.stdout)throw new Error('DOCX 结构无法读取，请确认文件未损坏');
       const rel=spawnSync('unzip',['-p',file,'word/_rels/document.xml.rels'],{encoding:'utf8',maxBuffer:4*1024*1024});const relationships={},embeddedAssets={},assetByTarget=new Map();let mediaBytes=0,mediaCount=0;
       if(rel.status===0&&rel.stdout){for(const rm of rel.stdout.matchAll(/<Relationship\b([^>]*)\/?\s*>/g)){const attrs=rm[1],id=(attrs.match(/\bId="([^"]+)"/)||[])[1]||'',target=decodeXml((attrs.match(/\bTarget="([^"]+)"/)||[])[1]||'');if(!id||!target)continue;relationships[id]=target;const ext=path.extname(target).toLowerCase();if(!['.png','.jpg','.jpeg','.gif','.webp'].includes(ext))continue;if(assetByTarget.has(target)){embeddedAssets[id]=assetByTarget.get(target);continue;}let entry=target.replace(/^\/+/, '');if(entry.startsWith('media/'))entry=`word/${entry}`;else if(!entry.startsWith('word/'))entry=path.posix.normalize(path.posix.join('word',entry));if(!entry.startsWith('word/media/'))continue;const media=spawnSync('unzip',['-p',file,entry],{encoding:null,maxBuffer:9*1024*1024});if(media.status!==0||!Buffer.isBuffer(media.stdout)||!media.stdout.length)throw new Error(`DOCX 内嵌图片无法读取：${path.posix.basename(entry)}`);mediaBytes+=media.stdout.length;mediaCount++;if(mediaCount>40||mediaBytes>8*1024*1024)throw new Error('DOCX 内嵌图片超过 40 张或 8MB 安全上限，请拆分稿件后导入');const mimeType=ext==='.png'?'image/png':ext==='.gif'?'image/gif':ext==='.webp'?'image/webp':'image/jpeg';const safeStem=path.basename(filename,path.extname(filename)).replace(/[^a-zA-Z0-9._-]+/g,'-').slice(0,48)||'docx';const asset={id:`docx-${mediaCount}-${id}`,ref:`embedded://${safeStem}-${mediaCount}-${id}`,filename:`${safeStem}-${mediaCount}${ext}`,mime:mimeType,bytes:media.stdout.length,base64:media.stdout.toString('base64')};assetByTarget.set(target,asset);embeddedAssets[id]=asset;}}
-      return parseDocxXml(r.stdout,filename,relationships,embeddedAssets);
+      // Word 通常把项目符号/编号定义在样式里（段落本身没有 <w:numPr>），只查内联 numPr
+      // 会让项目符号列表、编号列表整段退化成普通正文。这里先解析 styles.xml 的样式表。
+      const sty=spawnSync('unzip',['-p',file,'word/styles.xml'],{encoding:'utf8',maxBuffer:8*1024*1024});const listStyles={};
+      if(sty.status===0&&sty.stdout){for(const sm of sty.stdout.matchAll(/<w:style\b([^>]*?)\/>|<w:style\b([^>]*?)>([\s\S]*?)<\/w:style>/g)){const attrs=sm[1]||sm[2]||'',inner=sm[3]||'',id=(attrs.match(/w:styleId="([^"]+)"/)||[])[1];if(!id||!/<w:numPr\b/.test(inner))continue;listStyles[id]=/<w:numFmt\b[^>]*w:val="bullet"/.test(inner)||/bullet|项目符号/i.test(id)?'bullet':'ordered';}}
+      return parseDocxXml(r.stdout,filename,relationships,embeddedAssets,listStyles);
     }finally{await rm(dir,{recursive:true,force:true});}
   }
 
@@ -315,7 +320,7 @@ export { rebalanceContinuationGroups };
 function mergeUnderfilledPages(pages=[],target=900){
   const ceiling=Math.max(1100,Math.round(target*1.25));
   const blockCeiling=12;
-  const titleCeiling=48;
+  const titleCeiling=34;
   const out=[];
   for(const page of pages){
     const prev=out.at(-1);
@@ -413,7 +418,7 @@ export function paginatePublicationDocument(doc,{targetChars=760,maxPages=80}={}
   const pub=doc.publication;restoreRetainedMarkers(pub);if(!pub)throw new Error('未识别到整期期刊结构');const requested=Math.max(420,Math.min(1400,Number(targetChars)||760));const target=Math.max(900,Math.round(requested*1.28));const pages=[];
   if(pub.preface?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:'卷首语',kicker:'卷首语',section:'',pageType:'article',paras:pub.preface.paras},target));}
   if(pub.lead?.paras?.length){pages.push(...semanticUnitPages({title:doc.title,navTitle:doc.title||'刊首',kicker:'刊首',section:'',pageType:'article',paras:pub.lead.paras},target));}
-  for(const sec of pub.sections){const kicker=sec.display||sec.name;const introBlocks=semanticBlocks(sec.intro,sec.pageType);const introWeight=introBlocks.reduce((n,b)=>n+blockWeight(b),0);const hasRestoredMarker=(sec.intro||[]).some(p=>p&&p.restoredMarker);if(introBlocks.length&&(introWeight>=160||sec.feature||hasRestoredMarker)){const introTitle=sec.feature||sec.tagline||`${sec.name}导读`;pages.push(...semanticUnitPages({title:introTitle,navTitle:`${sec.name}｜导读`,kicker,section:sec.name,pageType:sec.pageType,paras:sec.intro},Math.max(target,900)));}
+  for(const sec of pub.sections){const kicker=sec.display||sec.name;const introBlocks=semanticBlocks(sec.intro,sec.pageType);const introWeight=introBlocks.reduce((n,b)=>n+blockWeight(b),0);const hasRestoredMarker=(sec.intro||[]).some(p=>p&&p.restoredMarker);if(introBlocks.length&&(introWeight>=160||sec.feature||hasRestoredMarker)){const introTitle=sec.feature||sec.tagline||(/^(?:本期)?(?:目录|目次|要目)$/.test(String(sec.name||'').trim())?String(sec.name).trim():`${sec.name}导读`);pages.push(...semanticUnitPages({title:introTitle,navTitle:`${sec.name}｜导读`,kicker,section:sec.name,pageType:sec.pageType,paras:sec.intro},Math.max(target,900)));}
     for(const article of sec.articles){const cleanTitle=stripNumberPrefix(article.title)||article.title;pages.push(...semanticUnitPages({title:cleanTitle,navTitle:`${sec.name}｜${cleanTitle}`,kicker,section:sec.name,pageType:sec.pageType,paras:article.paras},target));}
   }
   if(pub.closing?.paras?.length){const closeParas=[...pub.closing.paras];let closeTitle='尾刊寄语';let closingRetained=[];if(closeParas[0]&&closeParas[0].style==='FirstParagraph'&&cleanText(closeParas[0].text).length<=40){const source=cleanText(closeParas.shift().text);closeTitle=source.replace(/[。！？!?]$/,'');if(!sameText(source,closeTitle))closingRetained.push({text:source,level:2,links:[]});}if(closingRetained.length)closeParas.unshift(...closingRetained.map(r=>({text:r.text,style:'BodyText',level:r.level,links:r.links||[],richText:null,list:false})));
