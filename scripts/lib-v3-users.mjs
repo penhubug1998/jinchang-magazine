@@ -424,6 +424,20 @@ export function consumeResetCode(db, { username, code, newPassword } = {}, actor
   return { ok: true, user: publicUser(findUserById(db, Number(user.id))) };
 }
 
+// 清理"没人管"的申请，避免待办列表一直挂着过期条目：
+//   - 从未签发过重置码、且申请超过 7 天；
+//   - 签发过但已过期超过 7 天且从未使用。
+// 审计表里仍有 request/issue/complete 记录，历史不会丢。
+export function purgeStaleResetRequests(db, { days = 7 } = {}) {
+  const cutoff = new Date(Date.now() - Number(days) * 24 * 3600 * 1000).toISOString();
+  const info = db.prepare(`DELETE FROM password_resets
+                           WHERE used_at IS NULL
+                             AND ((code_hash IS NULL AND created_at < ?)
+                                  OR (code_hash IS NOT NULL AND expires_at IS NOT NULL AND expires_at < ?))`)
+    .run(cutoff, Date.now() - Number(days) * 24 * 3600 * 1000);
+  return Number(info.changes || 0);
+}
+
 export function pendingResetCount(db) {
   const row = db.prepare('SELECT COUNT(*) AS n FROM password_resets WHERE used_at IS NULL').get();
   return Number(row?.n || 0);

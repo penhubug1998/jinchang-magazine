@@ -23,9 +23,27 @@ const target=path.join(targetRoot,remotePath);
 // 用户分区（u/<slug>/<NN>）不是站点根：根级首页 / catalog.json / 部署清单属于平台命名空间，
 // 带斜杠的 remote-path 绝不能把它们覆盖掉，归档页由 Studio 的部署接口统一重建。
 const nested=remotePath.includes('/');
-const rootFiles=nested?[]:['index.html','catalog.json','deploy-manifest.json','nginx-cache-snippet.conf'];
+const wantRootFiles=Boolean(args['write-root-files']);
+// 站点根一旦由 Studio 接管（分区归档页 / 作者空间），release-v3/index.html 里那份
+// "扁平列出所有已发布期刊"的目录就会把分区归档覆盖掉。默认拒绝，必须显式 --write-root-files。
+let studioManaged=null;
+if(!nested){
+  try{
+    const manifest=JSON.parse(await readFile(path.join(targetRoot,'deploy-manifest.json'),'utf8'));
+    if(manifest&&(manifest.namespace!==undefined||manifest.kind||manifest.readerRuntime))studioManaged='deploy-manifest.json 由 Studio 生成';
+  }catch{}
+  if(!studioManaged&&await exists(path.join(targetRoot,'u','index.html')))studioManaged='目标根目录下已存在作者空间 /u/';
+}
+if(studioManaged&&!wantRootFiles){
+  console.error(`拒绝写入站点根文件：${studioManaged}。`);
+  console.error('release-v3/index.html 与 catalog.json 是"扁平列出所有已发布期刊"的目录，写进站点根会覆盖分区归档页；');
+  console.error('归档页请改用 Studio 的「部署到公开网站」。确需覆盖请显式加 --write-root-files。');
+  process.exit(2);
+}
+const rootFiles=(nested||!wantRootFiles&&studioManaged)?[]:['index.html','catalog.json','deploy-manifest.json','nginx-cache-snippet.conf'];
 if(nested)console.warn(`注意：${remotePath} 是用户分区，本次不写入站点根文件；归档页请用 Studio 的「部署到公开网站」。`);
-const plan={version:V3_VERSION,issue:id,source:posix(source),target:posix(target),rootFiles};
+if(!nested&&!rootFiles.length)console.warn('本次不写入站点根文件（目标根由 Studio 管理）。');
+const plan={version:V3_VERSION,issue:id,source:posix(source),target:posix(target),rootFiles,studioManaged:Boolean(studioManaged)};
 if(!confirm){console.log('RC1 安全部署预演（dry-run）：');console.log(JSON.stringify(plan,null,2));console.log('未写入目标目录。确认后追加 --confirm。');process.exit(0)}
 
 await mkdir(targetRoot,{recursive:true});

@@ -21,6 +21,18 @@ try{
  const web=path.join(sandbox,'web');await mkdir(path.join(web,'03'),{recursive:true});await writeFile(path.join(web,'03','old.txt'),'previous-version');await writeFile(path.join(web,'index.html'),'old archive');await writeFile(path.join(web,'catalog.json'),'[]');report.steps.seed={oldVersion:true};
  run('deploy-directory-v3.mjs',['--issue','003','--target',web,'--confirm']);assert((await readFile(path.join(web,'03','reader.js'),'utf8')).includes('RC1'),'部署后目标 reader.js 不正确');report.steps.deploy={applied:true};
  const {server,base}=await serverFor(web);try{const r=await runAsync('online-verification-v3.mjs',['--base',base,'--issue','003','--release','release-v3','--strict']);report.steps.online={passed:true,summary:r.stdout.trim().split('\n').slice(-2)};await writeFile(path.join(web,'03','reader.js'),'window.CORRUPTED=true;\n');await runAsync('online-verification-v3.mjs',['--base',base,'--issue','003','--release','release-v3','--strict'],1);report.steps.corruption={detected:true}}finally{await new Promise(r=>server.close(r))}
+ // Studio 接管站点根之后（分区归档页 + 作者空间），release-v3 的扁平目录不能再覆盖站点根。
+ // 这里先把目标根伪装成"Studio 管理"，验证默认拒绝、显式 --write-root-files 才放行。
+ await mkdir(path.join(web,'u'),{recursive:true});await writeFile(path.join(web,'u','index.html'),'<!doctype html><title>作者期刊空间</title>');
+ await writeFile(path.join(web,'index.html'),'studio archive');
+ await writeFile(path.join(web,'catalog.json'),'[{"id":"001"}]');
+ run('deploy-directory-v3.mjs',['--issue','003','--target',web,'--confirm'],2);
+ assert((await readFile(path.join(web,'index.html'),'utf8'))==='studio archive','被拒绝的部署不得改动站点根首页');
+ assert((await readFile(path.join(web,'catalog.json'),'utf8'))==='[{"id":"001"}]','被拒绝的部署不得改动站点根目录');
+ report.steps.rootGuard={rejected:true};
+ await rm(path.join(web,'u'),{recursive:true,force:true});
+ await writeFile(path.join(web,'index.html'),'old archive');
+ await writeFile(path.join(web,'catalog.json'),'[]');
  run('rollback-deployment-v3.mjs',['--issue','003','--target',web,'--confirm']);assert((await readFile(path.join(web,'03','old.txt'),'utf8'))==='previous-version','回滚没有恢复旧期刊目录');assert((await readFile(path.join(web,'index.html'),'utf8'))==='old archive','回滚没有恢复旧归档首页');assert((await readFile(path.join(web,'catalog.json'),'utf8'))==='[]','回滚没有恢复旧 catalog');report.steps.rollback={restored:true};report.status='passed';
- await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports','v3-rc1-deployment-rehearsal.json'),JSON.stringify(report,null,2)+'\n');console.log('V3 RC1 部署演练通过：原子部署 → 缓存/SHA/Range 线上验证 → 篡改检测 → receipt 回滚恢复。');
+ await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports','v3-rc1-deployment-rehearsal.json'),JSON.stringify(report,null,2)+'\n');console.log('V3 RC1 部署演练通过：原子部署 → 缓存/SHA/Range 线上验证 → 篡改检测 → 站点根护栏 → receipt 回滚恢复。');
 }finally{await rm(sandbox,{recursive:true,force:true})}
