@@ -1132,32 +1132,37 @@ async function deleteIssueToQuarantine(id,{actor='',isAdmin=false,force=false,is
   if(live&&!force)throw Object.assign(new Error('这一期已经上线；确认删除需要加 force=1，公开目录会一并移入隔离区'),{code:'ISSUE_PUBLISHED_CONFIRM',statusCode:409});
   const files=await listFilesRecursive(dir);
   const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  // 两个隔离区各自留在同一个文件系统里：期刊源在应用目录，公开副本在公开根目录。
+  // 生产上 /opt 与 /var/www 分属不同挂载点，跨设备 rename 会直接 EXDEV。
   const trashRoot=path.join(root,'.v3-trash'),trashIssue=path.join(trashRoot,'issues',`${id}-${stamp}`);
+  const publicTrashRoot=publicMagazineRoot?path.join(publicMagazineRoot,'.v3-trash'):'';
+  const trashPublic=publicExists?path.join(publicTrashRoot,'public',`${id}-${stamp}`):'';
+  const spaceDir=space&&publicMagazineRoot?path.join(publicMagazineRoot,USER_SPACE_ROOT,space.slug):'';
+  const trashSpace=spaceDir?path.join(publicTrashRoot,'spaces',`${space.slug}-${stamp}`):'';
+  // 先把隔离区目录准备好：任何不可写都在搬动数据之前就失败。
   await mkdir(path.dirname(trashIssue),{recursive:true});
-  const manifest={version:1,kind:'issue-delete',issueId:id,label:String(source.label||''),sourceStatus:String(source.status||''),deletedAt:new Date().toISOString(),actor:String(actor||''),reason:live?'published-force-delete':'draft-delete',fileCount:files.length,live,publicRemotePath:publicExists?relPath:null,publicDeployment:deployment?{url:deployment.url||null,deployedAt:deployment.deployedAt||null}:null};
+  if(publicTrashRoot&&(publicExists||spaceDir)){await mkdir(path.join(publicTrashRoot,'public'),{recursive:true});await mkdir(path.join(publicTrashRoot,'spaces'),{recursive:true});}
   await rename(dir,trashIssue);
+  let publicRemoved=false,spaceRemoved=false,publicError=null,archives=null;
+  if(publicExists){
+    try{
+      await rename(publicDir,trashPublic);publicRemoved=true;
+      // 作者最后一期被删除后，作者分区目录里只剩下归档页：一并隔离，
+      // 否则 /u/<slug>/index.html 会留着一条指向已删除期刊的死链接。
+      if(spaceDir&&await exists(spaceDir)){
+        const stillPublished=(await deployedPublicIssueDirs()).some(item=>item.space===space?.slug);
+        if(!stillPublished){await rename(spaceDir,trashSpace);spaceRemoved=true;}
+      }
+    }catch(error){publicError=String(error?.message||error);console.error(`删除公开副本失败：${publicError}`);}
+  }
+  const manifest={version:1,kind:'issue-delete',issueId:id,label:String(source.label||''),sourceStatus:String(source.status||''),deletedAt:new Date().toISOString(),actor:String(actor||''),reason:live?'published-force-delete':'draft-delete',fileCount:files.length,live,publicRemotePath:publicExists?relPath:null,publicQuarantine:publicRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashPublic)):null,spaceQuarantine:spaceRemoved&&publicMagazineRoot?posix(path.relative(publicMagazineRoot,trashSpace)):null,publicError,publicDeployment:deployment?{url:deployment.url||null,deployedAt:deployment.deployedAt||null}:null};
   await writeFile(path.join(trashIssue,'.deleted.json'),`${JSON.stringify(manifest,null,2)}\n`,'utf8');
   removeIssueOwner(userDb,id);
-  audit(userDb,{actor,action:'issue.delete',target:id,detail:`files=${files.length} live=${live?'1':'0'} public=${publicExists?'1':'0'}`});
-  let publicRemoved=false,archives=null;
-  if(publicExists){
-    const trashPublic=path.join(trashRoot,'public',`${id}-${stamp}`);
-    await mkdir(path.dirname(trashPublic),{recursive:true});
-    await rename(publicDir,trashPublic);publicRemoved=true;
-    // 作者最后一期被删除后，作者分区目录里只剩下归档页：一并隔离，
-    // 否则 /u/<slug>/index.html 会留着一条指向已删除期刊的死链接。
-    if(space){
-      const spaceDir=path.join(publicMagazineRoot,USER_SPACE_ROOT,space.slug);
-      const stillPublished=(await deployedPublicIssueDirs()).some(item=>item.space===space.slug);
-      if(!stillPublished&&await exists(spaceDir)){
-        const trashSpace=path.join(trashRoot,'public',`space-${space.slug}-${stamp}`);
-        await rename(spaceDir,trashSpace);
-      }
-    }
-    archives=await rebuildPublicArchives({removedIssue:id,actor}).catch(error=>({ok:false,error:String(error?.message||error)}));
-  }
-  return {ok:true,issueId:id,quarantined:posix(path.relative(root,trashIssue)),fileCount:files.length,publicRemoved,archives,deletedAt:manifest.deletedAt};
+  audit(userDb,{actor,action:'issue.delete',target:id,detail:`files=${files.length} live=${live?'1':'0'} public=${publicRemoved?'1':publicExists?'failed':'0'}`});
+  if(publicRemoved)archives=await rebuildPublicArchives({removedIssue:id,actor}).catch(error=>({ok:false,error:String(error?.message||error)}));
+  return {ok:true,issueId:id,quarantined:posix(path.relative(root,trashIssue)),fileCount:files.length,publicRemoved,spaceRemoved,publicError,archives,deletedAt:manifest.deletedAt};
 }
+
 async function ensurePublicationWeb(id){
   const build=await runScriptAsync('build-v3.mjs',['--issue',id]);if(!build.ok)throw new Error(build.output||'Web Reader 构建失败');
   const source=path.join(root,'dist-v3',id);if(!(await exists(path.join(source,'index.html'))))throw new Error(`构建产物不存在：dist-v3/${id}`);
