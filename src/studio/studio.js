@@ -1264,8 +1264,77 @@ $('#mySpacePassword')?.addEventListener('click',async()=>{
     status.className='login-status success';status.textContent='密码已修改，其它设备已退出登录。';
   }catch(error){status.className='login-status';status.textContent=error.message||'修改失败';}
 });
+// ---- 用户管理（仅管理员）----
+function userAdminTag(text, kind) { return `<span class="user-admin-tag ${kind || ''}">${escText(text)}</span>`; }
+function userAdminRow(user) {
+  const statusTag = user.status === 'active' ? userAdminTag('已启用', 'ok') : user.status === 'pending' ? userAdminTag('待审批', 'warn') : userAdminTag('已停用', 'bad');
+  const roleTag = user.role === 'admin' ? userAdminTag('管理员') : userAdminTag('编辑');
+  const publishTag = user.canPublish ? userAdminTag('可发布', 'ok') : userAdminTag('不可发布');
+  const meta = [user.displayName, user.journalName ? `刊名：${user.journalName}` : '未设置刊名', user.lastLoginAt ? `上次登录 ${String(user.lastLoginAt).slice(0, 10)}` : '从未登录'].filter(Boolean).join(' · ');
+  const actions = [];
+  if (user.role !== 'admin') {
+    if (user.status === 'pending') actions.push(`<button type="button" data-user-action="activate" data-user-id="${user.id}">审批通过</button>`);
+    if (user.status === 'active') actions.push(`<button type="button" data-user-action="disable" data-user-id="${user.id}">停用</button>`);
+    if (user.status === 'disabled') actions.push(`<button type="button" data-user-action="activate" data-user-id="${user.id}">启用</button>`);
+    actions.push(user.canPublish
+      ? `<button type="button" data-user-action="revoke" data-user-id="${user.id}">收回发布权</button>`
+      : `<button type="button" data-user-action="grant" data-user-id="${user.id}">授予发布权</button>`);
+    actions.push(`<button type="button" data-user-action="password" data-user-id="${user.id}">重置密码</button>`);
+    actions.push(`<button type="button" data-user-action="delete" data-user-id="${user.id}">删除</button>`);
+  }
+  const cls = user.status === 'pending' ? 'is-pending' : user.status === 'disabled' ? 'is-disabled' : '';
+  return `<article class="user-admin-row ${cls}" data-user-row="${user.id}">
+    <div class="user-admin-main"><strong>${escText(user.username)}</strong><small>${escText(meta)}</small>
+      <div class="user-admin-tags">${roleTag}${statusTag}${publishTag}</div></div>
+    <div class="user-admin-actions">${actions.join('') || '<span class="user-admin-tag">—</span>'}</div>
+  </article>`;
+}
+async function renderUserAdmin() {
+  const list = $('#userAdminList'); if (!list) return;
+  const status = $('#userAdminStatus'); if (status) { status.className = 'login-status'; status.textContent = ''; }
+  $('#userAdminSummary').textContent = '加载中…';
+  try {
+    const data = await api('/api/admin/users');
+    const users = data?.users || [], stats = data?.stats || {};
+    $('#userAdminSummary').textContent = `共 ${stats.users ?? users.length} 个账号 · 待审批 ${stats.pending ?? 0} · 已启用 ${stats.active ?? 0} · 已停用 ${stats.disabled ?? 0}`;
+    list.innerHTML = users.map(userAdminRow).join('') || '<div class="user-admin-tag">还没有账号</div>';
+  } catch (error) {
+    $('#userAdminSummary').textContent = '读取失败';
+    if (status) status.textContent = error.message || '读取用户列表失败';
+  }
+}
+async function openUserAdminDialog() {
+  const dialog = $('#userAdminDialog'); if (!dialog) return;
+  await renderUserAdmin();
+  dialog.showModal();
+}
+$('#userAdminBtn')?.addEventListener('click', openUserAdminDialog);
+$('#userAdminRefresh')?.addEventListener('click', renderUserAdmin);
+$('#userAdminList')?.addEventListener('click', async event => {
+  const button = event.target.closest('[data-user-action]'); if (!button) return;
+  const id = Number(button.dataset.userId), action = button.dataset.userAction;
+  const status = $('#userAdminStatus');
+  const call = async (route, init) => { button.disabled = true; try { await api(route, init); if (status) { status.className = 'login-status success'; status.textContent = '已更新。'; } await renderUserAdmin(); } catch (error) { if (status) { status.className = 'login-status'; status.textContent = error.message || '操作失败'; } button.disabled = false; } };
+  if (action === 'activate') return call(`/api/admin/users/${id}/status`, { method: 'POST', body: JSON.stringify({ status: 'active' }) });
+  if (action === 'disable') return call(`/api/admin/users/${id}/status`, { method: 'POST', body: JSON.stringify({ status: 'disabled' }) });
+  if (action === 'grant') return call(`/api/admin/users/${id}/publish`, { method: 'POST', body: JSON.stringify({ canPublish: true }) });
+  if (action === 'revoke') return call(`/api/admin/users/${id}/publish`, { method: 'POST', body: JSON.stringify({ canPublish: false }) });
+  if (action === 'password') {
+    const value = prompt('为该账号设置新密码（至少 8 位，含字母和数字）：');
+    if (!value) return;
+    return call(`/api/admin/users/${id}/password`, { method: 'POST', body: JSON.stringify({ password: value }) });
+  }
+  if (action === 'delete') {
+    if (!confirm('确定删除该账号？该账号将立即无法登录。')) return;
+    return call(`/api/admin/users/${id}`, { method: 'DELETE' });
+  }
+});
 // 顶部按钮上显示当前刊名，方便确认"我现在在哪个创作空间"
-function updateMySpaceLabel(){const button=$('#mySpaceBtn');if(!button)return;const name=String(state.account?.journalName||'').trim();button.textContent=name?`我的空间 · ${name.slice(0,10)}`:'我的空间';button.title=name?`当前刊名：${name}`:'设置你的期刊名、姓名与密码';}
+function updateMySpaceLabel(){
+  // 「用户管理」只对管理员显示
+  const adminBtn=$('#userAdminBtn');
+  if(adminBtn)adminBtn.classList.toggle('hidden', state.account?.role!=='admin');
+  const button=$('#mySpaceBtn');if(!button)return;const name=String(state.account?.journalName||'').trim();button.textContent=name?`我的空间 · ${name.slice(0,10)}`:'我的空间';button.title=name?`当前刊名：${name}`:'设置你的期刊名、姓名与密码';}
 async function loadMyAccount(){try{const data=await api('/api/me/profile');state.account=data?.account||null;}catch{state.account=null;}updateMySpaceLabel();}
 $('#myTemplatesBtn').onclick=()=>openPageTemplateDialog('add');
 
