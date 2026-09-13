@@ -1,0 +1,23 @@
+// 生产小验证：账号删除时私有素材库一并进隔离区。
+const BASE='http://127.0.0.1:4180';
+const ADMIN_PW=process.env.ADMIN_PW, USER='libcheck', PW='LibCheck123';
+const api=async(route,{method='GET',cookie='',data}={})=>{const r=await fetch(BASE+route,{method,headers:{...(data?{'Content-Type':'application/json'}:{}),...(cookie?{Cookie:cookie}:{})},...(data?{body:JSON.stringify(data)}:{})});return{status:r.status,body:await r.json().catch(()=>({})),cookie:(r.headers.get('set-cookie')||'').split(';')[0]}};
+const out=[];const check=(c,l,d='')=>{out.push(c);console.log(`  ${c?'✓':'✗'} ${l}${d?' — '+d:''}`)};
+const admin=await api('/api/auth/login',{method:'POST',data:{username:'admin',password:ADMIN_PW}});
+check(admin.status===200,'管理员登录');
+await api('/api/auth/register',{method:'POST',data:{username:USER,password:PW,displayName:'素材库隔离验证'}});
+let users=await api('/api/admin/users',{cookie:admin.cookie});
+const u=(users.body.users||[]).find(x=>x.username===USER);
+check(Boolean(u),'临时账号已注册',String(u?.id));
+await api(`/api/admin/users/${u.id}/status`,{method:'POST',cookie:admin.cookie,data:{status:'active'}});
+const session=await api('/api/auth/login',{method:'POST',data:{username:USER,password:PW}});
+check(session.status===200,'临时账号登录');
+const style=await api('/api/design-library',{method:'POST',cookie:session.cookie,data:{name:'隔离验证样式',scope:'theme',contextType:'theme',payload:{accent:'#315f4a'}}});
+check(style.status===201,'临时账号保存样式');
+const drop=await api(`/api/admin/users/${u.id}`,{method:'DELETE',cookie:admin.cookie});
+check(drop.status===200,'删除临时账号',`HTTP ${drop.status}`);
+check(drop.body?.libraryQuarantine?.moved===true,'素材库已搬进隔离区',JSON.stringify(drop.body?.libraryQuarantine||{}));
+const after=await api(`/api/admin/users`,{cookie:admin.cookie});
+check(!(after.body.users||[]).some(x=>x.username===USER),'账号已不存在');
+console.log(`\n结果：${out.filter(Boolean).length}/${out.length} 项通过`);
+process.exit(out.every(Boolean)?0:1);
