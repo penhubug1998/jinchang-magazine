@@ -51,6 +51,7 @@ jobs:
       - run: npm run test:reader-capabilities
       - run: npm run test:publication-hygiene
       - run: npm run test:repo-hygiene
+      - run: npm run test:multiuser-auth
       - run: npm run test:publication-share
       - run: npm run test:publication-pdf
       - run: npm run test:production-preflight

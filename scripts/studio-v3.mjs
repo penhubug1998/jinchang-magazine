@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
+import {openUserDb,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
 import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
 import path from 'node:path';
@@ -39,6 +40,15 @@ if(productionMode&&!acceptanceOnly&&!adminLoginEnabled)throw new Error('正式�
 const ADMIN_SESSION_COOKIE = 'v3_studio_session';
 const ADMIN_SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 const adminSessions = new Map();
+// ---- 多用户存储（SQLite）----
+// 数据库成为用户与会话的真源；STUDIO_ADMIN_PASSWORD 仍作为引导/应急入口保留。
+const userDb = openUserDb(root);
+const bootstrapResult = bootstrapAdmin(userDb, { username: adminLoginUser, password: adminLoginPassword });
+if (bootstrapResult.created) console.log(`多用户：已用环境变量创建管理员账号 ${bootstrapResult.user.username}`);
+else if (bootstrapResult.promoted) console.log(`多用户：已把既有账号 ${bootstrapResult.user.username} 提升为管理员`);
+purgeExpiredSessions(userDb);
+// 是否必须登录：配置了环境变量密码，或库里已有可用账号（本地测试目录两者都没有 → 免登录）
+function authRequired() { return adminLoginEnabled || countUsers(userDb, { status: STATUS_ACTIVE }) > 0; }
 const loginAttempts = new Map();
 const aiConfigFile = path.join(root,'.v3-ai-config.json');
 const aiSummaryCacheDir = path.join(root,'.v3-ai-cache');
@@ -262,10 +272,14 @@ async function summarizeExternalUrl(rawUrl){
 }
 function requestCookies(req){return Object.fromEntries(String(req.headers.cookie||'').split(';').map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.indexOf('=');return i<0?[x,'']:[x.slice(0,i),decodeURIComponent(x.slice(i+1))]}));}
 function adminSession(req){
-  if(!adminLoginEnabled)return {user:adminLoginUser,expiresAt:Infinity,unprotected:true};
-  const token=requestCookies(req)[ADMIN_SESSION_COOKIE];if(!token)return null;
-  const session=adminSessions.get(token);if(!session||session.expiresAt<=Date.now()){if(session)adminSessions.delete(token);return null;}
-  session.expiresAt=Date.now()+ADMIN_SESSION_TTL_MS;return session;
+  if(!authRequired())return {user:adminLoginUser,role:'admin',canPublish:true,expiresAt:Infinity,unprotected:true};
+  const token=requestCookies(req)[ADMIN_SESSION_COOKIE];
+  const found=sessionUser(userDb,token);if(!found)return null;
+  const row=found.user;
+  return {user:row.username,userId:Number(row.id),role:row.role,status:row.status,
+    canPublish:row.role==='admin'||Number(row.can_publish)===1,
+    journalName:row.journal_name||'',displayName:row.display_name||'',
+    sessionToken:token,row,expiresAt:found.expiresAt};
 }
 function sessionCookie(req,token,maxAge){
   const forwarded=String(req.headers['x-forwarded-proto']||'').split(',')[0].trim();
@@ -1136,22 +1150,60 @@ const server=http.createServer(async(req,res)=>{try{
   if(acceptanceOnly&&seg[0]==='api'&&u.pathname!=='/api/health')return send(res,403,{error:'Final Acceptance 模式禁止编辑 API',code:'READ_ONLY'});
   if(!acceptanceOnly&&u.pathname==='/api/auth/session'&&req.method==='GET'){
     const session=adminSession(req);
-    return send(res,200,{enabled:adminLoginEnabled,authenticated:Boolean(session),user:session?.user||null});
+    return send(res,200,{enabled:authRequired(),authenticated:Boolean(session),
+      user:session?.user||null,
+      account:session&&!session.unprotected?{username:session.user,role:session.role,status:session.status,
+        canPublish:session.canPublish,displayName:session.displayName||'',journalName:session.journalName||''}:null});
   }
   if(!acceptanceOnly&&u.pathname==='/api/auth/login'&&req.method==='POST'){
-    if(!adminLoginEnabled)return send(res,503,{error:'管理端尚未配置登录密码，请设置 STUDIO_ADMIN_PASSWORD',code:'AUTH_NOT_CONFIGURED'});
+    if(!authRequired())return send(res,503,{error:'管理端尚未配置登录密码，请设置 STUDIO_ADMIN_PASSWORD',code:'AUTH_NOT_CONFIGURED'});
     const ip=requestIp(req),rate=loginRate(ip);
     if(rate.lockedUntil>Date.now())return send(res,429,{error:'登录失败次数过多，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
     let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'登录请求格式无效',code:'INVALID_LOGIN_REQUEST'});}
     const username=String(data?.username||'').trim(),password=String(data?.password||'');
-    if(!safeSecretEqual(username,adminLoginUser)||!safeSecretEqual(password,adminLoginPassword)){const next=recordLoginFailure(ip);return send(res,next.lockedUntil>Date.now()?429:401,{error:next.lockedUntil>Date.now()?'登录失败次数过多，请 5 分钟后重试':'用户名或密码错误',code:next.lockedUntil>Date.now()?'AUTH_RATE_LIMITED':'AUTH_INVALID'});}
+    const row=findUserByName(userDb,username);
+    let ok=false,reason='';
+    if(row&&verifyPassword(password,row.password_hash)){ok=true;}
+    else if(!row&&adminLoginEnabled&&safeSecretEqual(username,adminLoginUser)&&safeSecretEqual(password,adminLoginPassword)){
+      // 应急入口：库里没有这个账号时，环境变量里的管理员凭据仍可登录，并补齐账号
+      const seeded=bootstrapAdmin(userDb,{username:adminLoginUser,password:adminLoginPassword});
+      ok=Boolean(seeded.user); if(ok)reason='breakglass';
+    }
+    if(!ok){const next=recordLoginFailure(ip);return send(res,next.lockedUntil>Date.now()?429:401,{error:next.lockedUntil>Date.now()?'登录失败次数过多，请 5 分钟后重试':'用户名或密码错误',code:next.lockedUntil>Date.now()?'AUTH_RATE_LIMITED':'AUTH_INVALID'});}
+    const fresh=findUserByName(userDb,username)||row;
+    if(fresh.status===STATUS_PENDING)return send(res,403,{error:'账号正在等待管理员审批，通过后即可登录',code:'AUTH_PENDING'});
+    if(fresh.status===STATUS_DISABLED)return send(res,403,{error:'账号已被停用，请联系管理员',code:'AUTH_DISABLED'});
     clearLoginFailures(ip);
-    for(const [token,session] of adminSessions)if(session.expiresAt<=Date.now())adminSessions.delete(token);
-    const token=randomUUID();adminSessions.set(token,{user:adminLoginUser,expiresAt:Date.now()+ADMIN_SESSION_TTL_MS});
-    return send(res,200,{ok:true,user:adminLoginUser},'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,token,ADMIN_SESSION_TTL_MS/1000)});
+    const session=createSession(userDb,fresh.id,{userAgent:String(req.headers['user-agent']||''),ip});
+    touchLastLogin(userDb,fresh.id);
+    audit(userDb,{actor:fresh.username,actorId:Number(fresh.id),action:reason==='breakglass'?'auth.login.breakglass':'auth.login',target:fresh.username});
+    return send(res,200,{ok:true,user:fresh.username,role:fresh.role,canPublish:fresh.role==='admin'||Number(fresh.can_publish)===1,
+      journalName:fresh.journal_name||'',displayName:fresh.display_name||''},
+      'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,session.token,session.ttlMs/1000)});
+  }
+  if(!acceptanceOnly&&u.pathname==='/api/auth/register'&&req.method==='POST'){
+    if(!authRequired())return send(res,503,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
+    const ip=requestIp(req),rate=loginRate(ip);
+    if(rate.lockedUntil>Date.now())return send(res,429,{error:'操作过于频繁，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+    try{
+      const created=createUser(userDb,{
+        username:String(data?.username||'').trim(),
+        password:String(data?.password||''),
+        displayName:String(data?.displayName||'').trim(),
+        journalName:String(data?.journalName||'').trim(),
+        publisher:String(data?.publisher||'').trim(),
+        role:'editor',status:STATUS_PENDING,canPublish:false,
+      });
+      clearLoginFailures(ip);
+      audit(userDb,{actor:created.username,actorId:Number(created.id),action:'auth.register',target:created.username,detail:created.journal_name||''});
+      return send(res,201,{ok:true,status:created.status,user:created.username,
+        message:'注册已提交，等待管理员审批通过后即可登录。'});
+    }catch(e){const next=recordLoginFailure(ip);return send(res,e.code==='USERNAME_TAKEN'?409:400,{error:e.message||String(e),code:e.code||'REGISTER_FAILED'});}
   }
   if(!acceptanceOnly&&u.pathname==='/api/auth/logout'&&req.method==='POST'){
-    const cookies=requestCookies(req),token=cookies[ADMIN_SESSION_COOKIE];if(token)adminSessions.delete(token);
+    const cookies=requestCookies(req),token=cookies[ADMIN_SESSION_COOKIE];
+    if(token){destroySession(userDb,token);adminSessions.delete(token);}
     return send(res,200,{ok:true},'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,'',0)});
   }
   if(!acceptanceOnly&&u.pathname==='/api/public/ai/summarize'&&req.method==='OPTIONS')return send(res,204,'','text/plain; charset=utf-8',AI_PUBLIC_HEADERS);
@@ -1161,11 +1213,71 @@ const server=http.createServer(async(req,res)=>{try{
     let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'AI_REQUEST_INVALID'},'application/json; charset=utf-8',AI_PUBLIC_HEADERS);}
     try{const result=await summarizeExternalUrl(data?.url);return send(res,200,{ok:true,...result},'application/json; charset=utf-8',AI_PUBLIC_HEADERS);}catch(e){return send(res,e.statusCode||500,{error:e.message||String(e),code:e.code||'AI_SUMMARY_FAILED'},'application/json; charset=utf-8',AI_PUBLIC_HEADERS);}
   }
-  if(!acceptanceOnly&&adminLoginEnabled&&!adminSession(req)&&u.pathname!=='/api/health'){
+  if(!acceptanceOnly&&authRequired()&&!adminSession(req)&&u.pathname!=='/api/health'){
     const publicLoginAsset=['/login.html','/login.css','/login.js'].includes(u.pathname);
     if(u.pathname==='/'||u.pathname==='/index.html')return serveFile(req,res,path.join(studioDir,'login.html'));
     if(publicLoginAsset)return serveFile(req,res,path.join(studioDir,u.pathname.slice(1)));
     return send(res,401,{error:'请先登录管理端',code:'AUTH_REQUIRED'});
+  }
+  // ---- 多用户：自助资料与管理员用户管理 ----
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='me'){
+    const session=adminSession(req);
+    if(seg[2]==='profile'&&req.method==='GET'){
+      return send(res,200,{ok:true,account:session.unprotected?{username:session.user,role:'admin',status:'active',canPublish:true,displayName:'',journalName:''}:publicUser(session.row)});
+    }
+    if(seg[2]==='profile'&&req.method==='PUT'){
+      if(session.unprotected)return send(res,409,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
+      let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+      const row=setUserProfile(userDb,session.userId,{displayName:data?.displayName,journalName:data?.journalName,publisher:data?.publisher},session.user);
+      return send(res,200,{ok:true,account:publicUser(row)});
+    }
+    if(seg[2]==='password'&&req.method==='POST'){
+      if(session.unprotected)return send(res,409,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
+      let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+      if(!verifyPassword(String(data?.currentPassword||''),session.row.password_hash))return send(res,403,{error:'当前密码不正确',code:'PASSWORD_MISMATCH'});
+      try{setUserPassword(userDb,session.userId,String(data?.newPassword||''),session.user);}
+      catch(e){return send(res,400,{error:e.message||String(e),code:e.code||'INVALID_PASSWORD'});}
+      // 改密会吊销全部会话，这里为当前请求重新签发一个，避免用户被立刻踢出
+      const fresh=createSession(userDb,session.userId,{userAgent:String(req.headers['user-agent']||''),ip:requestIp(req)});
+      return send(res,200,{ok:true},'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,fresh.token,fresh.ttlMs/1000)});
+    }
+    return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='users'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以管理用户',code:'ADMIN_REQUIRED'});
+    if(!seg[3]&&req.method==='GET'){
+      return send(res,200,{ok:true,users:listUsers(userDb),stats:dbStats(userDb,root)});
+    }
+    const targetId=Number(seg[3]);
+    if(seg[3]&&!Number.isInteger(targetId))return send(res,400,{error:'用户编号无效',code:'INVALID_USER_ID'});
+    if(seg[3]&&seg[4]==='status'&&req.method==='POST'){
+      let data;try{data=await body(req,8*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+      try{const row=setUserStatus(userDb,targetId,String(data?.status||''),session.user);return send(res,200,{ok:true,user:publicUser(row)});}
+      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_STATUS'});}
+    }
+    if(seg[3]&&seg[4]==='publish'&&req.method==='POST'){
+      let data;try{data=await body(req,8*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+      try{const row=setUserCanPublish(userDb,targetId,Boolean(data?.canPublish),session.user);return send(res,200,{ok:true,user:publicUser(row)});}
+      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_REQUEST'});}
+    }
+    if(seg[3]&&seg[4]==='password'&&req.method==='POST'){
+      let data;try{data=await body(req,8*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+      try{const row=setUserPassword(userDb,targetId,String(data?.password||''),session.user);return send(res,200,{ok:true,user:publicUser(row)});}
+      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_PASSWORD'});}
+    }
+    if(seg[3]&&!seg[4]&&req.method==='DELETE'){
+      try{deleteUser(userDb,targetId,session.user);return send(res,200,{ok:true});}
+      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:(e.code==='CANNOT_DELETE_ADMIN'?409:400),{error:e.message||String(e),code:e.code||'DELETE_FAILED'});}
+    }
+    return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='audit'&&req.method==='GET'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以查看审计记录',code:'ADMIN_REQUIRED'});
+    const limit=Math.max(1,Math.min(200,Number(u.searchParams.get('limit'))||50));
+    const rows=userDb.prepare('SELECT id,at,actor,action,target,detail FROM audit_log ORDER BY id DESC LIMIT ?').all(limit);
+    return send(res,200,{ok:true,entries:rows});
   }
   if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]){const job=backgroundJobs.get(seg[2]);if(!job)return send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});if(req.method==='GET')return send(res,200,jobView(job));if(seg[3]==='cancel'&&req.method==='POST'){try{return send(res,200,jobView(cancelBackgroundJob(job)))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}if(seg[3]==='retry'&&req.method==='POST'){try{const next=retryBackgroundJob(job);return send(res,202,backgroundJobResponse(next))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}}
   if (u.pathname==='/api/health') return send(res,200,{ok:true,version:studioVersion});
