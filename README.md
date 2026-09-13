@@ -72,7 +72,24 @@ npm run verify:gate
 发布目录卫生、仓库体积与密钥卫生，以及 11 个真实浏览器回归套件。
 浏览器套件的取舍原则见 [`RETIRED-BROWSER-SUITES.md`](RETIRED-BROWSER-SUITES.md)。
 
-`main` 分支受保护：必须通过 PR 合入，且 `verify` 检查为绿（管理员同样不能绕过）。
+### 关于 main 的保护（重要）
+
+仓库目前是 **private**。GitHub Free 套餐对私有仓库**不提供分支保护**
+（经典保护与 Rulesets 都会提示 `Upgrade to GitHub Pro`），因此 main 没有服务端必需检查。
+
+替代做法：
+
+- 正常改动走**功能分支 + PR**，等 CI 的 `verify` 变绿再合并（这也是本项目一直的做法）；
+- 本仓库自带 `pre-push` 钩子：**推送到 main 之前会先跑 `npm run verify:gate`，失败就拒绝推送**。
+  在新克隆里启用一次：
+
+  ```bash
+  npm run hooks:install
+  ```
+
+  紧急绕过：`SKIP_VERIFY_GATE=1 git push`（会打印警告，请事后补跑门禁）。
+
+如果想恢复服务端硬门禁，可选：把仓库改回 public，或升级 GitHub Pro 后重新开启分支保护。
 
 ## 部署
 

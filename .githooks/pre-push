@@ -1,0 +1,38 @@
+#!/bin/sh
+# 本地 pre-push 门禁。
+#
+# 背景：仓库改为 private 后，GitHub Free 套餐不再提供分支保护（经典保护与 Rulesets
+# 都提示 "Upgrade to GitHub Pro"），因此 main 不再有服务端必需检查。这个钩子把
+# 「推 main 之前先过完整门禁」补回到本地：
+#
+#   - 推送到 refs/heads/main  -> 先跑 npm run verify:gate，失败就拒绝推送
+#   - 推送到其它分支          -> 直接放行（正常开发走功能分支 + PR，CI 会跑）
+#
+# 安装：git config core.hooksPath .githooks   （或 npm run hooks:install）
+# 紧急绕过：SKIP_VERIFY_GATE=1 git push ...   （会打印警告，请事后补跑）
+set -u
+
+target_main=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "${remote_ref:-}" = "refs/heads/main" ] && target_main=1
+done
+
+if [ "$target_main" = "0" ]; then
+  exit 0
+fi
+
+if [ "${SKIP_VERIFY_GATE:-}" = "1" ]; then
+  echo "⚠️  SKIP_VERIFY_GATE=1：已跳过 main 门禁。请事后补跑 npm run verify:gate。" >&2
+  exit 0
+fi
+
+echo "==> 正在推送 main：先跑完整门禁（npm run verify:gate）"
+echo "    门禁约需 5–10 分钟；紧急情况下可用 SKIP_VERIFY_GATE=1 绕过。"
+if npm run --silent verify:gate; then
+  echo "==> 门禁通过，继续推送 main。"
+  exit 0
+fi
+echo "" >&2
+echo "✗ 门禁未通过，已拒绝推送 main。" >&2
+echo "  请修复后重试，或改走功能分支 + PR（推荐）。" >&2
+exit 1
