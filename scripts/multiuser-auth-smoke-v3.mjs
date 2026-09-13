@@ -51,12 +51,14 @@ try {
     const html = await r.text();
     assert.equal(r.status, 200, `${route} 作为登录页必须免登录可访问`);
     assert(/paneRegister|registerForm/.test(html), `${route} 应包含注册表单`);
-    assert(/login\.css/.test(html), `${route} 应引用登录页样式`);
+    // 自包含：公开地址下相对资源会解析到杂志静态目录，所以样式与脚本必须内联
+    assert(/<style>/.test(html) && /login-tabs/.test(html), `${route} 应内联登录页样式`);
+    assert(/API_BASE/.test(html) && !/src="\.\/login\.js/.test(html), `${route} 应内联脚本且不引用外部 login.js`);
   }
   // 公开地址（nginx 反代 /new-jc-magazine/login 到 /login）走的就是这个页面，
   // 页面内的接口基址必须能在两种路径下都算对：见 login.js 的 API_BASE 推导。
-  const loginPageSource = await (await fetch(base + '/login.js')).text();
-  assert(loginPageSource.includes("'/new-jc-magazine-admin/api'"), '公开路径下的接口基址必须指向管理端前缀');
+  const loginPageHtml = await (await fetch(base + '/login')).text();
+  assert(loginPageHtml.includes("'/new-jc-magazine-admin/api'"), '公开路径下的接口基址必须指向管理端前缀');
   console.log('  公开登录/注册页免登录可访问 ✓');
 
   // 3) 管理员登录

@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#29221e">
   <title>登录 / 注册 · 电子期刊制作中心</title>
-  <link rel="stylesheet" href="./login.css?v=3.1.0-multiuser-login-20260913">
+  <!-- 自包含单文件：公开地址 /new-jc-magazine/login 经 nginx 反代到 /login，
+       相对资源路径在该前缀下会解析到杂志静态目录，因此样式与脚本一律内联。 -->
+  <style>
+:root{color-scheme:light;--ink:#302721;--muted:#87786c;--line:#e6d9cb;--paper:#fffdf8;--bg:#f2ece3;--red:#982d29;--red-dark:#70201e}
+*{box-sizing:border-box}html,body{min-height:100%;margin:0}body{font-family:Inter,"PingFang SC","Noto Sans CJK SC",system-ui,sans-serif;color:var(--ink);background:radial-gradient(circle at 18% 12%,#fffdf8 0 18%,transparent 45%),linear-gradient(135deg,#eee5db,#f8f4ed);}
+.login-shell{min-height:100dvh;display:grid;place-items:center;padding:24px}.login-card{width:min(440px,100%);padding:30px;border:1px solid rgba(150,114,85,.18);border-radius:22px;background:rgba(255,253,248,.94);box-shadow:0 24px 70px rgba(78,54,37,.16)}
+.login-brand{display:flex;align-items:center;gap:12px;margin-bottom:34px}.login-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--ink);color:#f6d47d;font-family:serif;font-size:24px}.login-brand strong,.login-brand small{display:block}.login-brand strong{font-size:15px}.login-brand small{margin-top:4px;color:var(--muted);font-size:11px}
+.eyebrow{font-size:10px;letter-spacing:.16em;color:#a27658}.login-heading h1{margin:8px 0 7px;font-size:28px;line-height:1.2}.login-heading p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}.login-heading{margin-bottom:22px}form{display:grid;gap:14px}label{display:grid;gap:7px;color:#6e5e52;font-size:12px}input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font:inherit;outline:none}input:focus{border-color:#b6785e;box-shadow:0 0 0 3px rgba(182,120,94,.14)}.login-submit{min-height:45px;margin-top:5px;border:1px solid var(--red);border-radius:11px;background:var(--red);color:#fff;font:600 13px inherit;cursor:pointer}.login-submit:hover{background:var(--red-dark)}.login-submit:disabled{opacity:.62;cursor:wait}.login-status{min-height:20px;margin:0;color:var(--red);font-size:12px;line-height:1.5}.login-status.success{color:#3f765c}.login-note{margin:22px 0 0;padding-top:15px;border-top:1px solid #eee4d9;color:#9a8a7e;font-size:11px;line-height:1.55}
+@media(max-width:480px){.login-shell{padding:14px}.login-card{padding:23px;border-radius:18px}.login-brand{margin-bottom:28px}.login-heading h1{font-size:25px}}
+.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:22px;padding:4px;border:1px solid var(--line);border-radius:13px;background:#f7f1e8}
+.login-tab{min-height:40px;border:0;border-radius:10px;background:transparent;color:#7d6c5f;font:600 13px inherit;cursor:pointer}
+.login-tab.is-active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(78,54,37,.09)}
+.login-pane[hidden]{display:none}
+  </style>
 </head>
 <body>
   <main class="login-shell">
@@ -42,6 +55,95 @@
       <p class="login-note">登录会话有效期 8 小时。期刊名可在登录后随时修改；发布到公开网站需要管理员单独授权。</p>
     </section>
   </main>
-  <script type="module" src="./login.js?v=3.1.0-multiuser-login-20260913"></script>
+  <script>
+// 登录 / 注册页。
+//
+// 这个页面同时由两个入口提供：
+//   1. 应用自身：/login（未登录访问 / 时也回落到它）
+//   2. 公开地址：/new-jc-magazine/login（nginx 反代到应用的 /login）
+// 因此接口基址不能写死成相对路径——公开地址下相对路径会落到 /new-jc-magazine/api/*。
+// 这里按当前路径推导：公开路径 → 走管理端前缀；否则用同级 ./api。
+const API_BASE = (() => {
+  const path = location.pathname;
+  if (path.startsWith('/new-jc-magazine/')) return '/new-jc-magazine-admin/api';
+  return new URL('./api', location.href).pathname.replace(/\/$/, '');
+})();
+
+const $ = selector => document.querySelector(selector);
+const loginForm = $('#adminLoginForm'), userInput = $('#adminUsername'), passwordInput = $('#adminPassword');
+const loginSubmit = $('#adminLoginSubmit'), loginStatus = $('#adminLoginStatus');
+const registerForm = $('#registerForm'), registerStatus = $('#registerStatus'), registerSubmit = $('#registerSubmit');
+const tabLogin = $('#tabLogin'), tabRegister = $('#tabRegister'), paneLogin = $('#paneLogin'), paneRegister = $('#paneRegister');
+
+function setStatus(node, message, kind = '') { if (!node) return; node.textContent = message; node.className = `login-status ${kind}`.trim(); }
+async function readJson(response) { const text = await response.text(); try { return text ? JSON.parse(text) : {}; } catch { return { error: text || response.statusText }; } }
+
+function showTab(which) {
+  const login = which === 'login';
+  tabLogin?.classList.toggle('is-active', login);
+  tabRegister?.classList.toggle('is-active', !login);
+  tabLogin?.setAttribute('aria-selected', String(login));
+  tabRegister?.setAttribute('aria-selected', String(!login));
+  if (paneLogin) paneLogin.hidden = !login;
+  if (paneRegister) paneRegister.hidden = login;
+}
+tabLogin?.addEventListener('click', () => showTab('login'));
+tabRegister?.addEventListener('click', () => showTab('register'));
+
+async function loadSession() {
+  try {
+    const response = await fetch(`${API_BASE}/auth/session`, { cache: 'no-store' });
+    const data = await readJson(response);
+    if (data.authenticated) { location.replace(new URL('./', location.href).pathname); return; }
+    if (data.enabled === false) setStatus(loginStatus, '服务器尚未配置账号体系。');
+  } catch { setStatus(loginStatus, '无法连接服务器，请稍后重试。'); }
+}
+
+loginForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const username = userInput.value.trim(), password = passwordInput.value;
+  if (!username || !password) { setStatus(loginStatus, '请输入用户名和密码。'); return; }
+  loginSubmit.disabled = true; loginSubmit.textContent = '登录中…'; setStatus(loginStatus, '');
+  try {
+    const response = await fetch(`${API_BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password }) });
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.error || '登录失败');
+    setStatus(loginStatus, '登录成功，正在进入制作中心…', 'success');
+    location.replace(new URL('./', location.href).pathname);
+  } catch (error) {
+    setStatus(loginStatus, error.message || '用户名或密码错误。');
+    passwordInput.focus();
+  } finally {
+    loginSubmit.disabled = false; loginSubmit.textContent = '登录';
+  }
+});
+
+registerForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const username = $('#registerUsername').value.trim();
+  const displayName = $('#registerDisplayName').value.trim();
+  const journalName = $('#registerJournalName').value.trim();
+  const password = $('#registerPassword').value;
+  const password2 = $('#registerPassword2').value;
+  if (!username || !password) { setStatus(registerStatus, '请填写用户名和密码。'); return; }
+  if (password !== password2) { setStatus(registerStatus, '两次输入的密码不一致。'); return; }
+  registerSubmit.disabled = true; registerSubmit.textContent = '提交中…'; setStatus(registerStatus, '');
+  try {
+    const response = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, displayName, journalName }) });
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.error || '注册失败');
+    registerForm.reset();
+    showTab('login');
+    userInput.value = username;
+    setStatus(loginStatus, data.message || '注册已提交，等待管理员审批通过后即可登录。', 'success');
+  } catch (error) {
+    setStatus(registerStatus, error.message || '注册失败，请稍后重试。');
+  } finally {
+    registerSubmit.disabled = false; registerSubmit.textContent = '提交注册申请';
+  }
+});
+
+loadSession();
+  </script>
 </body>
 </html>
