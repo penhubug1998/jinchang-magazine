@@ -167,6 +167,11 @@ try {
 
   async function setPage(pageNumber = 1) {
     const id = await frameId();
+    // 阅读器会持久化"上次读到哪一页"，并在 __V3_INITIAL_PAGE__ 缺失时回退到它。
+    // 同一个浏览器实例要连跑 5 个视口，残留位置会让 setPage(1) 落到别的跨页
+    // （曾出现 first spread must be blank + cover (1,2) / (13,14) 的间歇失败）。
+    // 每次都清掉，保证 setPage 是确定性的。
+    await evaluate("try{localStorage.clear();sessionStorage.clear()}catch{}").catch(() => {});
     await cdp.send("Page.setDocumentContent", { frameId: id, html: buildInjectedHtml(pageNumber) });
     const started = Date.now();
     while (Date.now() - started < 6000) {
@@ -193,6 +198,8 @@ try {
         pageCountText:document.getElementById('pageCount')?.textContent,
         pageLabel:document.getElementById('pageLabel')?.textContent,
         pageIndexes:pages.map(p=>Number(p.dataset.pageIndex)),
+        statePageIndex:window.__V3_STATE__?.pageIndex ?? null,
+        injectedPage:Number(window.__V3_INITIAL_PAGE__)||null,
         pageTypes:pages.map(p=>p.classList.contains('blank')?'blank':p.dataset.pageType),
         stage:rect(document.getElementById('stage')),topbar:rect(document.querySelector('.topbar')),toolbar:rect(document.querySelector('.toolbar')),
         horizontalOverflow:document.documentElement.scrollWidth>innerWidth+2||document.body.scrollWidth>innerWidth+2,

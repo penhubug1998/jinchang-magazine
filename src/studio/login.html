@@ -4,23 +4,44 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#29221e">
-  <title>管理端登录 · 电子期刊制作中心</title>
-  <link rel="stylesheet" href="./login.css?v=3.1.0-admin-login-20260827">
+  <title>登录 / 注册 · 电子期刊制作中心</title>
+  <link rel="stylesheet" href="./login.css?v=3.1.0-multiuser-login-20260913">
 </head>
 <body>
   <main class="login-shell">
     <section class="login-card" aria-labelledby="loginTitle">
-      <div class="login-brand"><span class="login-mark">刊</span><div><strong>电子期刊制作中心</strong><small>V3.1 管理端</small></div></div>
-      <div class="login-heading"><span class="eyebrow">ADMIN ACCESS</span><h1 id="loginTitle">登录管理端</h1><p>登录后进入期刊制作、检查与发布工作台。</p></div>
-      <form id="adminLoginForm" novalidate>
-        <label>用户名<input id="adminUsername" name="username" autocomplete="username" value="admin" required maxlength="80"></label>
-        <label>密码<input id="adminPassword" name="password" type="password" autocomplete="current-password" required maxlength="240"></label>
-        <button id="adminLoginSubmit" class="login-submit" type="submit">登录管理端</button>
-        <p id="adminLoginStatus" class="login-status" role="status" aria-live="polite"></p>
-      </form>
-      <p class="login-note">登录会话有效期 8 小时；退出后需要重新登录。</p>
+      <div class="login-brand"><span class="login-mark">刊</span><div><strong>电子期刊制作中心</strong><small>V3.1</small></div></div>
+      <div class="login-tabs" role="tablist">
+        <button type="button" id="tabLogin" class="login-tab is-active" role="tab" aria-selected="true">登录</button>
+        <button type="button" id="tabRegister" class="login-tab" role="tab" aria-selected="false">注册</button>
+      </div>
+
+      <div id="paneLogin" class="login-pane">
+        <div class="login-heading"><span class="eyebrow">SIGN IN</span><h1 id="loginTitle">登录</h1><p>登录后进入你自己的创作空间，制作本单位期刊。</p></div>
+        <form id="adminLoginForm" novalidate>
+          <label>用户名<input id="adminUsername" name="username" autocomplete="username" required maxlength="32"></label>
+          <label>密码<input id="adminPassword" name="password" type="password" autocomplete="current-password" required maxlength="200"></label>
+          <button id="adminLoginSubmit" class="login-submit" type="submit">登录</button>
+          <p id="adminLoginStatus" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <div id="paneRegister" class="login-pane" hidden>
+        <div class="login-heading"><span class="eyebrow">REQUEST ACCESS</span><h1>申请账号</h1><p>提交后需要管理员审批，通过后即可登录使用。</p></div>
+        <form id="registerForm" novalidate>
+          <label>用户名<input id="registerUsername" name="username" autocomplete="username" required maxlength="32" placeholder="3–32 位字母、数字、下划线"></label>
+          <label>姓名 / 称呼<input id="registerDisplayName" name="displayName" autocomplete="name" maxlength="60" placeholder="例如：张三"></label>
+          <label>期刊名<input id="registerJournalName" name="journalName" maxlength="120" placeholder="例如：XX 单位离退休干部电子期刊"></label>
+          <label>密码<input id="registerPassword" name="password" type="password" autocomplete="new-password" required maxlength="200" placeholder="至少 8 位，含字母和数字"></label>
+          <label>确认密码<input id="registerPassword2" name="password2" type="password" autocomplete="new-password" required maxlength="200"></label>
+          <button id="registerSubmit" class="login-submit" type="submit">提交注册申请</button>
+          <p id="registerStatus" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <p class="login-note">登录会话有效期 8 小时。期刊名可在登录后随时修改；发布到公开网站需要管理员单独授权。</p>
     </section>
   </main>
-  <script type="module" src="./login.js?v=3.1.0-admin-login-20260827"></script>
+  <script type="module" src="./login.js?v=3.1.0-multiuser-login-20260913"></script>
 </body>
 </html>

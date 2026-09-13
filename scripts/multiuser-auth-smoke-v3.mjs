@@ -45,6 +45,20 @@ try {
   // 2) 未登录不能访问
   assert.equal((await call(base, '/api/issues')).status, 401, '未登录必须 401');
 
+  // 2.5) 公开登录页：未登录也必须能打开，且带注册入口
+  for (const route of ['/login', '/']) {
+    const r = await fetch(base + route, { redirect: 'manual' });
+    const html = await r.text();
+    assert.equal(r.status, 200, `${route} 作为登录页必须免登录可访问`);
+    assert(/paneRegister|registerForm/.test(html), `${route} 应包含注册表单`);
+    assert(/login\.css/.test(html), `${route} 应引用登录页样式`);
+  }
+  // 公开地址（nginx 反代 /new-jc-magazine/login 到 /login）走的就是这个页面，
+  // 页面内的接口基址必须能在两种路径下都算对：见 login.js 的 API_BASE 推导。
+  const loginPageSource = await (await fetch(base + '/login.js')).text();
+  assert(loginPageSource.includes("'/new-jc-magazine-admin/api'"), '公开路径下的接口基址必须指向管理端前缀');
+  console.log('  公开登录/注册页免登录可访问 ✓');
+
   // 3) 管理员登录
   const admin = await login(base, 'admin', ADMIN_PW);
   assert.equal(admin.status, 200, `管理员登录失败 ${JSON.stringify(admin.body)}`);
