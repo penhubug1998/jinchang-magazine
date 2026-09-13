@@ -1210,7 +1210,7 @@ function pageTemplatePreview(id){
 }
 function renderPageTemplatePalette() { $('#pageTemplatePalette').innerHTML=PAGE_TEMPLATES.map(([id,name,desc])=>`<button type="button" class="page-template-item" data-template="${id}">${pageTemplatePreview(id)}<span class="page-template-copy"><b>${escText(name)}</b><span>${escText(desc)}</span><small class="template-use-hint">${state.pageTemplateMode==='replace'?'替换当前页面':'插入到当前页后'}</small></span></button>`).join(''); }
 async function loadUserTemplates(){try{const r=await api('/api/templates');state.userTemplates=Array.isArray(r.templates)?r.templates:[]}catch{state.userTemplates=[]}renderUserTemplates();}
-function renderUserTemplates(){const box=$('#userTemplatePalette');if(!box)return;$('#userTemplateCount').textContent=`${state.userTemplates.length} / 50`;if(!state.userTemplates.length){box.innerHTML='<div class="template-empty">还没有“我的模板”。可将当前页保存为模板，媒体与文章绑定会自动清空。</div>';return;}box.innerHTML=state.userTemplates.map(t=>{const type=PAGE_TEMPLATE_NAMES[t.page?.type]?t.page.type:'article';return `<div class="user-template-row"><button type="button" class="page-template-item" data-user-template="${escText(t.id)}">${pageTemplatePreview(type)}<span class="page-template-copy"><b>${escText(t.name)}</b><span>${escText(t.page?.type||'article')} · ${escText(t.page?.section||'未归类')}</span><small class="template-use-hint">${state.pageTemplateMode==='replace'?'替换当前页面':'插入到当前页后'}</small></span></button><button type="button" class="danger-lite template-delete" data-delete-user-template="${escText(t.id)}" title="删除模板">×</button></div>`;}).join('');}
+function renderUserTemplates(){const box=$('#userTemplatePalette');if(!box)return;$('#userTemplateCount').textContent=`${state.userTemplates.length} / 50`;if(!state.userTemplates.length){box.innerHTML='<div class="template-empty">还没有“我的模板”。可将当前页保存为模板，媒体与文章绑定会自动清空；模板只属于当前账号。</div>';return;}box.innerHTML=state.userTemplates.map(t=>{const type=PAGE_TEMPLATE_NAMES[t.page?.type]?t.page.type:'article';return `<div class="user-template-row"><button type="button" class="page-template-item" data-user-template="${escText(t.id)}">${pageTemplatePreview(type)}<span class="page-template-copy"><b>${escText(t.name)}</b><span>${escText(t.page?.type||'article')} · ${escText(t.page?.section||'未归类')}</span><small class="template-use-hint">${state.pageTemplateMode==='replace'?'替换当前页面':'插入到当前页后'}</small></span></button><button type="button" class="danger-lite template-delete" data-delete-user-template="${escText(t.id)}" title="删除模板">×</button></div>`;}).join('');}
 async function openPageTemplateDialog(mode='add') {
   if(!requireIssue('请先选择可编辑期刊')||!commitPage())return; if(mode==='add'&&state.issue.pages.length>=LIMITS.pages)return toast(`页面已达到制作中心上限 ${LIMITS.pages} 页`);
   if(mode==='replace'&&['cover','closing'].includes(currentPage()?.type))return toast('封面和尾页属于结构边界页，不建议套用普通模板；请直接编辑内容。',2800);
@@ -1303,11 +1303,57 @@ async function renderUserAdmin() {
     if (status) status.textContent = error.message || '读取用户列表失败';
   }
 }
+// ---- 忘记密码申请（仅管理员）----
+// 明文重置码只在签发的那一刻出现，库里只留 sha256，所以这里必须当场显示并提醒转达。
+function userResetRow(row) {
+  const issued = row.hasCode && !row.expired;
+  const state = row.usedAt ? userAdminTag('已使用', 'ok') : issued ? userAdminTag('已签发', 'warn') : row.expired ? userAdminTag('已过期', 'bad') : userAdminTag('待处理', 'warn');
+  const meta = [row.displayName || row.username, `申请 ${fmtTime(row.requestedAt)}`, issued ? `有效期至 ${fmtTime(new Date(row.expiresAt).toISOString())}` : '尚未签发重置码'].filter(Boolean).join(' · ');
+  const actions = [`<button type="button" data-reset-action="issue" data-reset-id="${row.id}" data-reset-user="${row.userId}">生成重置码</button>`,
+    `<button type="button" data-reset-action="cancel" data-reset-id="${row.id}">撤销申请</button>`];
+  return `<article class="user-admin-row" data-reset-row="${row.id}">
+    <div class="user-admin-main"><strong>${escText(row.username)}</strong><small>${escText(meta)}</small>
+      <div class="user-admin-tags">${state}</div></div>
+    <div class="user-admin-actions">${actions.join('')}</div>
+  </article>`;
+}
+async function renderUserResets() {
+  const list = $('#userResetList'); if (!list) return;
+  const summary = $('#userResetSummary');
+  try {
+    const data = await api('/api/admin/reset-requests');
+    const rows = data?.requests || [];
+    if (summary) summary.textContent = rows.length ? `共 ${rows.length} 条待处理申请` : '当前没有待处理的申请';
+    list.innerHTML = rows.map(userResetRow).join('') || '<div class="user-admin-tag">没有账号申请重置密码</div>';
+  } catch (error) {
+    if (summary) summary.textContent = '读取失败';
+    const status = $('#userResetStatus'); if (status) status.textContent = error.message || '读取重置申请失败';
+  }
+}
 async function openUserAdminDialog() {
   const dialog = $('#userAdminDialog'); if (!dialog) return;
-  await renderUserAdmin();
+  await Promise.all([renderUserAdmin(), renderUserResets()]);
   dialog.showModal();
 }
+$('#userResetRefresh')?.addEventListener('click', renderUserResets);
+$('#userResetList')?.addEventListener('click', async event => {
+  const button = event.target.closest('[data-reset-action]'); if (!button) return;
+  const status = $('#userResetStatus'), action = button.dataset.resetAction, id = Number(button.dataset.resetId);
+  button.disabled = true;
+  try {
+    if (action === 'issue') {
+      const issued = await api(`/api/admin/users/${Number(button.dataset.resetUser)}/reset-code`, { method: 'POST' });
+      if (status) { status.className = 'login-status success'; status.textContent = `一次性重置码：${issued.code}（${issued.ttlMinutes || 30} 分钟内有效，请当面或电话转达给 ${issued.username}）`; }
+      try { await navigator.clipboard?.writeText(issued.code); } catch { }
+    } else {
+      await api(`/api/admin/reset-requests/${id}`, { method: 'DELETE' });
+      if (status) { status.className = 'login-status success'; status.textContent = '已撤销该申请。'; }
+    }
+    await renderUserResets();
+  } catch (error) {
+    if (status) { status.className = 'login-status'; status.textContent = error.message || '操作失败'; }
+  } finally { button.disabled = false; }
+});
 $('#userAdminBtn')?.addEventListener('click', openUserAdminDialog);
 $('#userAdminRefresh')?.addEventListener('click', renderUserAdmin);
 $('#userAdminList')?.addEventListener('click', async event => {
@@ -1432,7 +1478,7 @@ function renderLayoutPresetCards(){
   const profile=pageLayoutProfile(),health=profile.visualHealth==='dense'?'偏密':profile.visualHealth==='sparse'?'留白多':profile.visualHealth==='good'?'正常':'待测量';$('#layoutInsightTitle').textContent=`${currentPage()?.title||currentPage()?.navTitle||'当前页'} · 智能内容指纹`;$('#layoutInsightText').textContent=`标题 ${profile.titleChars||0} 字 · 正文 ${profile.bodyChars??profile.textChars??0} 字 · ${profile.semantic||'general'} 语义 · Reader ${health}。推荐只改变布局与出版参数，不改正文事实源。`;$('#layoutInsightMetrics').innerHTML=[['正文',`${profile.bodyChars??profile.textChars??0} 字`],['媒体',`${profile.media||0}`],['引用',`${profile.quotes||0}`],['要点',`${profile.points||0}`],['内容单元',`${profile.units||0}`],['填充',profile.fillRatio?`${Math.round(profile.fillRatio*100)}%`:'--']].map(([a,b])=>`<span><small>${a}</small><b>${b}</b></span>`).join('');
 }
 async function loadLayoutAssets(){try{const r=await api('/api/layout-library');state.layoutAssets=Array.isArray(r.layouts)?r.layouts:[];state.layoutAssetsLoaded=true;}catch{state.layoutAssets=[];state.layoutAssetsLoaded=true;}renderLayoutAssets();}
-function renderLayoutAssets(){const list=$('#layoutAssetList'),count=$('#layoutAssetCount');if(!list||!count)return;count.textContent=`${state.layoutAssets.length} / 40`;if(!state.layoutAssets.length){list.innerHTML='<div class="layout-asset-empty">还没有“我的版式”。可将当前页的容器结构保存为跨期布局骨架。</div>';return;}list.innerHTML=state.layoutAssets.map(x=>`<div class="layout-asset-row"><button type="button" data-layout-asset="${escText(x.id)}">${layoutMiniMarkup(x.previewPreset||'two-balanced')}<span><b>${escText(x.name)}</b><small>${escText(x.contextType||'page')} · ${Number(x.blueprint?.slotCount||0)} 个槽位</small></span></button><button type="button" class="danger-lite" data-delete-layout-asset="${escText(x.id)}" title="删除版式">×</button></div>`).join('');}
+function renderLayoutAssets(){const list=$('#layoutAssetList'),count=$('#layoutAssetCount');if(!list||!count)return;count.textContent=`${state.layoutAssets.length} / 40`;if(!state.layoutAssets.length){list.innerHTML='<div class="layout-asset-empty">还没有“我的版式”。可将当前页的容器结构保存为跨期布局骨架；版式库只属于当前账号。</div>';return;}list.innerHTML=state.layoutAssets.map(x=>`<div class="layout-asset-row"><button type="button" data-layout-asset="${escText(x.id)}">${layoutMiniMarkup(x.previewPreset||'two-balanced')}<span><b>${escText(x.name)}</b><small>${escText(x.contextType||'page')} · ${Number(x.blueprint?.slotCount||0)} 个槽位</small></span></button><button type="button" class="danger-lite" data-delete-layout-asset="${escText(x.id)}" title="删除版式">×</button></div>`).join('');}
 async function openLayoutLab(){if(!state.issue||!commitPage())return;if(['cover','toc','closing'].includes(currentPage()?.type))return toast('封面、目录和尾页属于结构边界页，请使用专用模板或直接编辑。',3000);renderLayoutPresetCards();await loadLayoutAssets();$('#layoutLabDialog').showModal();}
 function applyLayoutPreset(id){const preset=LAYOUT_PRESET_MAP[id];if(!preset)return;const page=currentPage(),before=flattenLayoutContent(page.blocks||[]);if(!before.length)return toast('当前页没有可套版的内容');const next=buildLayoutFromPreset(id,page.blocks||[]);page.blocks=next;markDirty({historyGroup:`layout-preset:${id}`,forceHistory:true});syncJsonFromPage();renderBlockList();renderPreview();renderLayoutPresetCards();toast(`已套用：${preset.name}；正文与媒体保持不变`);}
 function applySmartLayoutRecommendation(recommendationId){const rec=state.layoutSuggestions.find(x=>x.recommendationId===recommendationId);if(!rec)return;const preset=LAYOUT_PRESET_MAP[rec.id],page=currentPage(),before=flattenLayoutContent(page?.blocks||[]);if(!page||!preset||!before.length)return toast('当前页没有可套版内容');page.blocks=buildLayoutFromPreset(rec.id,page.blocks||[]);if(rec.publishing){page.publishing={...(page.publishing||{}),...cloneData(rec.publishing)};}markDirty({historyGroup:`smart-layout:${recommendationId}`,forceHistory:true});syncJsonFromPage();renderBlockList();renderPreview();renderLayoutPresetCards();updateManagerDashboard();const pageHint=Number(rec.recommendedPages||1)>1?`；建议 ${rec.recommendedPages} 页${rec.requiresPagination?'，可继续使用跨页文本流':''}`:'';toast(`已应用推荐：${rec.name}${pageHint}`,3600);}
@@ -2342,7 +2388,7 @@ async function loadDesignAssets(){try{const r=await api('/api/design-library');s
 function designScopeLabel(scope=state.designScope){return ({theme:'Theme',page:'页面',block:'组件'})[scope]||scope;}
 function currentDesignContextType(){if(state.designScope==='page')return currentPage()?.type||'page';if(state.designScope==='block')return currentDesignBlock()?.type||'block';return 'theme';}
 function currentDesignAssetPayload(){if(state.designScope==='theme')return {...THEME_DEFAULTS,...(state.issue?.design?.tokens||{})};const payload=cloneData(getDesignTarget()||{});if(state.designScope==='page')delete payload.backgroundImage;return payload;}
-function renderDesignLibrary(){const list=$('#designLibraryList'),count=$('#designLibraryCount');if(!list||!count)return;const rows=(state.designAssets||[]).filter(x=>x.scope===state.designScope);count.textContent=`${rows.length} 个${designScopeLabel()}样式 · ${state.designAssets.length} / 60`;if(!rows.length){list.innerHTML=`<div class="design-library-empty">还没有${designScopeLabel()}“我的样式”。调整后可保存，之后其他期刊也能直接复用。</div>`;return;}list.innerHTML=rows.map(x=>`<div class="design-library-item"><button type="button" data-design-asset="${escText(x.id)}"><b>${escText(x.name)}</b><span>${escText(x.contextType||designScopeLabel(x.scope))} · ${Object.keys(x.payload||{}).length} 项</span></button><button type="button" class="danger-lite" data-delete-design-asset="${escText(x.id)}" title="删除样式">×</button></div>`).join('');}
+function renderDesignLibrary(){const list=$('#designLibraryList'),count=$('#designLibraryCount');if(!list||!count)return;const rows=(state.designAssets||[]).filter(x=>x.scope===state.designScope);count.textContent=`${rows.length} 个${designScopeLabel()}样式 · ${state.designAssets.length} / 60`;if(!rows.length){list.innerHTML=`<div class="design-library-empty">还没有${designScopeLabel()}“我的样式”。调整后可保存，之后你的其他期刊也能直接复用；样式库只属于当前账号。</div>`;return;}list.innerHTML=rows.map(x=>`<div class="design-library-item"><button type="button" data-design-asset="${escText(x.id)}"><b>${escText(x.name)}</b><span>${escText(x.contextType||designScopeLabel(x.scope))} · ${Object.keys(x.payload||{}).length} 项</span></button><button type="button" class="danger-lite" data-delete-design-asset="${escText(x.id)}" title="删除样式">×</button></div>`).join('');}
 async function saveCurrentDesignAsset(){if(!state.issue)return;let payload;try{payload=designPayload(state.designScope,currentDesignAssetPayload());}catch(e){return toast(`无法保存：${e.message}`,3000)}if(!Object.keys(payload).length)return toast('当前作用域没有自定义样式可保存',2600);const name=prompt('样式名称：',`${currentDesignContextType()} · ${designScopeLabel()}样式`);if(name==null)return;try{await api('/api/design-library',{method:'POST',body:JSON.stringify({name:name.trim(),scope:state.designScope,contextType:currentDesignContextType(),payload})});await loadDesignAssets();toast('已保存到“我的样式”');}catch(e){toast(e.message,3200)}}
 function applyDesignAsset(id){const item=(state.designAssets||[]).find(x=>x.id===id);if(!item||item.scope!==state.designScope)return;let clean;try{clean=designPayload(state.designScope,item.payload||{});}catch(e){return toast(`样式已失效：${e.message}`,3000)}rememberDesignHistory(`library:${id}`,{force:true});if(state.designScope==='theme'){ensureDesignRoot();state.issue.design.tokens={...THEME_DEFAULTS,...clean};}else{const target=getDesignTarget(state.designScope,{create:true}),backgroundImage=state.designScope==='page'?target.backgroundImage:'';for(const key of Object.keys(target))delete target[key];Object.assign(target,clean);if(backgroundImage)target.backgroundImage=backgroundImage;}finalizeDesignMutation('design-library',{force:true,message:`已应用“${item.name}”`});}
 async function deleteDesignAsset(id){const item=(state.designAssets||[]).find(x=>x.id===id);if(!item)return;if(!confirm(`删除“我的样式”${item.name}？`))return;try{await api(`/api/design-library/${encodeURIComponent(id)}`,{method:'DELETE'});await loadDesignAssets();toast('样式已删除');}catch(e){toast(e.message,3000)}}
@@ -2434,6 +2480,7 @@ function renderPublicationCompletion(){
   $('#publicationCompletionTitle').textContent=verified?'当前版本已上线':changed?'当前修改尚未上线':deploy?'线上版本待核对':release?'发布包已生成':'尚无发布回执';
   $('#publicationCompletionState').textContent=verified?`当前制作源对应最近一次成功部署，部署时间：${fmtTime(deploy.deployedAt)}。可打开链接查看。`:changed?'保存仅更新制作源。请点击“发布并上线”生成并部署当前修改；下方链接仍指向已有线上版本。':deploy?'已有部署记录，但无法确认它对应当前制作源。重新发布后会记录版本对应关系。':release?'发布包已生成，尚未确认上线。':'期刊标记为已发布，但没有发布回执；请执行“发布并上线”。';
   const badge=$('#publicationCompletionBadge');badge.textContent=verified?'已上线':changed?'待发布':deploy?'待核对':'待部署';badge.className=`publication-completion-badge ${verified?'ready':''}`;
+  const spaceUrl=deploy?.spaceUrl||st?.publicShare?.spaceUrl||'',spaceNote=$('#publicationSpaceNote'),spaceLink=$('#publicationSpaceLink');if(spaceNote){spaceNote.hidden=!spaceUrl;if(spaceUrl&&spaceLink)spaceLink.href=spaceUrl;}
   const input=$('#publicationShareUrl'),deployButton=$('#publicationDeployBtn'),copyButton=$('#publicationCopyLinkBtn'),shareButton=$('#publicationNativeShareBtn'),openButton=$('#publicationOpenLinkBtn');if(input)input.value=url;deployButton.disabled=Boolean(state.publicationBusy)||!st?.publicShare?.configured||verified;deployButton.textContent=verified?'已部署并校验':state.publicationBusy==='部署公开网站'?'部署中…':'部署到公开网站';const disabled=!url;for(const b of [copyButton,shareButton,openButton])if(b)b.disabled=disabled;renderPublicationQr(verified?url:'');
 }
 function renderPublicationCenter(){
@@ -2693,6 +2740,27 @@ $('#publicationDeployBtn').onclick=deployPublicationUi;
 $('#publicationCopyLinkBtn').onclick=copyPublicationLink;
 $('#publicationNativeShareBtn').onclick=sharePublicationLink;
 $('#publicationOpenLinkBtn').onclick=openPublicationLink;
+// 删除这一期：先要求手输期号，再确认；已上线的期刊会带 force=1，由服务端再判一次管理员身份。
+async function deleteIssueUi(){
+  const issue=state.issue;const status=$('#publicationDeleteStatus'),button=$('#publicationDeleteBtn'),input=$('#publicationDeleteConfirm');
+  if(!issue||!button)return;
+  const typed=String(input?.value||'').trim();
+  if(typed!==String(issue.id)){if(status){status.className='login-status';status.textContent=`请输入期号 ${issue.id} 以确认删除。`;}input?.focus();return;}
+  const live=String(issue.status)==='published'||Boolean(state.publicationStatus?.publicDeployment);
+  if(!confirm(live?`「${issue.label||issue.id}」已经上线。删除会把它移入服务器隔离区，并撤掉公开站点上的这一期与归档入口。确定继续？`:`确定删除「${issue.label||issue.id}」？整期目录会被移入服务器隔离区，可在服务器上找回。`))return;
+  button.disabled=true;if(status){status.className='login-status';status.textContent='正在删除…';}
+  try{
+    const result=await api(`/api/issues/${encodeURIComponent(issue.id)}${live?'?force=1':''}`,{method:'DELETE'});
+    if(status){status.className='login-status success';status.textContent=`已移入隔离区：${result.quarantined||''}${result.publicRemoved?'（公开目录也已隔离）':''}`;}
+    toast('期刊已删除并移入隔离区',3200);
+    state.issue=null;
+    await loadIssues();
+    const next=state.issues?.[0];if(next)await openIssue(next.id);
+  }catch(error){
+    if(status){status.className='login-status';status.textContent=error.message||'删除失败';}
+  }finally{button.disabled=false;if(input)input.value='';}
+}
+$('#publicationDeleteBtn')?.addEventListener('click',deleteIssueUi);
 $('#publicationSnapshots').addEventListener('click',e=>{const b=e.target.closest('[data-publication-rollback]');if(b)rollbackPublicationSnapshot(b.dataset.publicationRollback);});
 document.addEventListener('click',e=>{const b=e.target.closest('[data-publication-go-page]');if(!b)return;const page=Number(b.dataset.publicationGoPage);if(!Number.isInteger(page)||page<1)return;$('#publicationCenterDialog')?.close();goToPage(page-1);});
 

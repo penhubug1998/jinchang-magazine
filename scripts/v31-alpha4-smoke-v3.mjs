@@ -37,7 +37,9 @@ async function freePort(){return await new Promise((resolve,reject)=>{const s=ne
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tmp=await mkdtemp(path.join(os.tmpdir(),'jinchang-v31a4-'));
 const styleFile=path.join(tmp,'styles.json'),port=await freePort();
-const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,env:{...process.env,V3_DESIGN_LIBRARY_FILE:styleFile},stdio:['ignore','pipe','pipe']});
+// 素材库按账号分区后，"我的样式"落在 <V3_LIBRARY_ROOT>/<账号>/styles.json；
+// 这里把它也指向临时目录，测试不在仓库里留下运行时产物。
+const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,env:{...process.env,V3_DESIGN_LIBRARY_FILE:styleFile,V3_LIBRARY_ROOT:path.join(tmp,'libraries')},stdio:['ignore','pipe','pipe']});
 let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);
 const base=`http://127.0.0.1:${port}`;
 try{

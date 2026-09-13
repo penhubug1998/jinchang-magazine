@@ -26,7 +26,9 @@ const ALLOWED_LARGE = new Map([
   ['2/assets/video/b5f8fa9399881dcaa092a0e2a2c00d03.mp4', 51007991]   // 48.6 MB
 ]);
 
-const JUNK = [/(^|\/)\.DS_Store$/, /\.bak$/i, /\.bak-/i, /\.orig$/i, /~$/, /\.tmp$/i, /(^|\/)npm-debug\.log$/i, /\.log$/i];
+const JUNK = [/(^|\/)\.DS_Store$/, /\.bak$/i, /\.bak-/i, /\.orig$/i, /~$/, /\.tmp$/i, /(^|\/)npm-debug\.log$/i, /\.log$/i,
+  // 删除期刊的隔离区属于运行时数据：只能留在服务器上，绝不能进仓库
+  /(^|\/)\.v3-trash\//];
 const SECRETS = [/(^|\/)\.env($|\.)/, /\.pem$/i, /\.key$/i, /(^|\/)id_rsa/, /\.dump$/i, /\.sql$/i,
   // 运行时数据库：含密码哈希与会话，绝不能进仓库（2026-09-13 真的漏提交过一次 users.db）
   /\.db$/i, /\.db-wal$/i, /\.db-shm$/i, /\.sqlite3?$/i, /(^|\/)\.v3-users\//];

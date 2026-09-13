@@ -14,7 +14,7 @@
 .login-brand{display:flex;align-items:center;gap:12px;margin-bottom:34px}.login-mark{display:grid;place-items:center;width:44px;height:44px;border-radius:14px;background:var(--ink);color:#f6d47d;font-family:serif;font-size:24px}.login-brand strong,.login-brand small{display:block}.login-brand strong{font-size:15px}.login-brand small{margin-top:4px;color:var(--muted);font-size:11px}
 .eyebrow{font-size:10px;letter-spacing:.16em;color:#a27658}.login-heading h1{margin:8px 0 7px;font-size:28px;line-height:1.2}.login-heading p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}.login-heading{margin-bottom:22px}form{display:grid;gap:14px}label{display:grid;gap:7px;color:#6e5e52;font-size:12px}input{width:100%;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);font:inherit;outline:none}input:focus{border-color:#b6785e;box-shadow:0 0 0 3px rgba(182,120,94,.14)}.login-submit{min-height:45px;margin-top:5px;border:1px solid var(--red);border-radius:11px;background:var(--red);color:#fff;font:600 13px inherit;cursor:pointer}.login-submit:hover{background:var(--red-dark)}.login-submit:disabled{opacity:.62;cursor:wait}.login-status{min-height:20px;margin:0;color:var(--red);font-size:12px;line-height:1.5}.login-status.success{color:#3f765c}.login-note{margin:22px 0 0;padding-top:15px;border-top:1px solid #eee4d9;color:#9a8a7e;font-size:11px;line-height:1.55}
 @media(max-width:480px){.login-shell{padding:14px}.login-card{padding:23px;border-radius:18px}.login-brand{margin-bottom:28px}.login-heading h1{font-size:25px}}
-.login-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:22px;padding:4px;border:1px solid var(--line);border-radius:13px;background:#f7f1e8}
+.login-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:22px;padding:4px;border:1px solid var(--line);border-radius:13px;background:#f7f1e8}
 .login-tab{min-height:40px;border:0;border-radius:10px;background:transparent;color:#7d6c5f;font:600 13px inherit;cursor:pointer}
 .login-tab.is-active{background:#fff;color:var(--ink);box-shadow:0 2px 8px rgba(78,54,37,.09)}
 .login-pane[hidden]{display:none}
@@ -27,6 +27,7 @@
       <div class="login-tabs" role="tablist">
         <button type="button" id="tabLogin" class="login-tab is-active" role="tab" aria-selected="true">登录</button>
         <button type="button" id="tabRegister" class="login-tab" role="tab" aria-selected="false">注册</button>
+        <button type="button" id="tabForgot" class="login-tab" role="tab" aria-selected="false">忘记密码</button>
       </div>
 
       <div id="paneLogin" class="login-pane">
@@ -51,7 +52,24 @@
         </form>
       </div>
 
-      <p class="login-note">登录会话有效期 8 小时。期刊名可在登录后随时修改；发布到公开网站需要管理员单独授权。</p>
+      <div id="paneForgot" class="login-pane" hidden>
+        <div class="login-heading"><span class="eyebrow">RESET PASSWORD</span><h1>忘记密码</h1><p>本系统没有邮件通道：先提交申请，管理员核实身份后给你一次性重置码，再用它设置新密码。</p></div>
+        <form id="forgotRequestForm" novalidate>
+          <label>用户名<input id="forgotUsername" name="username" autocomplete="username" required maxlength="32" placeholder="你的登录用户名"></label>
+          <button id="forgotRequestSubmit" class="login-submit" type="submit">提交重置申请</button>
+          <p id="forgotRequestStatus" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+        <form id="forgotResetForm" novalidate>
+          <label>用户名<input id="resetUsername" name="username" autocomplete="username" required maxlength="32"></label>
+          <label>一次性重置码<input id="resetCode" name="code" autocomplete="one-time-code" required maxlength="20" placeholder="例如 ABCDE-FGHJK"></label>
+          <label>新密码<input id="resetPassword" name="newPassword" type="password" autocomplete="new-password" required maxlength="200" placeholder="至少 8 位，含字母和数字"></label>
+          <label>确认新密码<input id="resetPassword2" name="password2" type="password" autocomplete="new-password" required maxlength="200"></label>
+          <button id="resetSubmit" class="login-submit" type="submit">用重置码设置新密码</button>
+          <p id="resetStatus" class="login-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+
+      <p class="login-note">登录会话有效期 8 小时。期刊名可在登录后随时修改；发布到公开网站需要管理员单独授权。重置码 30 分钟内有效，用过即失效。</p>
     </section>
   </main>
   <script>
@@ -72,22 +90,28 @@ const $ = selector => document.querySelector(selector);
 const loginForm = $('#adminLoginForm'), userInput = $('#adminUsername'), passwordInput = $('#adminPassword');
 const loginSubmit = $('#adminLoginSubmit'), loginStatus = $('#adminLoginStatus');
 const registerForm = $('#registerForm'), registerStatus = $('#registerStatus'), registerSubmit = $('#registerSubmit');
-const tabLogin = $('#tabLogin'), tabRegister = $('#tabRegister'), paneLogin = $('#paneLogin'), paneRegister = $('#paneRegister');
+const tabLogin = $('#tabLogin'), tabRegister = $('#tabRegister'), tabForgot = $('#tabForgot'), paneLogin = $('#paneLogin'), paneRegister = $('#paneRegister'), paneForgot = $('#paneForgot');
+const forgotForm = $('#forgotRequestForm'), forgotStatus = $('#forgotRequestStatus'), forgotSubmit = $('#forgotRequestSubmit');
+const resetForm = $('#forgotResetForm'), resetStatus = $('#resetStatus'), resetSubmit = $('#resetSubmit');
 
 function setStatus(node, message, kind = '') { if (!node) return; node.textContent = message; node.className = `login-status ${kind}`.trim(); }
 async function readJson(response) { const text = await response.text(); try { return text ? JSON.parse(text) : {}; } catch { return { error: text || response.statusText }; } }
 
 function showTab(which) {
-  const login = which === 'login';
+  const login = which === 'login', register = which === 'register', forgot = which === 'forgot';
   tabLogin?.classList.toggle('is-active', login);
-  tabRegister?.classList.toggle('is-active', !login);
+  tabRegister?.classList.toggle('is-active', register);
+  tabForgot?.classList.toggle('is-active', forgot);
   tabLogin?.setAttribute('aria-selected', String(login));
-  tabRegister?.setAttribute('aria-selected', String(!login));
+  tabRegister?.setAttribute('aria-selected', String(register));
+  tabForgot?.setAttribute('aria-selected', String(forgot));
   if (paneLogin) paneLogin.hidden = !login;
-  if (paneRegister) paneRegister.hidden = login;
+  if (paneRegister) paneRegister.hidden = !register;
+  if (paneForgot) paneForgot.hidden = !forgot;
 }
 tabLogin?.addEventListener('click', () => showTab('login'));
 tabRegister?.addEventListener('click', () => showTab('register'));
+tabForgot?.addEventListener('click', () => showTab('forgot'));
 
 async function loadSession() {
   try {
@@ -138,6 +162,46 @@ registerForm?.addEventListener('submit', async event => {
     setStatus(registerStatus, error.message || '注册失败，请稍后重试。');
   } finally {
     registerSubmit.disabled = false; registerSubmit.textContent = '提交注册申请';
+  }
+});
+
+forgotForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const username = $('#forgotUsername').value.trim();
+  if (!username) { setStatus(forgotStatus, '请填写用户名。'); return; }
+  forgotSubmit.disabled = true; forgotSubmit.textContent = '提交中…'; setStatus(forgotStatus, '');
+  try {
+    const response = await fetch(`${API_BASE}/auth/forgot`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username }) });
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.error || '提交失败');
+    $('#resetUsername').value = username;
+    setStatus(forgotStatus, data.message || '申请已提交，请联系管理员获取一次性重置码。', 'success');
+  } catch (error) {
+    setStatus(forgotStatus, error.message || '提交失败，请稍后重试。');
+  } finally {
+    forgotSubmit.disabled = false; forgotSubmit.textContent = '提交重置申请';
+  }
+});
+
+resetForm?.addEventListener('submit', async event => {
+  event.preventDefault();
+  const username = $('#resetUsername').value.trim(), code = $('#resetCode').value.trim();
+  const newPassword = $('#resetPassword').value, password2 = $('#resetPassword2').value;
+  if (!username || !code || !newPassword) { setStatus(resetStatus, '请填写用户名、重置码和新密码。'); return; }
+  if (newPassword !== password2) { setStatus(resetStatus, '两次输入的新密码不一致。'); return; }
+  resetSubmit.disabled = true; resetSubmit.textContent = '提交中…'; setStatus(resetStatus, '');
+  try {
+    const response = await fetch(`${API_BASE}/auth/reset`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, code, newPassword }) });
+    const data = await readJson(response);
+    if (!response.ok) throw new Error(data.error || '重置失败');
+    resetForm.reset();
+    showTab('login');
+    userInput.value = username;
+    setStatus(loginStatus, data.message || '密码已重设，请用新密码登录。', 'success');
+  } catch (error) {
+    setStatus(resetStatus, error.message || '重置失败，请重新向管理员申请。');
+  } finally {
+    resetSubmit.disabled = false; resetSubmit.textContent = '用重置码设置新密码';
   }
 });
 

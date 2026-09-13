@@ -1,25 +1,17 @@
-import { spawn } from 'node:child_process';
+// 管理端登录自测。
+//
+// 这里跑在临时工作区里（与其他套件一致），不再直接占用仓库根目录：
+// 之前它会在仓库的 .v3-users/users.db 里真的建一个 admin 账号，导致后续
+// 依赖"本地免登录"的套件（alpha4/alpha5 等）下一次运行时被登录层拦住。
+// 密码也必须带上数字，否则会被多用户的密码强度校验直接拒绝启动。
+import { createTestWorkspace, startTestStudio, stopTestStudio, removeTestWorkspace } from './lib-v3-test-workspace.mjs';
 
-const port = 43000 + Math.floor(Math.random() * 500);
-const base = `http://127.0.0.1:${port}`;
-const password = 'local-admin-test-password';
-let child;
-let logs = '';
+const password = 'local-admin-1-password';
+const dir = await createTestWorkspace('admin-auth');
+let studio = null;
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fail = (message) => { throw new Error(message); };
 const expect = (condition, message) => { if (!condition) fail(message); };
-
-async function waitForHealth() {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    try {
-      const response = await fetch(`${base}/api/health`);
-      if (response.ok) return;
-    } catch {}
-    await wait(100);
-  }
-  fail(`管理端登录自测服务启动失败：${logs.slice(-500)}`);
-}
 
 async function json(response) {
   const text = await response.text();
@@ -27,18 +19,13 @@ async function json(response) {
 }
 
 try {
-  child = spawn(process.execPath, ['scripts/studio-v3.mjs', '--host', '127.0.0.1', '--port', String(port)], {
-    cwd: process.cwd(),
-    env: { ...process.env, STUDIO_ADMIN_USER: 'admin', STUDIO_ADMIN_PASSWORD: password },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  child.stdout.on('data', (chunk) => { logs += chunk.toString(); });
-  child.stderr.on('data', (chunk) => { logs += chunk.toString(); });
-  await waitForHealth();
+  studio = await startTestStudio(dir, { STUDIO_ADMIN_USER: 'admin', STUDIO_ADMIN_PASSWORD: password });
+  const base = studio.base;
+  const logs = () => studio.logs();
 
   const configSession = await fetch(`${base}/api/auth/session`);
   const configBody = await json(configSession);
-  expect(configBody.enabled === true, `登录自测进程未读取 STUDIO_ADMIN_PASSWORD：HTTP ${configSession.status}，${JSON.stringify(configBody)}，日志 ${logs.slice(-500)}`);
+  expect(configBody.enabled === true, `登录自测进程未读取 STUDIO_ADMIN_PASSWORD：HTTP ${configSession.status}，${JSON.stringify(configBody)}，日志 ${logs().slice(-500)}`);
 
   const loginPage = await fetch(`${base}/`);
   const loginHtml = await loginPage.text();
@@ -78,6 +65,6 @@ try {
 
   console.log('管理端登录自测通过：未登录保护、错误反馈、登录会话、受保护 API、退出登录均正常。');
 } finally {
-  if (child && !child.killed) child.kill('SIGTERM');
-  await wait(100);
+  await stopTestStudio(studio);
+  await removeTestWorkspace(dir);
 }
