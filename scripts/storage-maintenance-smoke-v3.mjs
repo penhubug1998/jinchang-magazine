@@ -24,6 +24,9 @@ try {
   await mk('outputs-v3/003/publication-evidence.json');
   await mk('outputs-v3/999/publication-evidence.json');
   for (const name of ['20260101T000000Z-a', '20260102T000000Z-b', '20260103T000000Z-c']) await mk(`.v3-snapshots/003/${name}/issue.json`);
+  // 原子替换残留：正式目录还在 → 可删；找不到正式目录 → 只报告
+  await mk('release-v3/.003.previous-12345-1/release.json', 128);
+  await mk('release-v3/.777.previous-12345-2/release.json', 128);
   const oldTrash = await mk('.v3-trash/issues/006-20260101T000000Z/.deleted.json');
   const freshTrash = await mk('.v3-trash/issues/007-20260913T000000Z/.deleted.json');
   const longAgo = new Date(Date.now() - 200 * 24 * 3600 * 1000);
@@ -49,6 +52,10 @@ try {
     assert.ok(await exists(target), `预演不得改动文件：${file}`);
   }
   assert.ok(plan.totals.regenerable > 0 && plan.totals.orphan > 0 && plan.totals.trash > 0, '预演应给出各类体积');
+  const transientRows = plan.plan.filter(x => x.category === 'transient');
+  assert.equal(transientRows.length, 2, `原子替换残留应被识别，实际 ${transientRows.length}`);
+  assert.ok(transientRows.some(x => x.path === 'release-v3/.003.previous-12345-1' && x.action === 'delete'), '正式目录已就位的残留应可删');
+  assert.ok(transientRows.some(x => x.path === 'release-v3/.777.previous-12345-2' && x.action === 'report'), '找不到正式目录的残留只能报告，交给人工');
   console.log(`  预演只报告、不动文件，分类与体积正确 ✓（可回收 ${plan.totals.regenerable + plan.totals.orphan} 字节）`);
 
   // 2) 执行：可再生产物删除、孤儿进隔离区、live 产物原样保留
@@ -58,6 +65,8 @@ try {
   assert.equal(await exists(path.join(dir, 'dist-v3/999')), false, '孤儿构建产物应被删除');
   assert.equal(await exists(path.join(dir, 'dist-v3/preview-alpha9')), false, '预览产物应被删除');
   assert.equal(await exists(path.join(dir, 'release-v3/999')), false, '孤儿发布包应被移走');
+  assert.equal(await exists(path.join(dir, 'release-v3/.003.previous-12345-1')), false, '原子替换残留应被删除');
+  assert.ok(await exists(path.join(dir, 'release-v3/.777.previous-12345-2/release.json')), '找不到正式目录的残留必须保留（只报告）');
   assert.ok(await exists(path.join(dir, 'release-v3/003/release.json')), 'live 发布包必须保留');
   assert.ok(await exists(path.join(dir, 'outputs-v3/003/publication-evidence.json')), 'live 发布证据必须保留');
   assert.ok(await exists(path.join(dir, 'issues/003/issue.json')), '源稿必须保留');
