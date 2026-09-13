@@ -1,11 +1,20 @@
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
-import { mobilePageSnapshot, mobileTextTargets, mobileMediaTargets, primaryEditableField, isMobileStudioViewport, MOBILE_STUDIO_BREAKPOINT } from '../src/studio/mobile-studio.js';
+import { mobilePageSnapshot, mobileTextTargets, mobileMediaTargets, primaryEditableField, isMobileStudioViewport, isPhoneSizedViewport, shouldAutoEnterWorkspace, MOBILE_STUDIO_BREAKPOINT, MOBILE_STUDIO_HEIGHT_BREAKPOINT } from '../src/studio/mobile-studio.js';
 const assert=(c,m)=>{if(!c)throw new Error(m)},sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const pkg=JSON.parse(await readFile('package.json','utf8'));
 assert(['3.1.0-alpha.26','3.1.0-beta.1','3.1.0-rc.1','3.1.0-rc.2','3.1.0'].includes(pkg.version),`version ${pkg.version}`);
 assert(pkg.v31SchemaVersion==='3.1-alpha24',`Alpha26 must not mutate issue schema: ${pkg.v31SchemaVersion}`);
 assert(MOBILE_STUDIO_BREAKPOINT===820&&isMobileStudioViewport(390)&&!isMobileStudioViewport(1024),'mobile viewport contract');
+// 手机尺寸：竖屏窄、横屏矮都算；桌面不算
+assert(isPhoneSizedViewport(390,844)&&isPhoneSizedViewport(844,390)&&isPhoneSizedViewport(926,428)&&isPhoneSizedViewport(768,1024)&&!isPhoneSizedViewport(1366,768)&&!isPhoneSizedViewport(1024,768),'phone-sized viewport contract');
+assert(MOBILE_STUDIO_HEIGHT_BREAKPOINT===500,'mobile height breakpoint contract');
+// 手机上选完一期应自动进工作区；桌面、已在工作区、正在跳转都不触发
+assert(shouldAutoEnterWorkspace({width:390,height:844})===true,'phone should auto-enter workspace');
+assert(shouldAutoEnterWorkspace({width:844,height:390})===true,'landscape phone should auto-enter workspace');
+assert(shouldAutoEnterWorkspace({width:1366,height:768})===false,'desktop must not auto-enter workspace');
+assert(shouldAutoEnterWorkspace({width:390,height:844,workspaceMode:true})===false,'workspace must not re-enter');
+assert(shouldAutoEnterWorkspace({width:390,height:844,entering:true})===false,'in-flight navigation must not repeat');
 const page={title:'手机页',blocks:[{id:'b1',type:'paragraph',text:'正文'},{id:'b2',type:'image',src:'a.jpg'},{id:'b3',type:'quote',text:'引语',richText:{type:'doc',content:[]}}]};
 const snap=mobilePageSnapshot(page,5,18);assert(snap.pageNumber===6&&snap.text===2&&snap.media===1&&snap.blocks===3,`snapshot ${JSON.stringify(snap)}`);assert(mobileTextTargets(page).length===2&&mobileMediaTargets(page).length===1&&primaryEditableField(page.blocks[0])==='text','mobile block classification');
 const [html,css,studio,reader]=await Promise.all(['src/studio/index.html','src/studio/studio.css','src/studio/studio.js','src/reader/reader.js'].map(x=>readFile(x,'utf8')));
