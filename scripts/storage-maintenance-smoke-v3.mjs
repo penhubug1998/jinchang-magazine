@@ -91,7 +91,25 @@ try {
   assert.ok(await exists(freshTrash), '保留期内的隔离内容必须保留');
   console.log('  隔离区：默认只报告，显式 --prune-trash 才按保留期回收，未过期内容保留 ✓');
 
-  console.log('存储维护回归通过：预演安全、可再生产物回收、孤儿隔离、隔离区保留期均符合预期。');
+  // 4) 保留天数必须显式校验：0 / 负数 / 非数字都不能被"静默当成默认值"
+  for (const bad of ['0', '-30', 'abc', '90.5']) {
+    const r = run(['--retention-days', bad]);
+    assert.equal(r.status, 2, `--retention-days ${bad} 应被拒绝，实际 status=${r.status}`);
+    assert.match(r.stderr, /retention-days/, `拒绝时应说明原因：${r.stderr.slice(0, 120)}`);
+  }
+  // 前面那次 --prune-trash 已经把 200 天前那条回收了，这里再造一条用于体积分档断言
+  const agedAgain = await mk('.v3-trash/issues/008-20260101T000000Z/.deleted.json');
+  await utimes(agedAgain, longAgo, longAgo);
+  await utimes(path.dirname(agedAgain), longAgo, longAgo);
+  const buckets = run(['--json']);
+  const parsed = JSON.parse(buckets.stdout);
+  assert.equal(parsed.retentionDays, 90, '默认保留期应为 90 天（仅作建议起点，可任意指定）');
+  assert.ok(Array.isArray(parsed.ageBuckets) && parsed.ageBuckets.map(x => x.days).join(',') === '30,90,365', '应给出 30/90/365 天的隔离区体积分档');
+  assert.ok(parsed.ageBuckets[0].bytes > 0, '超过 30 天的分档应统计到那条 200 天前的隔离内容');
+  assert.equal(parsed.ageBuckets[2].bytes, 0, '超过 365 天的分档应为 0');
+  console.log('  保留天数参数显式校验（0 / 负数 / 小数 / 非数字都拒绝），并给出 30/90/365 天体积分档 ✓');
+
+  console.log('存储维护回归通过：预演安全、可再生产物回收、孤儿隔离、隔离区保留期与参数校验均符合预期。');
 } finally {
   await removeTestWorkspace(dir);
 }
