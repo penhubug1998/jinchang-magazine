@@ -1229,6 +1229,44 @@ $('#userTemplatePalette').addEventListener('click',async e=>{
   $('#pageTemplateDialog').close();state.pageSearch='';$('#pageSearch').value='';markDirty({historyGroup:'user-template',forceHistory:true});renderPages();renderPage();toast(`已应用模板：${t.name}`);
 });
 $('#saveCurrentTemplate').onclick=async()=>{if(!state.issue||!commitPage())return;const page=currentPage();if(!page)return;const name=prompt('模板名称：',`${page.section||page.navTitle||page.title||'页面'}模板`);if(name==null)return;try{await api('/api/templates',{method:'POST',body:JSON.stringify({name:name.trim(),page})});await loadUserTemplates();toast('已保存到“我的模板”');}catch(e){toast(e.message,3200)}};
+// ---- 我的空间：用户自助设置刊名/姓名与改密（多用户）----
+async function openMySpaceDialog(){
+  const dialog=$('#mySpaceDialog');if(!dialog)return;
+  try{
+    const data=await api('/api/me/profile');
+    const account=data?.account||{};
+    $('#mySpaceDisplayName').value=account.displayName||'';
+    $('#mySpaceJournalName').value=account.journalName||'';
+    $('#mySpaceStatus').textContent='';$('#mySpacePasswordStatus').textContent='';
+    $('#mySpaceCurrentPassword').value='';$('#mySpaceNewPassword').value='';
+    dialog.showModal();
+  }catch(error){toast(error.message||'读取账号信息失败',3200);}
+}
+$('#mySpaceBtn')?.addEventListener('click',openMySpaceDialog);
+$('#mySpaceSave')?.addEventListener('click',async()=>{
+  const status=$('#mySpaceStatus');status.className='login-status';status.textContent='保存中…';
+  try{
+    const data=await api('/api/me/profile',{method:'PUT',body:JSON.stringify({displayName:$('#mySpaceDisplayName').value.trim(),journalName:$('#mySpaceJournalName').value.trim()})});
+    const account=data?.account||{};
+    state.account=account;
+    updateMySpaceLabel();
+    status.className='login-status success';status.textContent='已保存。';
+  }catch(error){status.className='login-status';status.textContent=error.message||'保存失败';}
+});
+$('#mySpacePassword')?.addEventListener('click',async()=>{
+  const status=$('#mySpacePasswordStatus');status.className='login-status';
+  const currentPassword=$('#mySpaceCurrentPassword').value,newPassword=$('#mySpaceNewPassword').value;
+  if(!currentPassword||!newPassword){status.textContent='请填写当前密码与新密码。';return;}
+  status.textContent='提交中…';
+  try{
+    await api('/api/me/password',{method:'POST',body:JSON.stringify({currentPassword,newPassword})});
+    $('#mySpaceCurrentPassword').value='';$('#mySpaceNewPassword').value='';
+    status.className='login-status success';status.textContent='密码已修改，其它设备已退出登录。';
+  }catch(error){status.className='login-status';status.textContent=error.message||'修改失败';}
+});
+// 顶部按钮上显示当前刊名，方便确认"我现在在哪个创作空间"
+function updateMySpaceLabel(){const button=$('#mySpaceBtn');if(!button)return;const name=String(state.account?.journalName||'').trim();button.textContent=name?`我的空间 · ${name.slice(0,10)}`:'我的空间';button.title=name?`当前刊名：${name}`:'设置你的期刊名、姓名与密码';}
+async function loadMyAccount(){try{const data=await api('/api/me/profile');state.account=data?.account||null;}catch{state.account=null;}updateMySpaceLabel();}
 $('#myTemplatesBtn').onclick=()=>openPageTemplateDialog('add');
 
 function flattenLayoutContent(blocks=[]){
@@ -2687,7 +2725,7 @@ window.__V3_STUDIO__ = { state, runtimeVersionLabel, loadRuntimeVersion, command
 bindContextInspector();
 restoreWorkspacePreferences(); updateWorkspaceToolbar(); setMobileStudioMode();
 Object.assign(window.__V3_STUDIO__, { splitPageBaseTitle, nextContinuationNumber, buildContinuationPage, selectedPageSplitPlan, renderSplitPageDialog, openSplitPageDialog, moveSelectedBlocksToNewPage, isMediaSourceMissing, mediaNeeds, pendingMediaTargetFromElement, focusPendingMedia, renderPendingMediaList });
-loadIssues().then(async()=>{if(WORKSPACE_MODE&&!state.issue&&state.issues[0])await openIssue(state.issues[0].id);window.__V3_STUDIO_READY__ = true;}).catch(e => { window.__V3_STUDIO_READY__ = false; toast(e.message,3000); });
+loadIssues().then(async()=>{void loadMyAccount();if(WORKSPACE_MODE&&!state.issue&&state.issues[0])await openIssue(state.issues[0].id);window.__V3_STUDIO_READY__ = true;}).catch(e => { window.__V3_STUDIO_READY__ = false; toast(e.message,3000); });
 
 $('#importPreviewList')?.addEventListener('change',e=>{const el=e.target.closest('[data-import-section-semantic]');if(!el)return;updateImportSectionSemantic(el.dataset.resultIndex,el.dataset.sectionIndex,el.value);});
 $('#skeletonMode')?.addEventListener('change',()=>{if(state.importResults.length)renderImportPreview();});

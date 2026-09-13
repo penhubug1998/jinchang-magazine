@@ -51,6 +51,7 @@ try {
     const html = await r.text();
     assert.equal(r.status, 200, `${route} 作为登录页必须免登录可访问`);
     assert(/paneRegister|registerForm/.test(html), `${route} 应包含注册表单`);
+    assert(!/registerJournalName/.test(html), `${route} 注册表单不应再要求填写期刊名`);
     // 自包含：公开地址下相对资源会解析到杂志静态目录，所以样式与脚本必须内联
     assert(/<style>/.test(html) && /login-tabs/.test(html), `${route} 应内联登录页样式`);
     assert(/API_BASE/.test(html) && !/src="\.\/login\.js/.test(html), `${route} 应内联脚本且不引用外部 login.js`);
@@ -75,7 +76,7 @@ try {
   assert.equal(badName.status, 400, '非法用户名应被拒绝');
 
   // 5) 注册 → 待审批
-  const reg = await call(base, '/api/auth/register', { method: 'POST', data: { username: 'editor1', password: USER_PW, displayName: '编辑一号', journalName: '一号电子期刊' } });
+  const reg = await call(base, '/api/auth/register', { method: 'POST', data: { username: 'editor1', password: USER_PW, displayName: '编辑一号' } });
   assert.equal(reg.status, 201, `注册失败 ${JSON.stringify(reg.body)}`);
   assert.equal(reg.body.status, 'pending', '新注册账号必须是待审批');
   const dup = await call(base, '/api/auth/register', { method: 'POST', data: { username: 'editor1', password: USER_PW } });
@@ -102,7 +103,7 @@ try {
   assert.equal(user.status, 200, `审批后应能登录 ${JSON.stringify(user.body)}`);
   assert.equal(user.body.role, 'editor', '普通用户角色应为 editor');
   assert.equal(user.body.canPublish, false, '新用户默认不可发布');
-  assert.equal(user.body.journalName, '一号电子期刊', '注册时填写的刊名应保留');
+  assert.equal(user.body.journalName, '', '注册不再填写刊名，初始应为空');
   const forbidden = await call(base, '/api/admin/users', { cookie: user.cookie });
   assert.equal(forbidden.status, 403, '普通用户不得访问用户管理接口');
   console.log('  审批→登录→角色隔离 ✓');
@@ -162,6 +163,61 @@ try {
   assert.equal(delUser.status, 200, '应能删除普通用户');
   const afterDelete = await call(base, '/api/admin/users', { cookie: admin.cookie });
   assert.equal(afterDelete.body.users.filter(x => x.username === 'editor1').length, 0, '删除后不应再出现');
+
+  // 14.5) 创作空间隔离
+  // 既有期刊归属：管理员名下
+  const adminIssues = await call(base, '/api/issues', { cookie: admin.cookie });
+  assert.equal(adminIssues.status, 200, '管理员应能列出期刊');
+  assert.ok(adminIssues.body.length >= 1, '管理员应能看到既有期刊（fixture 里是 003）');
+  const owned = await call(base, '/api/admin/issues', { cookie: admin.cookie });
+  assert.equal(owned.status, 200, '管理员应能查看归属总表');
+  assert.ok(owned.body.issues.every(x => x.ownerId), '每一期都应有归属，不能有无主期刊');
+  const plainId = owned.body.issues[0].id;
+
+  // 新建一个普通用户并审批（上一段把它删掉了）
+  await call(base, '/api/auth/register', { method: 'POST', data: { username: 'editor2', password: USER_PW, displayName: '编辑二号' } });
+  const list2 = await call(base, '/api/admin/users', { cookie: admin.cookie });
+  const ed2 = list2.body.users.find(x => x.username === 'editor2');
+  await call(base, `/api/admin/users/${ed2.id}/status`, { method: 'POST', cookie: admin.cookie, data: { status: 'active' } });
+  const ed2login = await login(base, 'editor2', USER_PW);
+  assert.equal(ed2login.status, 200, '第二个用户应能登录');
+
+  // 普通用户：看不到别人的期刊，直接访问被拒
+  const mineList = await call(base, '/api/issues', { cookie: ed2login.cookie });
+  assert.equal(mineList.status, 200, '普通用户应能列表（可能为空）');
+  assert.equal(mineList.body.length, 0, `新用户不应看到任何既有期刊：${JSON.stringify(mineList.body)}`);
+  for (const route of [`/api/issues/${plainId}`, `/api/issues/${plainId}/source-status`, `/api/issues/${plainId}/audit`, `/api/issues/${plainId}/publication/status`]) {
+    const r = await call(base, route, { cookie: ed2login.cookie });
+    assert.equal(r.status, 403, `${route} 应拒绝非归属用户（实际 ${r.status}）`);
+  }
+  const writeTry = await call(base, `/api/issues/${plainId}`, { method: 'PUT', cookie: ed2login.cookie, data: { issue: {} } });
+  assert.equal(writeTry.status, 403, '非归属用户不得写入别人的期刊');
+  // 运维级接口也不对普通用户开放
+  assert.equal((await call(base, '/api/final/status', { cookie: ed2login.cookie })).status, 403, '运维检查应仅限管理员');
+  assert.equal((await call(base, '/api/admin/issues', { cookie: ed2login.cookie })).status, 403, '归属总表应仅限管理员');
+  // 自助空间概览
+  const space = await call(base, '/api/me/space', { cookie: ed2login.cookie });
+  assert.equal(space.status, 200, '用户应能读取自己的创作空间');
+  assert.equal(space.body.space.issueCount, 0, '新用户空间应为空');
+
+  // 新建的期刊自动归到自己名下，并且只见自己的
+  // 审批后自助设置刊名，并确认它成为新期刊的 publication
+  const prof = await call(base, '/api/me/profile', { method: 'PUT', cookie: ed2login.cookie, data: { journalName: '二号单位电子期刊' } });
+  assert.equal(prof.body.account.journalName, '二号单位电子期刊', '用户应能自助设置刊名');
+  const created = await call(base, '/api/issues', { method: 'POST', cookie: ed2login.cookie, data: { subtitle: '我的第一期', label: '试刊' } });
+  assert.equal(created.status, 201, `普通用户应能创建自己的期刊：${JSON.stringify(created.body).slice(0, 160)}`);
+  const afterCreate = await call(base, '/api/issues', { cookie: ed2login.cookie });
+  assert.equal(afterCreate.body.length, 1, `新用户应只看到自己创建的 1 期：${JSON.stringify(afterCreate.body)}`);
+  const myId = afterCreate.body[0].id;
+  assert.notEqual(myId, plainId, '新期刊不应覆盖既有期号');
+  assert.equal((await call(base, `/api/issues/${myId}`, { cookie: ed2login.cookie })).status, 200, '用户应能读取自己的期刊');
+  // 管理员仍能看到全部，并且归属正确
+  const owned2 = await call(base, '/api/admin/issues', { cookie: admin.cookie });
+  const mineRow = owned2.body.issues.find(x => x.id === myId);
+  assert.equal(mineRow.ownerName, 'editor2', `新期刊应归创建者所有：${JSON.stringify(mineRow)}`);
+  const myIssue = await call(base, `/api/issues/${myId}`, { cookie: ed2login.cookie });
+  assert.equal(myIssue.body.publication, '二号单位电子期刊', `新建期刊应使用用户自定义刊名：${myIssue.body.publication}`);
+  console.log(`  创作空间隔离 ✓（既有 ${owned.body.issues.length} 期归管理员，新用户只看到自己创建的 ${myId}）`);
 
   // 15) 审计留痕
   const audit = await call(base, '/api/admin/audit?limit=100', { cookie: admin.cookie });

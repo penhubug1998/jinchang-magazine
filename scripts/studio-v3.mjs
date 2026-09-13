@@ -1,8 +1,8 @@
 import http from 'node:http';
 import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
-import {openUserDb,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
+import {openUserDb,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
 import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
-import { accessSync, createReadStream, constants as fsConstants } from 'node:fs';
+import { accessSync, createReadStream, constants as fsConstants, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { chmod, cp, mkdir, mkdtemp, open, readFile, readdir, rename, rm, stat, statfs, writeFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
@@ -47,6 +47,16 @@ const bootstrapResult = bootstrapAdmin(userDb, { username: adminLoginUser, passw
 if (bootstrapResult.created) console.log(`多用户：已用环境变量创建管理员账号 ${bootstrapResult.user.username}`);
 else if (bootstrapResult.promoted) console.log(`多用户：已把既有账号 ${bootstrapResult.user.username} 提升为管理员`);
 purgeExpiredSessions(userDb);
+// 把磁盘上已有的期刊挂到管理员名下（没有归属记录的期刊只有管理员可见），
+// 保证引入多用户不会让既有期刊"消失"，也不会漏给普通用户。
+try {
+  const issuesRoot = path.join(root, 'issues');
+  if (existsSync(issuesRoot)) {
+    const ids = readdirSync(issuesRoot, { withFileTypes: true }).filter(e => e.isDirectory()).map(e => e.name);
+    const added = reconcileIssueOwners(userDb, ids, null);
+    if (added.length) console.log(`多用户：已把 ${added.length} 期既有期刊归入管理员创作空间（${added.slice(0, 6).join(', ')}）`);
+  }
+} catch (error) { console.warn('多用户：既有期刊归属对齐失败', error?.message || error); }
 // 是否必须登录：配置了环境变量密码，或库里已有可用账号（本地测试目录两者都没有 → 免登录）
 function authRequired() { return adminLoginEnabled || countUsers(userDb, { status: STATUS_ACTIVE }) > 0; }
 const loginAttempts = new Map();
@@ -1232,6 +1242,14 @@ const server=http.createServer(async(req,res)=>{try{
       const row=setUserProfile(userDb,session.userId,{displayName:data?.displayName,journalName:data?.journalName,publisher:data?.publisher},session.user);
       return send(res,200,{ok:true,account:publicUser(row)});
     }
+    if(seg[2]==='space'&&req.method==='GET'){
+      if(session.unprotected)return send(res,200,{ok:true,space:{journalName:'',issueCount:0,issues:[]}});
+      const owned=ownedIssueIds(userDb,session.userId);
+      const all=await issueSummaries();
+      const mine=all.filter(x=>owned.has(String(x.id)));
+      return send(res,200,{ok:true,space:{journalName:session.journalName||'',displayName:session.displayName||'',
+        canPublish:session.canPublish,issueCount:mine.length,issues:mine}});
+    }
     if(seg[2]==='password'&&req.method==='POST'){
       if(session.unprotected)return send(res,409,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
       let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
@@ -1273,6 +1291,25 @@ const server=http.createServer(async(req,res)=>{try{
     }
     return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
   }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='issues'&&seg[3]&&seg[4]==='owner'&&req.method==='POST'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以调整期刊归属',code:'ADMIN_REQUIRED'});
+    let data;try{data=await body(req,8*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+    const issueId=normalizeIssueId(seg[3]);
+    if(!issueId)return send(res,400,{error:'期号无效',code:'INVALID_ISSUE_ID'});
+    try{await readJson(path.join(root,'issues',issueId,'issue.json'));}
+    catch{return send(res,404,{error:'找不到该期',code:'ISSUE_NOT_FOUND'});}
+    try{const owner=setIssueOwner(userDb,issueId,Number(data?.userId),session.user);return send(res,200,{ok:true,issueId,ownerId:owner});}
+    catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_OWNER'});}
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='issues'&&req.method==='GET'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以查看全部期刊归属',code:'ADMIN_REQUIRED'});
+    const owners=listIssueOwners(userDb);
+    const users=new Map(listUsers(userDb).map(u=>[u.id,u]));
+    const rows=(await issueSummaries()).map(x=>({id:x.id,label:x.label,status:x.status,ownerId:owners[String(x.id)]??null,ownerName:owners[String(x.id)]?users.get(owners[String(x.id)])?.username||null:null}));
+    return send(res,200,{ok:true,issues:rows,counts:countIssuesByOwner(userDb)});
+  }
   if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='audit'&&req.method==='GET'){
     const session=adminSession(req);
     if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以查看审计记录',code:'ADMIN_REQUIRED'});
@@ -1280,7 +1317,20 @@ const server=http.createServer(async(req,res)=>{try{
     const rows=userDb.prepare('SELECT id,at,actor,action,target,detail FROM audit_log ORDER BY id DESC LIMIT ?').all(limit);
     return send(res,200,{ok:true,entries:rows});
   }
-  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]){const job=backgroundJobs.get(seg[2]);if(!job)return send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});if(req.method==='GET')return send(res,200,jobView(job));if(seg[3]==='cancel'&&req.method==='POST'){try{return send(res,200,jobView(cancelBackgroundJob(job)))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}if(seg[3]==='retry'&&req.method==='POST'){try{const next=retryBackgroundJob(job);return send(res,202,backgroundJobResponse(next))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}}
+  // ---- 创作空间隔离：非管理员只能访问自己名下的期刊 ----
+  // 放在这里集中拦截，避免在几十个 /api/issues/** 分支里各写一遍而漏掉某一条。
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='issues'&&seg[2]){
+    const session=adminSession(req);
+    if(session&&session.role!=='admin'&&!session.unprotected){
+      const issueId=normalizeIssueId(seg[2]);
+      const ownerId=issueId?issueOwnerId(userDb,issueId):null;
+      if(ownerId===null||ownerId!==session.userId){
+        return send(res,403,{error:'这一期不属于你的创作空间',code:'ISSUE_FORBIDDEN'});
+      }
+    }
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]){const job=backgroundJobs.get(seg[2]);if(!job)return send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});
+    {const session=adminSession(req);if(session&&session.role!=='admin'&&!session.unprotected&&job.issueId){const ownerId=issueOwnerId(userDb,job.issueId);if(ownerId===null||ownerId!==session.userId)return send(res,403,{error:'该任务不属于你的创作空间',code:'ISSUE_FORBIDDEN'});}}if(req.method==='GET')return send(res,200,jobView(job));if(seg[3]==='cancel'&&req.method==='POST'){try{return send(res,200,jobView(cancelBackgroundJob(job)))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}if(seg[3]==='retry'&&req.method==='POST'){try{const next=retryBackgroundJob(job);return send(res,202,backgroundJobResponse(next))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}}
   if (u.pathname==='/api/health') return send(res,200,{ok:true,version:studioVersion});
   if (u.pathname==='/api/ai/config'&&req.method==='GET') return send(res,200,aiConfigPublic(await readAiConfig()));
   if (u.pathname==='/api/ai/config'&&req.method==='PUT') {
@@ -1292,6 +1342,10 @@ const server=http.createServer(async(req,res)=>{try{
     let url=String(data?.url||'').trim(),article=null,issueId=String(data?.issueId||'').trim(),articleId=String(data?.articleId||'').trim();
     if(issueId&&articleId){const file=path.join(root,'issues',normalizeIssueId(issueId),'issue.json');try{const issue=await readJson(file);article=issue?.articles?.[articleId]||null;url=url||String(article?.url||'');}catch{return send(res,404,{error:'找不到指定文章',code:'AI_ARTICLE_NOT_FOUND'});}}
     try{const result=await summarizeExternalUrl(url);return send(res,200,{ok:true,issueId:issueId||null,articleId:articleId||null,...result});}catch(e){return send(res,e.statusCode||500,{error:e.message||String(e),code:e.code||'AI_SUMMARY_FAILED'});}
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='final'){
+    const session=adminSession(req);
+    if(session&&session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以查看运维检查',code:'ADMIN_REQUIRED'});
   }
   if (u.pathname==='/api/final/status'&&req.method==='GET') {
     const id=normalizeIssueId(u.searchParams.get('issue')||'003');
@@ -1344,7 +1398,13 @@ const server=http.createServer(async(req,res)=>{try{
     const data=await body(req);const name=String(data.name||'').trim();if(!name||name.length>60)return send(res,400,{error:'模板名称需要 1–60 个字符',code:'VALIDATION_ERROR'});let page;try{page=sanitizeTemplatePage(data.page)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}const rows=await readUserTemplates();if(rows.length>=50)return send(res,409,{error:'我的模板最多保存 50 个',code:'TEMPLATE_LIMIT'});const item={id:`tpl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,name,createdAt:new Date().toISOString(),page};rows.unshift(item);await writeUserTemplates(rows);return send(res,201,item);
   }
   if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
-  if (u.pathname==='/api/issues'&&req.method==='GET') return send(res,200,await issueSummaries());
+  if (u.pathname==='/api/issues'&&req.method==='GET') {
+    const session=adminSession(req);
+    const all=await issueSummaries();
+    if(!session||session.role==='admin'||session.unprotected)return send(res,200,all);
+    const owned=ownedIssueIds(userDb,session.userId);
+    return send(res,200,all.filter(x=>owned.has(String(x.id))));
+  }
   if (u.pathname==='/api/whole-magazine-templates'&&req.method==='GET') return send(res,200,{templates:WHOLE_MAGAZINE_TEMPLATES});
   if (u.pathname==='/api/issue-templates'&&req.method==='GET') return send(res,200,{templates:issueTemplateCatalog()});
   if (u.pathname==='/api/issues'&&req.method==='POST') {
@@ -1361,7 +1421,11 @@ const server=http.createServer(async(req,res)=>{try{
     if(startMode==='clone'){if(!data.cloneFrom)return send(res,400,{error:'复制上期需要选择来源期刊',code:'VALIDATION_ERROR'});const sourceId=normalizeIssueId(data.cloneFrom);const sourceFile=path.join(root,'issues',sourceId,'issue.json');if(!(await exists(sourceFile)))return send(res,400,{error:`结构来源 ${sourceId} 不存在`,code:'VALIDATION_ERROR'});cloneSource=await readJson(sourceFile);if(cloneSource.engine!=='v3')return send(res,400,{error:'只能复制 V3 期刊结构',code:'VALIDATION_ERROR'});if(!Array.isArray(cloneSource.pages)||cloneSource.pages.length<1||cloneSource.pages.length>200)return send(res,400,{error:'结构来源页面数量不在 1–200 页允许范围内',code:'VALIDATION_ERROR'});}
     const before=new Set((await issueSummaries()).map(x=>x.id)); const argv=['--subtitle',String(data.subtitle||'请填写本期主题')]; if(data.label)argv.push('--label',String(data.label));
     if(catalogTemplate)argv.push('--template',templateId);
+    // 多用户：用户自定义的刊名就是这一期的 publication
+    {const session=adminSession(req);if(session&&!session.unprotected&&session.journalName)argv.push('--publication',session.journalName);}
     const r=await runScriptAsync('new-issue-v3.mjs',argv); if(!r.ok)return send(res,400,{error:r.output}); const after=await issueSummaries(); const created=after.find(x=>!before.has(x.id));
+    // 登记归属：普通用户创建的期刊自动归到自己的创作空间（管理员创建的归管理员）
+    {const session=adminSession(req);if(created&&session&&!session.unprotected)setIssueOwner(userDb,created.id,session.userId,session.user);}
     if (cloneSource) {
       const targetFile=path.join(root,'issues',created.id,'issue.json'); const target=await readJson(targetFile); const cloned=cloneStructure(cloneSource,target); validateIssue(cloned,created.id); await writeFile(targetFile,`${JSON.stringify(cloned,null,2)}\n`,'utf8'); await runScriptAsync('sync-assets-v3.mjs',['--issue',created.id]); created.pageCount=cloned.pages.length;
     } else if(startMode==='template') {
