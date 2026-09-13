@@ -288,6 +288,17 @@ try {
   assert.equal(spacesIndexAfter.includes('href="./alice/"'), false, '作者空间索引不应再列出空分区');
   console.log('  期刊删除隔离区、作者/管理员权限分级、公开目录回收与归档重建 ✓');
 
+  // ---------- 5) 账号删除时素材库一起进隔离区 ----------
+  assert.ok(await exists(path.join(dir, '.v3-users', 'libraries', String(alice.id))), '删除账号前素材库目录应存在');
+  const dropAlice = await call(base, `/api/admin/users/${alice.id}`, { method: 'DELETE', cookie: admin.cookie });
+  assert.equal(dropAlice.status, 200, `删除账号失败 ${JSON.stringify(dropAlice.body)}`);
+  assert.equal(dropAlice.body.libraryQuarantine?.moved, true, '删除账号时应把私有素材库搬进隔离区');
+  assert.equal(await exists(path.join(dir, '.v3-users', 'libraries', String(alice.id))), false, '账号删除后不应留下素材库目录');
+  const libTrash = (await readdir(path.join(dir, '.v3-trash', 'libraries'))).filter(name => name.startsWith(`${alice.id}-`));
+  assert.equal(libTrash.length, 1, '素材库隔离区应恰好有一份');
+  assert.equal((await json(path.join(dir, '.v3-trash', 'libraries', libTrash[0], 'styles.json'))).length, 1, '隔离区里必须保留素材内容');
+  console.log('  账号删除时私有素材库一并隔离（不留在线上、也不物理删除）✓');
+
   console.log('多用户按用户分区回归通过：素材库隔离 / 发布命名空间 / 自助改密 / 期刊删除 全部符合预期。');
 } finally {
   await stopTestStudio(studio);

@@ -704,6 +704,17 @@ async function migrateLegacyLibraries(adminId){
   }
 }
 
+// 删除账号时，把这个账号的私有素材库一并搬进隔离区。
+// 不做物理删除：素材可能还需要人工找回；也不留在原处，避免"账号没了、素材还在"。
+async function quarantineUserLibraries(userId){
+  const dir=path.join(libraryRoot,String(userId));
+  if(!(await exists(dir)))return {ok:true,moved:false,reason:'NO_LIBRARY'};
+  const target=path.join(root,'.v3-trash','libraries',`${userId}-${new Date().toISOString().replace(/[:.]/g,'-')}`);
+  await mkdir(path.dirname(target),{recursive:true});
+  await rename(dir,target);
+  return {ok:true,moved:true,quarantined:posix(path.relative(root,target))};
+}
+
 const DESIGN_LIBRARY_KEYS={
   theme:new Set(['accent','paper','canvas','texture','text','muted','fontBase','radius','spacing']),
   page:new Set(['background','color','accent','padding','contentWidth','backgroundOverlay','backgroundFit','backgroundPosition']),
@@ -1524,7 +1535,7 @@ const server=http.createServer(async(req,res)=>{try{
       catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'RESET_CODE_FAILED'});}
     }
     if(seg[3]&&!seg[4]&&req.method==='DELETE'){
-      try{deleteUser(userDb,targetId,session.user);return send(res,200,{ok:true});}
+      try{deleteUser(userDb,targetId,session.user);const libraryQuarantine=await quarantineUserLibraries(targetId).catch(error=>({ok:false,error:String(error?.message||error)}));return send(res,200,{ok:true,libraryQuarantine});}
       catch(e){return send(res,['USER_NOT_FOUND'].includes(e.code)?404:['CANNOT_DELETE_ADMIN','USER_HAS_ISSUES'].includes(e.code)?409:400,{error:e.message||String(e),code:e.code||'DELETE_FAILED'});}
     }
     return send(res,404,{error:'接口不存在',code:'NOT_FOUND'});
