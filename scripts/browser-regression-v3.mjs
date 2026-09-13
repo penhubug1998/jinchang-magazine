@@ -70,7 +70,7 @@ const chrome = spawn("xvfb-run", ["-a", chromium,
   "--no-first-run", "--no-default-browser-check", "about:blank",
 ], { stdio: "ignore", detached: true });
 
-async function waitForJson(url, timeout = 8000) {
+async function waitForJson(url, timeout = 8000, { child = null } = {}) {
   const started = Date.now();
   let lastError;
   while (Date.now() - started < timeout) {
@@ -78,9 +78,13 @@ async function waitForJson(url, timeout = 8000) {
       const response = await fetch(url);
       if (response.ok) return await response.json();
     } catch (error) { lastError = error; }
+    // 浏览器进程已经退出就不必再等：直接把退出码报出来，别让 CI 只看到 ECONNREFUSED
+    if (child && child.exitCode !== null) {
+      throw new Error(`浏览器进程已退出（code=${child.exitCode}），调试端口 ${url} 不可用`);
+    }
     await sleep(100);
   }
-  throw lastError || new Error(`timeout: ${url}`);
+  throw new Error(`等待调试端口超时 ${Math.round(timeout / 1000)} 秒：${url}${lastError ? `（最后一次错误：${lastError.message}）` : ''}`);
 }
 
 class CDP {
@@ -114,7 +118,9 @@ class CDP {
 
 let cdp = null;
 try {
-  const tabs = await waitForJson(`http://127.0.0.1:${debugPort}/json/list`);
+  // CI 机器负载高时，浏览器把调试端口暴露出来可能要十几秒；这里给 30 秒，
+  // 并在进程已退出时立刻失败（否则只会看到一行 ECONNREFUSED，难以定位）。
+  const tabs = await waitForJson(`http://127.0.0.1:${debugPort}/json/list`, 30000, { child: chrome });
   const tab = tabs.find((entry) => entry.type === "page") || tabs[0];
   if (!tab?.webSocketDebuggerUrl) throw new Error("Chromium DevTools websocket unavailable");
   cdp = new CDP(tab.webSocketDebuggerUrl);
