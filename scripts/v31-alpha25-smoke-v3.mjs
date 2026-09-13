@@ -18,6 +18,10 @@ assert(bad.canPublish&&bad.metrics.links.status==='fail'&&bad.advisories.some(x=
 const [studio,html,css,server,readerCss,readerJs]=await Promise.all([readFile('src/studio/studio.js','utf8'),readFile('src/studio/index.html','utf8'),readFile('src/studio/studio.css','utf8'),readFile('scripts/studio-v3.mjs','utf8'),readFile('src/reader/reader.css','utf8'),readFile('src/reader/reader.js','utf8')]);
 for(const token of ['openPublicationCenter','runPublicationAction','runPublicationPreflightUi','createPublicationSnapshotUi','rollbackPublicationSnapshot','formalPublicationUi'])assert(studio.includes(token),`studio missing ${token}`);
 for(const token of ['内容完整度','页面健康','媒体完整','移动端','桌面端','无障碍','链接','朗读音频'])assert(studio.includes(token),`studio metric missing ${token}`);
+// 审计结论必须跟着发布模式说实话：V3_FORCE_RELEASE 打开时阻断只是提示，
+// 否则同一屏会同时出现「存在发布阻断项」和「可直接发布 · 检查项仅作提示」。
+for(const token of ['直接发布模式，不阻断上线','直接发布模式：硬性阻断只记录为提示','直接发布模式，硬性阻断也不阻断上线'])assert(studio.includes(token),`审计结论未按直接发布模式说明：${token}`);
+assert(/state\.publicationStatus\?\.forceRelease/.test(studio),'审计结论没有读取发布模式');
 for(const token of ['publicationCenterDialog','PUBLISHING CENTER 2.0','一个内容源 · 三种输出','生成预览','导出 PDF','生成归档','正式发布'])assert(html.includes(token),`html missing ${token}`);
 for(const token of ['publication-metrics','publication-output-card','publication-release'])assert(css.includes(token),`css missing ${token}`);
 for(const token of ["seg[4]==='status'","seg[4]==='preflight'","seg[4]==='preview'","seg[4]==='pdf'","seg[4]==='archive'","seg[4]==='release'",'Page.printToPDF','ReturnAsStream','IO.read','archive-manifest.json','issue.json 仍是唯一事实来源'])assert(server.includes(token),`server missing ${token}`);
