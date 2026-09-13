@@ -112,6 +112,15 @@ export function ensureSchema(db) {
       ip           TEXT NOT NULL DEFAULT ''
     );
     CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
+    -- 期刊归属：多用户的"独立创作空间"以这张表为准（issue.json 保持原样，
+    -- 不把内部元数据写进会被发布的文件）。
+    CREATE TABLE IF NOT EXISTS issue_owners (
+      issue_id   TEXT PRIMARY KEY,
+      owner_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_issue_owners_owner ON issue_owners(owner_id);
     CREATE TABLE IF NOT EXISTS audit_log (
       id       INTEGER PRIMARY KEY AUTOINCREMENT,
       at       TEXT NOT NULL,
@@ -276,6 +285,63 @@ export function purgeExpiredSessions(db) {
 export function sessionCountForUser(db, userId) {
   const row = db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').get(Number(userId));
   return Number(row?.n || 0);
+}
+
+// ---------- 期刊归属 ----------
+export function issueOwnerId(db, issueId) {
+  const row = db.prepare('SELECT owner_id FROM issue_owners WHERE issue_id = ?').get(String(issueId));
+  return row ? Number(row.owner_id) : null;
+}
+
+export function setIssueOwner(db, issueId, ownerId, actor = '') {
+  const id = String(issueId);
+  const owner = Number(ownerId);
+  if (!Number.isInteger(owner)) throw Object.assign(new Error('用户编号无效'), { code: 'INVALID_OWNER' });
+  if (!findUserById(db, owner)) throw Object.assign(new Error('用户不存在'), { code: 'USER_NOT_FOUND' });
+  db.prepare(`INSERT INTO issue_owners(issue_id,owner_id,created_at,updated_at) VALUES (?,?,?,?)
+              ON CONFLICT(issue_id) DO UPDATE SET owner_id=excluded.owner_id, updated_at=excluded.updated_at`)
+    .run(id, owner, now(), now());
+  audit(db, { actor, action: 'issue.owner.set', target: id, detail: String(owner) });
+  return owner;
+}
+
+export function removeIssueOwner(db, issueId) {
+  db.prepare('DELETE FROM issue_owners WHERE issue_id = ?').run(String(issueId));
+}
+
+export function ownedIssueIds(db, ownerId) {
+  return new Set(db.prepare('SELECT issue_id FROM issue_owners WHERE owner_id = ?').all(Number(ownerId)).map(r => String(r.issue_id)));
+}
+
+export function listIssueOwners(db) {
+  const out = {};
+  for (const row of db.prepare('SELECT issue_id, owner_id FROM issue_owners').all()) out[String(row.issue_id)] = Number(row.owner_id);
+  return out;
+}
+
+export function countIssuesByOwner(db) {
+  const out = {};
+  for (const row of db.prepare('SELECT owner_id, COUNT(*) AS n FROM issue_owners GROUP BY owner_id').all()) out[Number(row.owner_id)] = Number(row.n);
+  return out;
+}
+
+// 把磁盘上已有、但还没有归属记录的期刊挂到 fallbackOwner（通常是管理员）。
+// 这样既有期刊不会因为引入多用户而"消失"，也不会被普通用户看到。
+export function reconcileIssueOwners(db, issueIds = [], fallbackOwnerId = null) {
+  const known = new Set(db.prepare('SELECT issue_id FROM issue_owners').all().map(r => String(r.issue_id)));
+  const missing = issueIds.map(String).filter(id => id && !known.has(id));
+  if (!missing.length) return [];
+  let owner = fallbackOwnerId;
+  if (!owner) {
+    const admin = db.prepare("SELECT id FROM users WHERE role='admin' AND status='active' ORDER BY id LIMIT 1").get();
+    owner = admin ? Number(admin.id) : null;
+  }
+  if (!owner) return [];
+  for (const id of missing) {
+    db.prepare('INSERT OR IGNORE INTO issue_owners(issue_id,owner_id,created_at,updated_at) VALUES (?,?,?,?)').run(id, owner, now(), now());
+  }
+  audit(db, { actor: 'bootstrap', action: 'issue.owner.reconcile', target: String(missing.length), detail: missing.slice(0, 20).join(',') });
+  return missing;
 }
 
 // ---------- 初始化 ----------

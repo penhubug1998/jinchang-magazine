@@ -35,7 +35,8 @@
           <button type="button" class="final-gate-open" id="finalGateBtn" data-studio-entry="publish">5 发布</button>
         </nav>
         <button type="button" id="quickImportBtn" title="粘贴文字或导入 Word / Markdown">导入内容</button>
-         <details class="action-menu advanced-menu"><summary>更多</summary><div class="action-popover"><button type="button" id="mediaLibraryBtn" data-studio-entry="media">素材库</button><button type="button" id="issueInfoBtn">期刊信息</button><button id="editorialPlanBtn">整刊编排</button><button id="articleLibraryBtn">文章库</button><button id="aiConfigBtn">AI 服务配置</button><button id="myTemplatesBtn">页面模板</button><button type="button" id="reviewWorkspaceBtn">内部校审</button><button type="button" id="reviewHandoffBtn">校审交接</button><button id="discardBtn" class="danger-lite" disabled>放弃未保存修改</button></div></details>
+         <details class="action-menu advanced-menu"><summary>更多</summary><div class="action-popover"><button type="button" id="mediaLibraryBtn" data-studio-entry="media">素材库</button><button type="button" id="issueInfoBtn">期刊信息</button>
+          <button type="button" id="mySpaceBtn" title="设置你的期刊名、姓名与密码">我的空间</button><button id="editorialPlanBtn">整刊编排</button><button id="articleLibraryBtn">文章库</button><button id="aiConfigBtn">AI 服务配置</button><button id="myTemplatesBtn">页面模板</button><button type="button" id="reviewWorkspaceBtn">内部校审</button><button type="button" id="reviewHandoffBtn">校审交接</button><button id="discardBtn" class="danger-lite" disabled>放弃未保存修改</button></div></details>
         <div class="history-actions" aria-label="撤销重做"><button id="undoBtn" title="撤销上一步" disabled>↶</button><button id="redoBtn" title="重做" disabled>↷</button></div>
         <button class="primary save-main" id="saveBtn">保存</button><button type="button" class="admin-session-button" id="adminLogoutBtn" title="退出管理端登录">退出</button>
       </div>
@@ -216,7 +217,24 @@
     </div>
   </section>
 </dialog>
-<dialog id="issueInfoDialog" class="issue-info-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">ISSUE INFO</span><h3>期刊信息</h3><p>低频元数据集中在这里；正式发布前会再次检查必填项。</p></div><button value="cancel" aria-label="关闭">×</button></div><section class="issue-meta card" id="metaCard">
+<dialog id="mySpaceDialog" class="issue-info-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">MY SPACE</span><h3>我的创作空间</h3><p>这里设置的是你自己的刊名与账号；新建期刊时会用它作为默认刊名。</p></div><button value="cancel" aria-label="关闭">×</button></div>
+      <section class="card">
+        <div class="dialog-head" style="margin-bottom:10px"><div><span class="eyebrow">PROFILE</span><h4>资料与刊名</h4></div></div>
+        <label>姓名 / 称呼<input id="mySpaceDisplayName" maxlength="60" placeholder="例如：张三"></label>
+        <label>期刊名<input id="mySpaceJournalName" maxlength="120" placeholder="例如：XX 单位离退休干部电子期刊"><span class="field-note">新建期刊时默认使用这个名称</span></label>
+        <div class="dialog-actions"><button type="button" class="primary" id="mySpaceSave">保存资料</button></div>
+        <p id="mySpaceStatus" class="login-status" role="status" aria-live="polite"></p>
+      </section>
+      <section class="card">
+        <div class="dialog-head" style="margin-bottom:10px"><div><span class="eyebrow">PASSWORD</span><h4>修改密码</h4><p>修改后其它设备上的登录会立即失效。</p></div></div>
+        <label>当前密码<input id="mySpaceCurrentPassword" type="password" autocomplete="current-password" maxlength="200"></label>
+        <label>新密码<input id="mySpaceNewPassword" type="password" autocomplete="new-password" maxlength="200"><span class="field-note">至少 8 位，含字母和数字</span></label>
+        <div class="dialog-actions"><button type="button" id="mySpacePassword">修改密码</button></div>
+        <p id="mySpacePasswordStatus" class="login-status" role="status" aria-live="polite"></p>
+      </section>
+      <div class="dialog-actions"><button value="cancel">关闭</button></div>
+    </form></dialog>
+    <dialog id="issueInfoDialog" class="issue-info-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">ISSUE INFO</span><h3>期刊信息</h3><p>低频元数据集中在这里；正式发布前会再次检查必填项。</p></div><button value="cancel" aria-label="关闭">×</button></div><section class="issue-meta card" id="metaCard">
         <button type="button" class="meta-summary" id="metaToggle" aria-expanded="false">
           <span class="meta-summary-main"><span class="eyebrow">ISSUE INFO</span><strong id="metaSummaryTitle">期刊信息</strong><small id="metaSummaryText">期号 · 状态 · 发布单位</small></span>
           <span class="meta-toggle-copy" id="metaToggleText">展开</span>

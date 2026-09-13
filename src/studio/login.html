@@ -40,11 +40,10 @@
       </div>
 
       <div id="paneRegister" class="login-pane" hidden>
-        <div class="login-heading"><span class="eyebrow">REQUEST ACCESS</span><h1>申请账号</h1><p>提交后需要管理员审批，通过后即可登录使用。</p></div>
+        <div class="login-heading"><span class="eyebrow">REQUEST ACCESS</span><h1>申请账号</h1><p>提交后需要管理员审批，通过后即可登录使用；登录后可设置你自己的期刊名。</p></div>
         <form id="registerForm" novalidate>
           <label>用户名<input id="registerUsername" name="username" autocomplete="username" required maxlength="32" placeholder="3–32 位字母、数字、下划线"></label>
           <label>姓名 / 称呼<input id="registerDisplayName" name="displayName" autocomplete="name" maxlength="60" placeholder="例如：张三"></label>
-          <label>期刊名<input id="registerJournalName" name="journalName" maxlength="120" placeholder="例如：XX 单位离退休干部电子期刊"></label>
           <label>密码<input id="registerPassword" name="password" type="password" autocomplete="new-password" required maxlength="200" placeholder="至少 8 位，含字母和数字"></label>
           <label>确认密码<input id="registerPassword2" name="password2" type="password" autocomplete="new-password" required maxlength="200"></label>
           <button id="registerSubmit" class="login-submit" type="submit">提交注册申请</button>
@@ -122,14 +121,13 @@ registerForm?.addEventListener('submit', async event => {
   event.preventDefault();
   const username = $('#registerUsername').value.trim();
   const displayName = $('#registerDisplayName').value.trim();
-  const journalName = $('#registerJournalName').value.trim();
   const password = $('#registerPassword').value;
   const password2 = $('#registerPassword2').value;
   if (!username || !password) { setStatus(registerStatus, '请填写用户名和密码。'); return; }
   if (password !== password2) { setStatus(registerStatus, '两次输入的密码不一致。'); return; }
   registerSubmit.disabled = true; registerSubmit.textContent = '提交中…'; setStatus(registerStatus, '');
   try {
-    const response = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, displayName, journalName }) });
+    const response = await fetch(`${API_BASE}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username, password, displayName }) });
     const data = await readJson(response);
     if (!response.ok) throw new Error(data.error || '注册失败');
     registerForm.reset();
