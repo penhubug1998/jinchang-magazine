@@ -81,7 +81,12 @@ export function openUserDb(root) {
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 4000');
   ensureSchema(db);
+  // users.db 之外，SQLite 还会创建 -wal / -shm（预写日志与共享内存），
+  // 它们同样可能含有密码哈希与会话令牌。默认 umask 下是 644，必须一并收紧。
   try { chmodSync(file, 0o600); } catch { }
+  for (const suffix of ['-wal', '-shm', '-journal']) {
+    try { if (existsSync(file + suffix)) chmodSync(file + suffix, 0o600); } catch { }
+  }
   return db;
 }
 

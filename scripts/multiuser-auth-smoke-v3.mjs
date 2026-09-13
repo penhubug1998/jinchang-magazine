@@ -41,6 +41,14 @@ try {
   const dbFile = path.join(dir, '.v3-users', 'users.db');
   assert.equal(statSync(dbFile).mode & 0o777, 0o600, '用户数据库权限必须是 600（含密码哈希）');
   assert.equal(statSync(path.join(dir, '.v3-users')).mode & 0o777, 0o700, '用户数据库目录权限必须是 700');
+  // 预写日志与共享内存同样含敏感数据，必须和主库一样是 600（默认 umask 下是 644）
+  for (const name of ['users.db-wal', 'users.db-shm']) {
+    const target = path.join(dir, '.v3-users', name);
+    if (statSync(path.join(dir, '.v3-users'), { throwIfNoEntry: false })) {
+      try { assert.equal(statSync(target).mode & 0o777, 0o600, `${name} 权限必须是 600（含会话与密码哈希）`); }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+    }
+  }
 
   // 2) 未登录不能访问
   assert.equal((await call(base, '/api/issues')).status, 401, '未登录必须 401');
