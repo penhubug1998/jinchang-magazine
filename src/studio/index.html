@@ -246,6 +246,12 @@
         <div class="dialog-actions"><button type="button" id="mySpacePassword">修改密码</button></div>
         <p id="mySpacePasswordStatus" class="login-status" role="status" aria-live="polite"></p>
       </section>
+      <section class="card">
+        <div class="dialog-head" style="margin-bottom:10px"><div><span class="eyebrow">SESSIONS</span><h4>登录设备</h4><p id="mySpaceSessionSummary">加载中…</p></div><button type="button" id="mySpaceSessionsRefresh">刷新</button></div>
+        <div id="mySpaceSessionList" class="user-admin-list"></div>
+        <div class="dialog-actions"><button type="button" id="mySpaceLogoutOthers">退出其他设备</button></div>
+        <p id="mySpaceSessionStatus" class="login-status" role="status" aria-live="polite"></p>
+      </section>
       <div class="dialog-actions"><button value="cancel">关闭</button></div>
     </form></dialog>
     <dialog id="issueInfoDialog" class="issue-info-dialog"><form method="dialog"><div class="dialog-head"><div><span class="eyebrow">ISSUE INFO</span><h3>期刊信息</h3><p>低频元数据集中在这里；正式发布前会再次检查必填项。</p></div><button value="cancel" aria-label="关闭">×</button></div><section class="issue-meta card" id="metaCard">
