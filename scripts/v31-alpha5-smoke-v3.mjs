@@ -40,7 +40,7 @@ async function freePort(){return await new Promise((resolve,reject)=>{const s=ne
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const tmp=await mkdtemp(path.join(os.tmpdir(),'jinchang-v31a5-'));
 const layoutFile=path.join(tmp,'layouts.json'),templateFile=path.join(tmp,'templates.json'),designFile=path.join(tmp,'styles.json'),port=await freePort();
-const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,env:{...process.env,V3_LAYOUT_LIBRARY_FILE:layoutFile,V3_TEMPLATE_LIBRARY_FILE:templateFile,V3_DESIGN_LIBRARY_FILE:designFile},stdio:['ignore','pipe','pipe']});
+const child=spawn(process.execPath,['scripts/studio-v3.mjs','--host','127.0.0.1','--port',String(port)],{cwd:root,env:{...process.env,V3_LAYOUT_LIBRARY_FILE:layoutFile,V3_TEMPLATE_LIBRARY_FILE:templateFile,V3_DESIGN_LIBRARY_FILE:designFile,V3_LIBRARY_ROOT:path.join(tmp,'libraries')},stdio:['ignore','pipe','pipe']});
 let logs='';child.stdout.on('data',d=>logs+=d);child.stderr.on('data',d=>logs+=d);const base=`http://127.0.0.1:${port}`;
 try{
   let health=null;for(let i=0;i<120;i++){try{const r=await fetch(`${base}/api/health`);if(r.ok){health=await r.json();break}}catch{}await sleep(50)}

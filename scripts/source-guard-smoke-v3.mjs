@@ -25,7 +25,7 @@ async function copyRuntime() {
   await mkdir(path.join(sandbox, 'issues', '001'), { recursive: true });
   for (const file of [
     'lib-v3-production.mjs', 'lib-v3-history.mjs', 'lib-v3-import.mjs',
-    'lib-v3-publication.mjs', 'lib-v3-catalog.mjs', 'lib-v3-deploy.mjs',
+    'lib-v3-publication.mjs', 'lib-v3-catalog.mjs', 'lib-v3-deploy.mjs', 'lib-v3-users.mjs',
     'new-issue-v3.mjs', 'sync-assets-v3.mjs', 'studio-v3.mjs'
   ]) await cp(path.join(root, 'scripts', file), path.join(sandbox, 'scripts', file));
   await cp(path.join(root, 'src', 'studio'), path.join(sandbox, 'src', 'studio'), { recursive: true });

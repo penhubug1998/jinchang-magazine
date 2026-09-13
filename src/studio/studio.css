@@ -963,3 +963,10 @@ dialog.publication-center-dialog:not([open]){display:none}
 .user-admin-tag.bad{background:#fde8e6;color:#a32922}
 .user-admin-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .user-admin-actions button{min-height:34px;padding:6px 11px;font-size:11.5px;border-radius:9px}
+
+/* 按用户分区的删除入口：删除=移入 .v3-trash 隔离区，必须手输期号确认 */
+.publication-danger-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.publication-danger-actions input{min-height:40px;min-width:min(240px,100%);padding:8px 12px;border:1px solid #e6d9cb;border-radius:10px;background:#fff;color:inherit;font:inherit}
+.publication-danger-actions .login-status{margin:0}
+.danger-lite{border-color:#e0b4ae;color:#9c2f26;background:#fff6f4}
+@media(max-width:600px){.publication-danger-actions{align-items:stretch;flex-direction:column}.publication-danger-actions input,.publication-danger-actions button{width:100%}}

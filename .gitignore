@@ -37,6 +37,9 @@ outputs-v3/
 .v3-background-jobs/
 .tts-backups/
 
+# 删除期刊的隔离区（.v3-trash）：只隔离不删除，同样不入库
+.v3-trash/
+
 # 多用户数据库（含密码哈希）与运行时状态：绝不入库
 .v3-users/
 *.db

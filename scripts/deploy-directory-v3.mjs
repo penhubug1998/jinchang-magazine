@@ -11,21 +11,30 @@ const publicIssuePath=(value)=>{const number=Number(String(value||'').trim());re
 const remotePath=String(args['remote-path']||publicIssuePath(id)||'').replace(/^\/+|\/+$/g,'');
 const confirm=Boolean(args.confirm);
 if(!id||!targetRoot){console.error('用法：npm run deploy:apply -- --issue 003 --target /var/www/.../new-jc-magazine [--remote-path 03] [--confirm]');process.exit(2)}
-if(!/^[a-zA-Z0-9._-]+$/.test(remotePath)){console.error(`remote-path 不合法：${remotePath}`);process.exit(2)}
+// remote-path 可以是用户分区（u/<slug>/<NN>），所以允许一级或多级目录。
+if(!/^[a-zA-Z0-9._-]+(\/[a-zA-Z0-9._-]+)*$/.test(remotePath)){console.error(`remote-path 不合法：${remotePath}`);process.exit(2)}
 if(path.parse(targetRoot).root===targetRoot){console.error('拒绝把文件系统根目录作为部署目标。');process.exit(2)}
 const source=path.join(releaseRoot,id);const errors=[];
 if(!(await exists(source)))errors.push(`发布源不存在：${posix(path.relative(root,source))}`);
 if(!errors.length){const v=await verifyIntegrity(source);if(!v.ok)errors.push(...v.errors);const meta=path.join(source,'release.json');if(!(await exists(meta)))errors.push('发布源缺少 release.json');else{const j=JSON.parse(await readFile(meta,'utf8'));if(j.version!==V3_VERSION)errors.push(`release.json 版本 ${j.version} != ${V3_VERSION}`);if(j.issue!==id)errors.push(`release.json issue=${j.issue} != ${id}`)}}
 for(const f of ['index.html','catalog.json','deploy-manifest.json','nginx-cache-snippet.conf'])if(!(await exists(path.join(releaseRoot,f))))errors.push(`发布根缺少 ${f}`);
 if(errors.length){console.error(`部署前检查失败（${errors.length}）：`);for(const e of errors)console.error(`- ${e}`);process.exit(1)}
-const target=path.join(targetRoot,remotePath);const plan={version:V3_VERSION,issue:id,source:posix(source),target:posix(target),rootFiles:['index.html','catalog.json','deploy-manifest.json','nginx-cache-snippet.conf']};
+const target=path.join(targetRoot,remotePath);
+// 用户分区（u/<slug>/<NN>）不是站点根：根级首页 / catalog.json / 部署清单属于平台命名空间，
+// 带斜杠的 remote-path 绝不能把它们覆盖掉，归档页由 Studio 的部署接口统一重建。
+const nested=remotePath.includes('/');
+const rootFiles=nested?[]:['index.html','catalog.json','deploy-manifest.json','nginx-cache-snippet.conf'];
+if(nested)console.warn(`注意：${remotePath} 是用户分区，本次不写入站点根文件；归档页请用 Studio 的「部署到公开网站」。`);
+const plan={version:V3_VERSION,issue:id,source:posix(source),target:posix(target),rootFiles};
 if(!confirm){console.log('RC1 安全部署预演（dry-run）：');console.log(JSON.stringify(plan,null,2));console.log('未写入目标目录。确认后追加 --confirm。');process.exit(0)}
 
 await mkdir(targetRoot,{recursive:true});
 const token=`${new Date().toISOString().replace(/[:.]/g,'-')}-${process.pid}`;
 const control=path.join(targetRoot,'.v3-deployments');const backupDir=path.join(control,'backups',id,token);const receiptDir=path.join(control,'receipts');
 await mkdir(path.join(backupDir,'root'),{recursive:true});await mkdir(receiptDir,{recursive:true});
-const staging=path.join(targetRoot,`.${remotePath}.staging-${token}`);const previous=path.join(targetRoot,`.${remotePath}.previous-${token}`);
+const stagingName=`.${remotePath.replaceAll('/','__')}.staging-${token}`,previousName=`.${remotePath.replaceAll('/','__')}.previous-${token}`;
+await mkdir(path.dirname(target),{recursive:true});
+const staging=path.join(targetRoot,stagingName);const previous=path.join(targetRoot,previousName);
 await rm(staging,{recursive:true,force:true});await rm(previous,{recursive:true,force:true});await cp(source,staging,{recursive:true});
 const staged=await verifyIntegrity(staging);if(!staged.ok){await rm(staging,{recursive:true,force:true});console.error(`staging 完整性失败：${staged.errors.join('；')}`);process.exit(1)}
 const previousExisted=await exists(target);const rootState=[];

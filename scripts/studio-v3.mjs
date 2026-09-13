@@ -1,6 +1,6 @@
 import http from 'node:http';
 import {ttsGenerationDigests,changedTtsPages} from './lib-v3-production.mjs';
-import {openUserDb,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
+import {openUserDb,userDbDir,bootstrapAdmin,purgeExpiredSessions,countUsers,findUserByName,findUserById,listUsers,createUser,setUserStatus,setUserCanPublish,setUserPassword,setUserProfile,deleteUser,createSession,sessionUser,destroySession,touchLastLogin,publicUser,audit,dbStats,verifyPassword,issueOwnerId,setIssueOwner,removeIssueOwner,ownedIssueIds,listIssueOwners,countIssuesByOwner,reconcileIssueOwners,requestPasswordReset,listPasswordResets,issueResetCode,cancelPasswordReset,consumeResetCode,RESET_CODE_TTL_MS,ROLE_ADMIN,STATUS_ACTIVE,STATUS_PENDING,STATUS_DISABLED} from './lib-v3-users.mjs';
 import {narrationPageText as serverNarrationPageText} from './lib-v3-production.mjs';
 import { accessSync, createReadStream, constants as fsConstants, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
@@ -661,15 +661,56 @@ function cloneStructure(source,target) {
   return {...target,theme:source.theme||target.theme,features:{...target.features,flipAnimation:source.features?.flipAnimation??true,turnAnimation:['smooth','slide','fade','three-d','none'].includes(source.features?.turnAnimation)?source.features.turnAnimation:'smooth',fullscreen:source.features?.fullscreen??true,music:{src:'assets/music/bgm.mp3',defaultOn:false},narration:{pattern:'assets/tts/page-{page}.mp3',fallback:'speechSynthesis',continuousDefault:false,rate:1}},articles:{},pages};
 }
 
-const designLibraryFile=process.env.V3_DESIGN_LIBRARY_FILE?path.resolve(process.env.V3_DESIGN_LIBRARY_FILE):path.join(root,'.v3-design-library','styles.json');
+// ---- 用户级素材库分区（我的样式 / 我的版式 / 我的模板）----
+// 这三个库以前是全站共享的单个 JSON 文件：任何账号保存的素材，其他账号都能
+// 看到、套用、删除。现在改成"一个账号一份私有库"：
+//     <root>/.v3-users/libraries/<scope>/<file>      scope = 用户 id，免登录本地模式为 local
+// 目录沿用已经存在且 700/600 收敛过的 .v3-users，不再新开顶层目录（生产上
+// /opt/jinchang-magazine-admin 归 root 所有，新顶层目录会让服务起不来）。
+// 历史全局文件只在启动时迁移给管理员，随后重命名归档保留，不再被读取。
+// 内置预设（DESIGN_PRESETS / LAYOUT_PRESETS / 整刊模板）仍留在代码里，属于
+// 所有账号共享的只读起点。
+const libraryRoot=process.env.V3_LIBRARY_ROOT?path.resolve(process.env.V3_LIBRARY_ROOT):path.join(userDbDir(root),'libraries');
+const LIBRARY_KINDS={
+  design:{file:'styles.json',label:'样式',legacy:process.env.V3_DESIGN_LIBRARY_FILE?path.resolve(process.env.V3_DESIGN_LIBRARY_FILE):path.join(root,'.v3-design-library','styles.json')},
+  layout:{file:'layouts.json',label:'版式',legacy:process.env.V3_LAYOUT_LIBRARY_FILE?path.resolve(process.env.V3_LAYOUT_LIBRARY_FILE):path.join(root,'.v3-layout-library','layouts.json')},
+  template:{file:'page-templates.json',label:'模板',legacy:process.env.V3_TEMPLATE_LIBRARY_FILE?path.resolve(process.env.V3_TEMPLATE_LIBRARY_FILE):path.join(root,'.v3-templates','page-templates.json')}
+};
+const designLibraryFile=LIBRARY_KINDS.design.legacy;
+const layoutLibraryFile=LIBRARY_KINDS.layout.legacy;
+const userTemplateFile=LIBRARY_KINDS.template.legacy;
+// 免登录本地模式（没有配置任何账号）用 local 作为作用域，行为与旧版一致。
+function libraryScope(session){return session&&Number.isInteger(session.userId)?String(session.userId):'local';}
+function libraryFile(kind,scope){return path.join(libraryRoot,String(scope),LIBRARY_KINDS[kind].file);}
+async function readLibrary(kind,session){const scope=libraryScope(session);try{const rows=await readJson(libraryFile(kind,scope));return Array.isArray(rows)?rows:[]}catch{return []}}
+async function writeLibrary(kind,session,rows){const file=libraryFile(kind,libraryScope(session));await mkdir(path.dirname(file),{recursive:true});await writeFile(file,`${JSON.stringify(rows,null,2)}\n`,'utf8');await chmod(file,0o600).catch(()=>{});}
+// 启动时把历史全局库交给管理员，然后归档原文件（重命名保留，绝不删除）。
+// 没有管理员账号时保持原文件不动，避免把数据迁到无人认领的位置。
+async function migrateLegacyLibraries(adminId){
+  for(const [kind,meta] of Object.entries(LIBRARY_KINDS)){
+    try{
+      if(!(await exists(meta.legacy)))continue;
+      let rows=null;try{rows=await readJson(meta.legacy);}catch{console.warn(`素材库迁移：${meta.legacy} 不是合法 JSON，保持原样`);continue;}
+      const list=Array.isArray(rows)?rows:[];
+      if(list.length&&adminId){
+        const target=libraryFile(kind,String(adminId));
+        if(await exists(target))console.log(`素材库迁移：管理员已有${meta.label}库，历史文件仅归档`);
+        else {await writeLibrary(kind,{userId:Number(adminId)},list);console.log(`素材库迁移：${list.length} 个${meta.label}已归入管理员私有库`);}
+      } else if(list.length){console.warn(`素材库迁移：历史${meta.label}库有 ${list.length} 项但没有管理员账号，保持原样`);continue;}
+      const archived=`${meta.legacy}.migrated-${new Date().toISOString().replace(/[:.]/g,'-')}`;
+      await rename(meta.legacy,archived);
+      console.log(`素材库迁移：历史全局${meta.label}文件已归档为 ${path.basename(archived)}`);
+    }catch(error){console.warn(`素材库迁移：${meta.label}处理失败`,error?.message||error);}
+  }
+}
+
 const DESIGN_LIBRARY_KEYS={
   theme:new Set(['accent','paper','canvas','texture','text','muted','fontBase','radius','spacing']),
   page:new Set(['background','color','accent','padding','contentWidth','backgroundOverlay','backgroundFit','backgroundPosition']),
   block:new Set(['fontSize','fontWeight','color','background','padding','margin','radius','borderWidth','borderColor','shadow','textAlign','width','alignSelf'])
 };
-async function readDesignLibrary(){try{const rows=await readJson(designLibraryFile);return Array.isArray(rows)?rows:[]}catch{return []}}
-async function writeDesignLibrary(rows){await mkdir(path.dirname(designLibraryFile),{recursive:true});await writeFile(designLibraryFile,`${JSON.stringify(rows,null,2)}
-`,'utf8')}
+async function readDesignLibrary(session){return readLibrary('design',session)}
+async function writeDesignLibrary(session,rows){return writeLibrary('design',session,rows)}
 function sanitizeDesignAsset(data){
   const scope=String(data?.scope||'');if(!DESIGN_LIBRARY_KEYS[scope])throw new Error('样式作用域必须为 theme / page / block');
   const name=String(data?.name||'').trim();if(!name||name.length>60)throw new Error('样式名称需要 1–60 个字符');
@@ -681,10 +722,9 @@ function sanitizeDesignAsset(data){
   return {scope,name,payload,contextType};
 }
 
-const layoutLibraryFile=process.env.V3_LAYOUT_LIBRARY_FILE?path.resolve(process.env.V3_LAYOUT_LIBRARY_FILE):path.join(root,'.v3-layout-library','layouts.json');
 const LAYOUT_LIBRARY_PRESETS=new Set(['single-focus','lead-two','two-balanced','media-left','media-right','three-brief']);
-async function readLayoutLibrary(){try{const rows=await readJson(layoutLibraryFile);return Array.isArray(rows)?rows:[]}catch{return []}}
-async function writeLayoutLibrary(rows){await mkdir(path.dirname(layoutLibraryFile),{recursive:true});await writeFile(layoutLibraryFile,`${JSON.stringify(rows,null,2)}\n`,'utf8')}
+async function readLayoutLibrary(session){return readLibrary('layout',session)}
+async function writeLayoutLibrary(session,rows){return writeLibrary('layout',session,rows)}
 function sanitizeLayoutNode(node,{nested=false}={}){
   if(!node||typeof node!=='object'||Array.isArray(node))throw new Error('版式节点必须为对象');
   const kind=String(node.kind||'');
@@ -823,9 +863,8 @@ function sanitizeReviewHandoffs(raw,id,{preserveIds=false,updatedAt=null}={}){
   return {version:1,issueId:id,handoffs,updatedAt:updatedAt||new Date().toISOString()};
 }
 
-const userTemplateFile=process.env.V3_TEMPLATE_LIBRARY_FILE?path.resolve(process.env.V3_TEMPLATE_LIBRARY_FILE):path.join(root,'.v3-templates','page-templates.json');
-async function readUserTemplates(){try{const rows=await readJson(userTemplateFile);return Array.isArray(rows)?rows:[]}catch{return []}}
-async function writeUserTemplates(rows){await mkdir(path.dirname(userTemplateFile),{recursive:true});await writeFile(userTemplateFile,`${JSON.stringify(rows,null,2)}\n`,'utf8')}
+async function readUserTemplates(session){return readLibrary('template',session)}
+async function writeUserTemplates(session,rows){return writeLibrary('template',session,rows)}
 function sanitizeTemplateBlock(block,index=0){
   const b=JSON.parse(JSON.stringify(block));validateBlock(b,0,index);
   if(b.type==='container'){b.columns=(b.columns||[]).map((col,ci)=>({blocks:(col.blocks||[]).map((child,bi)=>sanitizeTemplateBlock(child,bi+ci*20))}));return b;}
@@ -866,10 +905,29 @@ async function publicationStatus(id,{refreshAudit=true}={}){
   const savedFingerprint=issueSourceFingerprint(issue),deployment=evidence.publicDeployment||null;
   // A successful historical deployment is not proof that the edited source is online.
   const publicDeployment=deployment?{...deployment,sourceMatchesCurrent:deployment.sourceFingerprint?deployment.sourceFingerprint===savedFingerprint:null}:null;
-  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},publicDeployment,exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null,archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null},publicDeployment:publicDeployment};
+  const space=issuePublicSpace(id);
+  return {...status,canPublish:Boolean(status.canPublish&&storage.ok),reason:storage.status==='critical'?storage.advice:status.reason,storage,sourceFingerprint:savedFingerprint,forceRelease:forceReleaseEnabled(),auditRun:{strict:true,ok:Boolean(run?.ok),checkedAt:new Date().toISOString()},publicDeployment,exportCapabilities:publicationExportCapabilities(),publicShare:{configured:Boolean(publicMagazineRoot&&publicMagazineBaseUrl),url:publicIssueUrl(id),archiveUrl:publicMagazineBaseUrl?`${publicMagazineBaseUrl}/`:null,spaceUrl:publicSpaceUrl(space),namespace:space?`${USER_SPACE_ROOT}/${space.slug}`:null},publicDeployment:publicDeployment};
 }
 function publicIssuePath(id){const raw=String(id||'').trim();const n=Number(raw);return Number.isInteger(n)&&n>0?String(n).padStart(2,'0'):raw;}
-function publicIssueUrl(id){return publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${publicIssuePath(id)}/`:null;}
+// ---- 发布命名空间（按用户分区）----
+// 管理员（平台）期刊继续发布在站点根：/<NN>/，老链接不变；
+// 普通用户期刊发布在自己的分区：/u/<slug>/<NN>/，并各自带一份归档页 /u/<slug>/。
+// 目录结构本身就是命名空间真源：扫描公开目录即可还原分区，不依赖数据库。
+const USER_SPACE_ROOT='u';
+const USER_SPACE_SLUG_RE=/^[a-z0-9][a-z0-9_.-]{2,31}$/;
+function userSpaceSlug(username){const slug=String(username||'').trim().toLowerCase();return USER_SPACE_SLUG_RE.test(slug)?slug:'';}
+// null = 平台命名空间（管理员或无归属期刊）；否则返回作者分区描述
+function issuePublicSpace(id){
+  try{
+    const ownerId=issueOwnerId(userDb,id);if(!ownerId)return null;
+    const row=findUserById(userDb,ownerId);if(!row||String(row.role)===ROLE_ADMIN)return null;
+    const slug=userSpaceSlug(row.username);if(!slug)return null;
+    return {slug,username:String(row.username),displayName:String(row.display_name||''),journalName:String(row.journal_name||''),ownerId:Number(row.id)};
+  }catch{return null;}
+}
+function publicIssueRelPath(id,space=null){const leaf=publicIssuePath(id);return space?`${USER_SPACE_ROOT}/${space.slug}/${leaf}`:leaf;}
+function publicSpaceUrl(space){return space&&publicMagazineBaseUrl?`${publicMagazineBaseUrl}/${USER_SPACE_ROOT}/${space.slug}/`:null;}
+function publicIssueUrl(id){if(!publicMagazineBaseUrl)return null;return `${publicMagazineBaseUrl}/${publicIssueRelPath(id,issuePublicSpace(id))}/`;}
 function legacyIssuePath(id){const raw=String(id||'').trim();return /^\d+$/.test(raw)?raw:'';}
 function legacyIssueRedirectHtml(remotePath){
   const target=`../${remotePath}/`;
@@ -884,16 +942,50 @@ async function ensureLegacyPublicRoute(id,remotePath){
   await atomicPublicWrite(path.join(legacyDir,'index.html'),legacyIssueRedirectHtml(remotePath));
   return {created:true,legacyPath,legacyDir};
 }
-async function readDeployedPublicCatalog(){
-  if(!publicMagazineRoot||!(await exists(publicMagazineRoot)))return [];
+// 公开目录扫描：根目录 = 平台期刊；u/<slug>/ = 各作者分区。
+async function deployedPublicIssueDirs(){
   const rows=[];
+  if(!publicMagazineRoot||!(await exists(publicMagazineRoot)))return rows;
   for(const entry of await readdir(publicMagazineRoot,{withFileTypes:true})){
-    if(!entry.isDirectory()||entry.name.startsWith('.')||!/^[a-zA-Z0-9._-]+$/.test(entry.name))continue;
-    try{
-      const issue=await readJson(path.join(publicMagazineRoot,entry.name,'issue.json'));
-      if(issue.engine!=='v3'||issue.status!=='published')continue;
-      rows.push({id:issue.id||entry.name,label:issue.label||issue.id||entry.name,publication:issue.publication||'',subtitle:issue.subtitle||'',engine:'v3',status:'published',href:`./${entry.name}/`,legacyPath:null,pageCount:Array.isArray(issue.pages)?issue.pages.length:null});
-    }catch{}
+    if(!entry.isDirectory()||entry.name.startsWith('.'))continue;
+    if(entry.name===USER_SPACE_ROOT){
+      const spaceRoot=path.join(publicMagazineRoot,USER_SPACE_ROOT);
+      for(const spaceEntry of await readdir(spaceRoot,{withFileTypes:true})){
+        if(!spaceEntry.isDirectory()||!USER_SPACE_SLUG_RE.test(spaceEntry.name))continue;
+        const spaceDir=path.join(spaceRoot,spaceEntry.name);
+        for(const issueEntry of await readdir(spaceDir,{withFileTypes:true})){
+          if(!issueEntry.isDirectory()||issueEntry.name.startsWith('.'))continue;
+          rows.push({dir:path.join(spaceDir,issueEntry.name),leaf:issueEntry.name,space:spaceEntry.name});
+        }
+      }
+      continue;
+    }
+    if(!/^[a-zA-Z0-9._-]+$/.test(entry.name))continue;
+    rows.push({dir:path.join(publicMagazineRoot,entry.name),leaf:entry.name,space:null});
+  }
+  return rows;
+}
+async function publicIssueCatalogRow(item){
+  try{
+    const issue=await readJson(path.join(item.dir,'issue.json'));
+    if(issue.engine!=='v3'||issue.status!=='published')return null;
+    return {id:issue.id||item.leaf,label:issue.label||issue.id||item.leaf,publication:issue.publication||'',subtitle:issue.subtitle||'',engine:'v3',status:'published',href:`./${item.leaf}/`,legacyPath:null,pageCount:Array.isArray(issue.pages)?issue.pages.length:null};
+  }catch{return null}
+}
+// 作者分区元信息：数据库优先（刊名改了不用重新发布），space.json 作为兜底。
+async function publicSpaceInfo(slug,issues=[]){
+  const row=listUsers(userDb).find(user=>userSpaceSlug(user.username)===slug)||null;
+  let file=null;try{file=await readJson(path.join(publicMagazineRoot,USER_SPACE_ROOT,slug,'space.json'));}catch{}
+  const fallback=(file&&typeof file==='object')?file:{};
+  // 刊名优先级：账号里设置的刊名（最新）→ 上一次发布写入的 space.json → 最新一期的 publication。
+  const fromIssue=issues.map(x=>String(x.publication||'').trim()).find(Boolean)||'';
+  return {slug,username:String(row?.username||fallback.username||slug),displayName:String(row?.displayName||fallback.displayName||''),journalName:String(row?.journalName||fallback.journalName||fromIssue||'')};
+}
+async function readDeployedPublicCatalog(){
+  const rows=[];
+  for(const item of await deployedPublicIssueDirs()){
+    if(item.space)continue;
+    const row=await publicIssueCatalogRow(item);if(row)rows.push(row);
   }
   // 兼容旧的安全部署目录：历史 Reader 可能没有随包携带 issue.json，
   // 但只要 catalog 中的目标目录仍存在，就保留它，避免新一期发布时丢失旧入口。
@@ -905,6 +997,38 @@ async function readDeployedPublicCatalog(){
     }
   }catch{}
   return rows.sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-CN'));
+}
+// 每个作者分区各一份归档页；返回 [{space,issues,catalog}]
+async function readDeployedPublicSpaces(){
+  const grouped=new Map();
+  for(const item of await deployedPublicIssueDirs()){
+    if(!item.space)continue;
+    const row=await publicIssueCatalogRow(item);if(!row)continue;
+    const list=grouped.get(item.space)||[];list.push(row);grouped.set(item.space,list);
+  }
+  const rows=[];
+  for(const [slug,issues] of grouped){
+    issues.sort((a,b)=>String(b.id).localeCompare(String(a.id),'zh-CN'));
+    rows.push({...await publicSpaceInfo(slug,issues),issues,issueCount:issues.length});
+  }
+  return rows.sort((a,b)=>a.slug.localeCompare(b.slug,'zh-CN'));
+}
+// 公开站点所有归档页：平台首页、作者空间索引、每个作者的归档页。
+async function publicArchivePages(){
+  const catalog=await readDeployedPublicCatalog(),spaces=await readDeployedPublicSpaces();
+  const spaceRows=spaces.map(s=>({slug:s.slug,username:s.username,displayName:s.displayName,journalName:s.journalName,issueCount:s.issueCount,href:`./${USER_SPACE_ROOT}/${s.slug}/`}));
+  const pages=[
+    {rel:'index.html',content:buildArchiveHtml(catalog,{subtitle:'公开阅读 · 平台已发布期刊归档',spaces:spaceRows,nav:spaces.length?[{label:'作者空间 →',href:`./${USER_SPACE_ROOT}/`}]:[]})},
+    {rel:'catalog.json',content:`${JSON.stringify(catalog,null,2)}\n`},
+    {rel:`${USER_SPACE_ROOT}/index.html`,content:buildArchiveHtml([],{title:'作者期刊空间',kicker:'AUTHOR SPACES',subtitle:'按作者分区浏览已发布期刊',spaces:spaceRows.map(s=>({...s,href:`./${s.slug}/`})),nav:[{label:'← 返回平台期刊',href:'../'}],emptyHint:'还没有作者发布期刊。'})},
+    {rel:`${USER_SPACE_ROOT}/spaces.json`,content:`${JSON.stringify(spaceRows.map(s=>({...s,href:`./${s.slug}/`})),null,2)}\n`}
+  ];
+  for(const space of spaces){
+    pages.push({rel:`${USER_SPACE_ROOT}/${space.slug}/index.html`,content:buildArchiveHtml(space.issues,{title:space.journalName||`${space.username} 的期刊空间`,kicker:'AUTHOR SPACE',subtitle:`${space.displayName||space.username} · 共 ${space.issueCount} 期已发布`,nav:[{label:'← 平台期刊',href:'../../'},{label:'作者空间',href:'../'}]})});
+    pages.push({rel:`${USER_SPACE_ROOT}/${space.slug}/catalog.json`,content:`${JSON.stringify(space.issues,null,2)}\n`});
+    pages.push({rel:`${USER_SPACE_ROOT}/${space.slug}/space.json`,content:`${JSON.stringify({slug:space.slug,username:space.username,displayName:space.displayName,journalName:space.journalName,issueCount:space.issueCount,updatedAt:new Date().toISOString()},null,2)}\n`});
+  }
+  return {pages,catalog,spaces};
 }
 async function atomicPublicWrite(file,content){
   const token=`${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`;const temp=`${file}.tmp-${token}`,backup=`${file}.previous-${token}`;const had=await exists(file);await writeFile(temp,content,'utf8');
@@ -924,15 +1048,14 @@ async function verifyPublicDeployment(id){
 async function syncPublishedReaderRuntime(sourceDir,excludeId=''){
   const runtimeFiles=['index.html','reader.css','reader.js','rich-text.js','layout-engine.js'];
   for(const name of runtimeFiles)if(!(await exists(path.join(sourceDir,name))))throw new Error(`公开 Reader 运行时缺少 ${name}`);
-  const synced=[];const entries=await readdir(publicMagazineRoot,{withFileTypes:true});
-  for(const entry of entries){
-    if(!entry.isDirectory()||entry.name.startsWith('.'))continue;
-    const targetDir=path.join(publicMagazineRoot,entry.name);if(path.resolve(targetDir)===path.resolve(sourceDir))continue;
+  const synced=[];
+  for(const item of await deployedPublicIssueDirs()){
+    const targetDir=item.dir;if(path.resolve(targetDir)===path.resolve(sourceDir))continue;
     let meta;try{meta=await readJson(path.join(targetDir,'issue.json'));}catch{continue;}
     if(meta?.engine!=='v3'||meta?.status!=='published'||String(meta.id||'')===String(excludeId))continue;
     for(const name of runtimeFiles)await cp(path.join(sourceDir,name),path.join(targetDir,name));
     const vendor=path.join(sourceDir,'vendor');if(await exists(vendor))await cp(vendor,path.join(targetDir,'vendor'),{recursive:true});
-    synced.push(meta.id||entry.name);
+    synced.push(item.space?`${item.space}/${meta.id||item.leaf}`:(meta.id||item.leaf));
   }
   return {ok:true,source:sourceDir,synced};
 }
@@ -943,21 +1066,97 @@ async function deployPublicIssue(id){
   const source=path.join(root,'release-v3',id);if(!(await exists(source)))throw new Error(`正式发布包不存在：release-v3/${id}`);
   const releaseMeta=await readJson(path.join(source,'release.json'));if(releaseMeta.version!==V3_VERSION||releaseMeta.issue!==id||releaseMeta.sourceStatus!=='published')throw new Error('正式发布包不是当前已发布版本，不能生成公开分享链接');
   const sourceIntegrity=await verifyIntegrity(source);if(!sourceIntegrity.ok)throw new Error(`正式发布包完整性失败：${sourceIntegrity.errors.join('；')}`);
-  await mkdir(publicMagazineRoot,{recursive:true});const remotePath=publicIssuePath(id),target=path.join(publicMagazineRoot,remotePath),control=path.join(publicMagazineRoot,'.v3-deployments'),token=`${new Date().toISOString().replace(/[:.]/g,'-')}-${process.pid}`;const backupDir=path.join(control,'backups',id,token),receiptDir=path.join(control,'receipts'),staging=path.join(publicMagazineRoot,`.${remotePath}.staging-${token}`);await mkdir(path.join(backupDir,'root'),{recursive:true});await mkdir(receiptDir,{recursive:true});await rm(staging,{recursive:true,force:true});await cp(source,staging,{recursive:true});const staged=await verifyIntegrity(staging);if(!staged.ok){await rm(staging,{recursive:true,force:true});throw new Error(`公开部署暂存完整性失败：${staged.errors.join('；')}`);}
-  const rootFiles=['index.html','catalog.json','deploy-manifest.json'],rootState=rootFiles.map(name=>({name,existed:false}));const previousExisted=await exists(target);let targetSwapped=false,legacyRoute=null;
+  // 命名空间：管理员（平台）期刊发布在站点根 /<NN>/，普通用户发布在 /u/<slug>/<NN>/。
+  const space=issuePublicSpace(id);
+  const remotePath=publicIssueRelPath(id,space);
+  await mkdir(publicMagazineRoot,{recursive:true});
+  const spaceDir=space?path.join(publicMagazineRoot,USER_SPACE_ROOT,space.slug):publicMagazineRoot;
+  const target=path.join(publicMagazineRoot,remotePath),control=path.join(publicMagazineRoot,'.v3-deployments'),token=`${new Date().toISOString().replace(/[:.]/g,'-')}-${process.pid}`;const backupDir=path.join(control,'backups',id,token),receiptDir=path.join(control,'receipts');
+  // 暂存目录必须与发布目标同处一个文件系统，rename 才是原子的；用户分区先建目录。
+  await mkdir(spaceDir,{recursive:true});
+  const staging=path.join(spaceDir,`.staging-v3-${id}-${token}`);
+  await mkdir(path.join(backupDir,'pages'),{recursive:true});await mkdir(receiptDir,{recursive:true});await rm(staging,{recursive:true,force:true});await cp(source,staging,{recursive:true});const staged=await verifyIntegrity(staging);if(!staged.ok){await rm(staging,{recursive:true,force:true});throw new Error(`公开部署暂存完整性失败：${staged.errors.join('；')}`);}
+  const pageState=[];const previousExisted=await exists(target);let targetSwapped=false,legacyRoute=null;
   try{
     if(previousExisted)await rename(target,path.join(backupDir,'issue'));
     await rename(staging,target);targetSwapped=true;const readerRuntime=await syncPublishedReaderRuntime(target,id);
-    const catalog=await readDeployedPublicCatalog();const deployedAt=new Date().toISOString();const publicManifest={version:V3_VERSION,issue:id,deployedAt,source:`release-v3/${id}/`,remotePath,treeSha256:staged.manifest?.treeSha256||null,archiveRoot:publicMagazineBaseUrl,readerRuntime};
-    const rootPayload={'index.html':buildArchiveHtml(catalog,{subtitle:'公开阅读 · 已发布期刊归档'}),'catalog.json':`${JSON.stringify(catalog,null,2)}\n`,'deploy-manifest.json':`${JSON.stringify(publicManifest,null,2)}\n`};
-    for(const name of rootFiles){const file=path.join(publicMagazineRoot,name);const existed=await exists(file);rootState.find(x=>x.name===name).existed=existed;if(existed)await cp(file,path.join(backupDir,'root',name));await atomicPublicWrite(file,rootPayload[name]);}
-    legacyRoute=await ensureLegacyPublicRoute(id,remotePath);
-    const verification=await verifyPublicDeployment(id);const deployment={kind:'public',version:V3_VERSION,issue:id,remotePath,publicRoot:publicMagazineRoot,url:publicIssueUrl(id),archiveUrl:publicMagazineBaseUrl,deployedAt,treeSha256:staged.manifest?.treeSha256||null,verification,verified:Boolean(verification.ok),legacyRoute:legacyRoute?.legacyPath||null,backupDir:path.relative(root,backupDir).replaceAll('\\','/')};
+    const {pages,catalog,spaces}=await publicArchivePages();const deployedAt=new Date().toISOString();const publicManifest={version:V3_VERSION,issue:id,deployedAt,source:`release-v3/${id}/`,remotePath,namespace:space?`${USER_SPACE_ROOT}/${space.slug}`:null,space:space?{slug:space.slug,username:space.username,journalName:space.journalName}:null,treeSha256:staged.manifest?.treeSha256||null,archiveRoot:publicMagazineBaseUrl,spaceUrl:publicSpaceUrl(space),readerRuntime};
+    pages.push({rel:'deploy-manifest.json',content:`${JSON.stringify(publicManifest,null,2)}\n`});
+    // 归档页按命名空间整体重写（平台首页 / 作者空间索引 / 各作者归档页）：
+    // 写前逐页备份，任一步失败就逐页回滚，不会留下半新半旧的站点。
+    for(const page of pages){
+      const file=path.join(publicMagazineRoot,page.rel),backup=path.join(backupDir,'pages',page.rel.replaceAll('/','__'));
+      const existed=await exists(file);pageState.push({file,backup,existed});
+      if(existed)await cp(file,backup);
+      await mkdir(path.dirname(file),{recursive:true});
+      await atomicPublicWrite(file,page.content);
+    }
+    // 不补非补零历史跳转只对平台根命名空间有意义，作者分区不做。
+    if(!space)legacyRoute=await ensureLegacyPublicRoute(id,remotePath);
+    const verification=await verifyPublicDeployment(id);const deployment={kind:'public',version:V3_VERSION,issue:id,remotePath,namespace:space?`${USER_SPACE_ROOT}/${space.slug}`:null,spaceUrl:publicSpaceUrl(space),publicRoot:publicMagazineRoot,url:publicIssueUrl(id),archiveUrl:publicMagazineBaseUrl,deployedAt,treeSha256:staged.manifest?.treeSha256||null,verification,verified:Boolean(verification.ok),legacyRoute:legacyRoute?.legacyPath||null,backupDir:path.relative(root,backupDir).replaceAll('\\','/')};
     deployment.sourceFingerprint=issueSourceFingerprint(await readJson(path.join(target,'issue.json')));
     const receiptFile=path.join(receiptDir,`${id}-${token}.json`);await writeFile(receiptFile,`${JSON.stringify(deployment,null,2)}\n`,'utf8');await writeFile(path.join(receiptDir,`${id}-latest.json`),`${JSON.stringify(deployment,null,2)}\n`,'utf8');await mkdir(path.join(root,'reports'),{recursive:true});await writeFile(path.join(root,'reports',`v3-public-deployment-${id}.json`),`${JSON.stringify({...deployment,receiptFile:path.relative(root,receiptFile).replaceAll('\\','/')},null,2)}\n`,'utf8');await writePublicationEvidence(id,{publicDeployment:deployment,outputs:{public:deployment}});return deployment;
   }catch(error){
-    await rm(staging,{recursive:true,force:true}).catch(()=>{});if(targetSwapped)await rm(target,{recursive:true,force:true}).catch(()=>{});if(legacyRoute?.created)await rm(legacyRoute.legacyDir,{recursive:true,force:true}).catch(()=>{});if(previousExisted&&await exists(path.join(backupDir,'issue')))await rename(path.join(backupDir,'issue'),target).catch(()=>{});for(const row of rootState){const file=path.join(publicMagazineRoot,row.name),backup=path.join(backupDir,'root',row.name);if(row.existed&&await exists(backup))await cp(backup,file).catch(()=>{});else if(!row.existed)await rm(file,{force:true}).catch(()=>{});}throw error;
+    await rm(staging,{recursive:true,force:true}).catch(()=>{});if(targetSwapped)await rm(target,{recursive:true,force:true}).catch(()=>{});if(legacyRoute?.created)await rm(legacyRoute.legacyDir,{recursive:true,force:true}).catch(()=>{});if(previousExisted&&await exists(path.join(backupDir,'issue')))await rename(path.join(backupDir,'issue'),target).catch(()=>{});
+    for(const row of pageState){try{if(row.existed&&await exists(row.backup))await cp(row.backup,row.file);else if(!row.existed)await rm(row.file,{force:true});}catch{}}
+    throw error;
   }
+}
+// 重建公开站点的全部归档页（平台首页 / 作者空间索引 / 各作者归档页）。
+// 删除期刊后需要它来摘掉入口；页面都是派生数据，失败可以再发布一次恢复。
+async function rebuildPublicArchives({removedIssue='',actor=''}={}){
+  if(!publicMagazineRoot)return {ok:false,reason:'NOT_CONFIGURED'};
+  const {pages}=await publicArchivePages();const deployedAt=new Date().toISOString();
+  pages.push({rel:'deploy-manifest.json',content:`${JSON.stringify({version:V3_VERSION,kind:'archive-rebuild',removedIssue:removedIssue||null,deployedAt,actor,archiveRoot:publicMagazineBaseUrl},null,2)}\n`});
+  for(const page of pages){const file=path.join(publicMagazineRoot,page.rel);await mkdir(path.dirname(file),{recursive:true});await atomicPublicWrite(file,page.content);}
+  return {ok:true,files:pages.length,deployedAt};
+}
+// 删除期刊 = 搬进隔离区，不是 rm。
+//   issues/<id>            → .v3-trash/issues/<id>-<时间戳>/（并写入 .deleted.json 说明来源与操作人）
+//   公开目录 <命名空间>/<NN> → .v3-trash/public/<id>-<时间戳>/，随后重建归档页摘掉入口
+// 已上线（status=published / 有公开部署回执 / 公开目录存在）的期刊只有管理员能删，且必须显式 force=1。
+async function deleteIssueToQuarantine(id,{actor='',isAdmin=false,force=false,issue=null}={}){
+  const dir=path.join(root,'issues',id);
+  if(!(await exists(path.join(dir,'issue.json'))))throw Object.assign(new Error(`找不到 issues/${id}`),{code:'ISSUE_NOT_FOUND',statusCode:404});
+  const busy=[...backgroundJobs.values()].find(job=>String(job.issueId)===String(id)&&['queued','running'].includes(String(job.status)));
+  if(busy)throw Object.assign(new Error('这一期还有后台任务在运行，请先等待完成或取消任务'),{code:'ISSUE_JOB_RUNNING',statusCode:409});
+  const source=issue||await readJson(path.join(dir,'issue.json'));
+  const evidence=await readPublicationEvidence(id).catch(()=>null);
+  const deployment=evidence?.publicDeployment||null;
+  const space=issuePublicSpace(id);
+  const relPath=publicIssueRelPath(id,space);
+  const publicDir=publicMagazineRoot?path.join(publicMagazineRoot,relPath):'';
+  const publicExists=Boolean(publicDir&&await exists(publicDir));
+  const live=String(source.status)==='published'||publicExists||Boolean(deployment);
+  if(live&&!isAdmin)throw Object.assign(new Error('这一期已经上线，只有管理员可以删除；请先联系管理员'),{code:'ISSUE_PUBLISHED',statusCode:403});
+  if(live&&!force)throw Object.assign(new Error('这一期已经上线；确认删除需要加 force=1，公开目录会一并移入隔离区'),{code:'ISSUE_PUBLISHED_CONFIRM',statusCode:409});
+  const files=await listFilesRecursive(dir);
+  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  const trashRoot=path.join(root,'.v3-trash'),trashIssue=path.join(trashRoot,'issues',`${id}-${stamp}`);
+  await mkdir(path.dirname(trashIssue),{recursive:true});
+  const manifest={version:1,kind:'issue-delete',issueId:id,label:String(source.label||''),sourceStatus:String(source.status||''),deletedAt:new Date().toISOString(),actor:String(actor||''),reason:live?'published-force-delete':'draft-delete',fileCount:files.length,live,publicRemotePath:publicExists?relPath:null,publicDeployment:deployment?{url:deployment.url||null,deployedAt:deployment.deployedAt||null}:null};
+  await rename(dir,trashIssue);
+  await writeFile(path.join(trashIssue,'.deleted.json'),`${JSON.stringify(manifest,null,2)}\n`,'utf8');
+  removeIssueOwner(userDb,id);
+  audit(userDb,{actor,action:'issue.delete',target:id,detail:`files=${files.length} live=${live?'1':'0'} public=${publicExists?'1':'0'}`});
+  let publicRemoved=false,archives=null;
+  if(publicExists){
+    const trashPublic=path.join(trashRoot,'public',`${id}-${stamp}`);
+    await mkdir(path.dirname(trashPublic),{recursive:true});
+    await rename(publicDir,trashPublic);publicRemoved=true;
+    // 作者最后一期被删除后，作者分区目录里只剩下归档页：一并隔离，
+    // 否则 /u/<slug>/index.html 会留着一条指向已删除期刊的死链接。
+    if(space){
+      const spaceDir=path.join(publicMagazineRoot,USER_SPACE_ROOT,space.slug);
+      const stillPublished=(await deployedPublicIssueDirs()).some(item=>item.space===space.slug);
+      if(!stillPublished&&await exists(spaceDir)){
+        const trashSpace=path.join(trashRoot,'public',`space-${space.slug}-${stamp}`);
+        await rename(spaceDir,trashSpace);
+      }
+    }
+    archives=await rebuildPublicArchives({removedIssue:id,actor}).catch(error=>({ok:false,error:String(error?.message||error)}));
+  }
+  return {ok:true,issueId:id,quarantined:posix(path.relative(root,trashIssue)),fileCount:files.length,publicRemoved,archives,deletedAt:manifest.deletedAt};
 }
 async function ensurePublicationWeb(id){
   const build=await runScriptAsync('build-v3.mjs',['--issue',id]);if(!build.ok)throw new Error(build.output||'Web Reader 构建失败');
@@ -1216,6 +1415,35 @@ const server=http.createServer(async(req,res)=>{try{
     if(token){destroySession(userDb,token);adminSessions.delete(token);}
     return send(res,200,{ok:true},'application/json; charset=utf-8',{'Set-Cookie':sessionCookie(req,'',0)});
   }
+  // ---- 忘记密码（免登录）----
+  // 没有邮件/短信通道，所以这里只登记申请；真正的重置码由管理员签发后当面转达。
+  // 两个接口都按 IP 限速，并且永远不回答"这个用户名是否存在"。
+  if(!acceptanceOnly&&u.pathname==='/api/auth/forgot'&&req.method==='POST'){
+    if(!authRequired())return send(res,503,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
+    const ip=requestIp(req),rate=loginRate(ip);
+    if(rate.lockedUntil>Date.now())return send(res,429,{error:'操作过于频繁，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+    const username=String(data?.username||'').trim();
+    if(!username)return send(res,400,{error:'请填写用户名',code:'VALIDATION_ERROR'});
+    const result=requestPasswordReset(userDb,{username,ip});
+    clearLoginFailures(ip);
+    return send(res,200,{ok:true,registered:Boolean(result.requested),
+      message:'重置申请已提交。请联系管理员获取一次性重置码，然后在登录页选择「用重置码改密」。'});
+  }
+  if(!acceptanceOnly&&u.pathname==='/api/auth/reset'&&req.method==='POST'){
+    if(!authRequired())return send(res,503,{error:'当前环境未启用账号体系',code:'AUTH_NOT_CONFIGURED'});
+    const ip=requestIp(req),rate=loginRate(ip);
+    if(rate.lockedUntil>Date.now())return send(res,429,{error:'尝试次数过多，请 5 分钟后重试',code:'AUTH_RATE_LIMITED'});
+    let data;try{data=await body(req,32*1024)}catch{return send(res,400,{error:'请求格式无效',code:'INVALID_REQUEST'});}
+    try{
+      consumeResetCode(userDb,{username:String(data?.username||'').trim(),code:String(data?.code||''),newPassword:String(data?.newPassword||'')});
+      clearLoginFailures(ip);
+      return send(res,200,{ok:true,message:'密码已重设，请用新密码登录。'});
+    }catch(e){
+      recordLoginFailure(ip);
+      return send(res,e.code==='INVALID_PASSWORD'?400:403,{error:e.message||String(e),code:e.code||'RESET_FAILED'});
+    }
+  }
   if(!acceptanceOnly&&u.pathname==='/api/public/ai/summarize'&&req.method==='OPTIONS')return send(res,204,'','text/plain; charset=utf-8',AI_PUBLIC_HEADERS);
   if(!acceptanceOnly&&u.pathname==='/api/public/ai/config'&&req.method==='GET'){const config=await readAiConfig();return send(res,200,{publicEndpoint:config.publicEndpoint||AI_CONFIG_DEFAULTS.publicEndpoint},'application/json; charset=utf-8',AI_PUBLIC_HEADERS);}
   if(!acceptanceOnly&&u.pathname==='/api/public/ai/summarize'&&req.method==='POST'){
@@ -1285,6 +1513,11 @@ const server=http.createServer(async(req,res)=>{try{
       try{const row=setUserPassword(userDb,targetId,String(data?.password||''),session.user);return send(res,200,{ok:true,user:publicUser(row)});}
       catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'INVALID_PASSWORD'});}
     }
+    // 签发一次性重置码：明文只在这里返回一次，库里只留 sha256。
+    if(seg[3]&&seg[4]==='reset-code'&&req.method==='POST'){
+      try{const issued=issueResetCode(userDb,targetId,session.user);return send(res,200,{ok:true,...issued,ttlMinutes:Math.round(RESET_CODE_TTL_MS/60000)});}
+      catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'RESET_CODE_FAILED'});}
+    }
     if(seg[3]&&!seg[4]&&req.method==='DELETE'){
       try{deleteUser(userDb,targetId,session.user);return send(res,200,{ok:true});}
       catch(e){return send(res,e.code==='USER_NOT_FOUND'?404:(e.code==='CANNOT_DELETE_ADMIN'?409:400),{error:e.message||String(e),code:e.code||'DELETE_FAILED'});}
@@ -1317,6 +1550,19 @@ const server=http.createServer(async(req,res)=>{try{
     const rows=userDb.prepare('SELECT id,at,actor,action,target,detail FROM audit_log ORDER BY id DESC LIMIT ?').all(limit);
     return send(res,200,{ok:true,entries:rows});
   }
+  // 忘记密码申请列表（仅管理员）：用户提交申请后出现在这里，管理员据此签发重置码。
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='reset-requests'&&!seg[3]&&req.method==='GET'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以查看重置申请',code:'ADMIN_REQUIRED'});
+    const includeClosed=u.searchParams.get('all')==='1';
+    return send(res,200,{ok:true,requests:listPasswordResets(userDb,{limit:u.searchParams.get('limit'),includeClosed})});
+  }
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='admin'&&seg[2]==='reset-requests'&&seg[3]&&req.method==='DELETE'){
+    const session=adminSession(req);
+    if(session.role!=='admin'&&!session.unprotected)return send(res,403,{error:'只有管理员可以处理重置申请',code:'ADMIN_REQUIRED'});
+    try{cancelPasswordReset(userDb,Number(seg[3]),session.user);return send(res,200,{ok:true});}
+    catch(e){return send(res,e.code==='RESET_NOT_FOUND'?404:400,{error:e.message||String(e),code:e.code||'RESET_CANCEL_FAILED'});}
+  }
   // ---- 创作空间隔离：非管理员只能访问自己名下的期刊 ----
   // 放在这里集中拦截，避免在几十个 /api/issues/** 分支里各写一遍而漏掉某一条。
   if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='issues'&&seg[2]){
@@ -1328,6 +1574,12 @@ const server=http.createServer(async(req,res)=>{try{
         return send(res,403,{error:'这一期不属于你的创作空间',code:'ISSUE_FORBIDDEN'});
       }
     }
+  }
+  // 发布权限：管理员或已获单独授权的账号才能生成正式发布包并上线。
+  // 前端一直把它当作提示展示，但服务端此前没有拦截，普通账号可以直接调接口。
+  if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='issues'&&seg[2]&&seg[3]==='publication'&&['release','deploy'].includes(seg[4])&&req.method==='POST'){
+    const session=adminSession(req);
+    if(session&&session.role!=='admin'&&!session.unprotected&&!session.canPublish)return send(res,403,{error:'你还没有被授予发布权限，请联系管理员开通后再发布',code:'PUBLISH_FORBIDDEN'});
   }
   if(!acceptanceOnly&&seg[0]==='api'&&seg[1]==='jobs'&&seg[2]){const job=backgroundJobs.get(seg[2]);if(!job)return send(res,404,{error:'后台任务不存在或已过期',code:'JOB_NOT_FOUND'});
     {const session=adminSession(req);if(session&&session.role!=='admin'&&!session.unprotected&&job.issueId){const ownerId=issueOwnerId(userDb,job.issueId);if(ownerId===null||ownerId!==session.userId)return send(res,403,{error:'该任务不属于你的创作空间',code:'ISSUE_FORBIDDEN'});}}if(req.method==='GET')return send(res,200,jobView(job));if(seg[3]==='cancel'&&req.method==='POST'){try{return send(res,200,jobView(cancelBackgroundJob(job)))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}if(seg[3]==='retry'&&req.method==='POST'){try{const next=retryBackgroundJob(job);return send(res,202,backgroundJobResponse(next))}catch(e){return send(res,e.statusCode||409,{error:e.message,code:e.code})}}}
@@ -1369,12 +1621,14 @@ const server=http.createServer(async(req,res)=>{try{
       const pagination=paginateImportedDocument(doc,opts);return send(res,200,{document:doc,pagination,options:opts});
     } catch(e){return send(res,400,{error:e.message||String(e),code:e.code||'IMPORT_ERROR'});}
   }
-  if (u.pathname==='/api/layout-library'&&req.method==='GET') return send(res,200,{layouts:await readLayoutLibrary()});
+  // 我的版式 / 我的样式 / 我的模板：读写都限定在当前账号自己的私有库。
+  // 免登录本地模式（没有账号）落在 local 作用域，与旧行为一致。
+  if (u.pathname==='/api/layout-library'&&req.method==='GET') return send(res,200,{layouts:await readLayoutLibrary(adminSession(req))});
   if (u.pathname==='/api/layout-library'&&req.method==='POST') {
     const data=await body(req);let clean;try{clean=sanitizeLayoutAsset(data)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}
-    const rows=await readLayoutLibrary();if(rows.length>=40)return send(res,409,{error:'我的版式最多保存 40 个',code:'LAYOUT_LIBRARY_LIMIT'});const item={id:`layout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,...clean,createdAt:new Date().toISOString()};rows.unshift(item);await writeLayoutLibrary(rows);return send(res,201,item);
+    const session=adminSession(req);const rows=await readLayoutLibrary(session);if(rows.length>=40)return send(res,409,{error:'我的版式最多保存 40 个',code:'LAYOUT_LIBRARY_LIMIT'});const item={id:`layout-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,...clean,createdAt:new Date().toISOString()};rows.unshift(item);await writeLayoutLibrary(session,rows);return send(res,201,item);
   }
-  if (seg[0]==='api'&&seg[1]==='layout-library'&&seg[2]&&req.method==='DELETE') {const rows=await readLayoutLibrary();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'版式不存在'});await writeLayoutLibrary(next);return send(res,200,{ok:true});}
+  if (seg[0]==='api'&&seg[1]==='layout-library'&&seg[2]&&req.method==='DELETE') {const session=adminSession(req);const rows=await readLayoutLibrary(session);const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'版式不存在'});await writeLayoutLibrary(session,next);return send(res,200,{ok:true});}
 
   if(seg[0]==='api'&&seg[1]==='editorial-plan'&&seg[2]){
     const id=normalizeIssueId(seg[2]);const issueFile=path.join(root,'issues',id,'issue.json');if(!(await exists(issueFile)))return send(res,404,{error:`找不到 issues/${id}`});
@@ -1386,18 +1640,18 @@ const server=http.createServer(async(req,res)=>{try{
     if(req.method==='DELETE'){await rm(editorialPlanFile(id),{force:true});return send(res,200,{ok:true});}
   }
 
-  if (u.pathname==='/api/design-library'&&req.method==='GET') return send(res,200,{styles:await readDesignLibrary()});
+  if (u.pathname==='/api/design-library'&&req.method==='GET') return send(res,200,{styles:await readDesignLibrary(adminSession(req))});
   if (u.pathname==='/api/design-library'&&req.method==='POST') {
     const data=await body(req);let clean;try{clean=sanitizeDesignAsset(data)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}
-    const rows=await readDesignLibrary();if(rows.length>=60)return send(res,409,{error:'我的样式最多保存 60 个',code:'DESIGN_LIBRARY_LIMIT'});
-    const item={id:`style-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,...clean,createdAt:new Date().toISOString()};rows.unshift(item);await writeDesignLibrary(rows);return send(res,201,item);
+    const session=adminSession(req);const rows=await readDesignLibrary(session);if(rows.length>=60)return send(res,409,{error:'我的样式最多保存 60 个',code:'DESIGN_LIBRARY_LIMIT'});
+    const item={id:`style-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,...clean,createdAt:new Date().toISOString()};rows.unshift(item);await writeDesignLibrary(session,rows);return send(res,201,item);
   }
-  if (seg[0]==='api'&&seg[1]==='design-library'&&seg[2]&&req.method==='DELETE') {const rows=await readDesignLibrary();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'样式不存在'});await writeDesignLibrary(next);return send(res,200,{ok:true});}
-  if (u.pathname==='/api/templates'&&req.method==='GET') return send(res,200,{templates:await readUserTemplates()});
+  if (seg[0]==='api'&&seg[1]==='design-library'&&seg[2]&&req.method==='DELETE') {const session=adminSession(req);const rows=await readDesignLibrary(session);const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'样式不存在'});await writeDesignLibrary(session,next);return send(res,200,{ok:true});}
+  if (u.pathname==='/api/templates'&&req.method==='GET') return send(res,200,{templates:await readUserTemplates(adminSession(req))});
   if (u.pathname==='/api/templates'&&req.method==='POST') {
-    const data=await body(req);const name=String(data.name||'').trim();if(!name||name.length>60)return send(res,400,{error:'模板名称需要 1–60 个字符',code:'VALIDATION_ERROR'});let page;try{page=sanitizeTemplatePage(data.page)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}const rows=await readUserTemplates();if(rows.length>=50)return send(res,409,{error:'我的模板最多保存 50 个',code:'TEMPLATE_LIMIT'});const item={id:`tpl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,name,createdAt:new Date().toISOString(),page};rows.unshift(item);await writeUserTemplates(rows);return send(res,201,item);
+    const data=await body(req);const name=String(data.name||'').trim();if(!name||name.length>60)return send(res,400,{error:'模板名称需要 1–60 个字符',code:'VALIDATION_ERROR'});let page;try{page=sanitizeTemplatePage(data.page)}catch(e){return send(res,400,{error:e.message||String(e),code:'VALIDATION_ERROR'})}const session=adminSession(req);const rows=await readUserTemplates(session);if(rows.length>=50)return send(res,409,{error:'我的模板最多保存 50 个',code:'TEMPLATE_LIMIT'});const item={id:`tpl-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,7)}`,name,createdAt:new Date().toISOString(),page};rows.unshift(item);await writeUserTemplates(session,rows);return send(res,201,item);
   }
-  if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const rows=await readUserTemplates();const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(next);return send(res,200,{ok:true});}
+  if (seg[0]==='api'&&seg[1]==='templates'&&seg[2]&&req.method==='DELETE') {const session=adminSession(req);const rows=await readUserTemplates(session);const next=rows.filter(x=>x.id!==seg[2]);if(next.length===rows.length)return send(res,404,{error:'模板不存在'});await writeUserTemplates(session,next);return send(res,200,{ok:true});}
   if (u.pathname==='/api/issues'&&req.method==='GET') {
     const session=adminSession(req);
     const all=await issueSummaries();
@@ -1443,6 +1697,13 @@ const server=http.createServer(async(req,res)=>{try{
   if (seg[0]==='api'&&seg[1]==='issues'&&seg[2]) {
     const id=normalizeIssueId(seg[2]); const issueFile=path.join(root,'issues',id,'issue.json'); if(!(await exists(issueFile)))return send(res,404,{error:`找不到 issues/${id}`}); const issue=await readJson(issueFile);
     if (seg.length===3&&req.method==='GET') return send(res,200,issue);
+    // 删除期刊：不做物理删除，整期目录搬进 .v3-trash 隔离区（含 manifest 与发布回执）。
+    // 已上线（published / 有公开部署回执）的期刊只有管理员能删，并且必须显式 force。
+    if (seg.length===3&&req.method==='DELETE'){
+      const session=adminSession(req);
+      try{const result=await deleteIssueToQuarantine(id,{actor:session?.user||'',isAdmin:session?.role==='admin'||Boolean(session?.unprotected),force:u.searchParams.get('force')==='1',issue});return send(res,200,result);}
+      catch(e){return send(res,e.statusCode||400,{error:e.message||String(e),code:e.code||'ISSUE_DELETE_FAILED'});}
+    }
     if (seg[3]==='source-status'&&req.method==='GET') return send(res,200,await readSourceStatus(id,issue));
     if (seg[3]==='source-export'&&req.method==='GET') return send(res,200,await sourceExport(id,issue),'application/json; charset=utf-8',{'Content-Disposition':`attachment; filename="jinchang-${id}-source.json"`});
     if (seg[3]==='live-preview'&&req.method==='POST') {
@@ -1550,4 +1811,6 @@ async function runPublicationPreflight(id,report=()=>{}){
 }
 if(args.check){for(const f of ['index.html','studio.css','studio.js','publication-center.js','design-presets.js','login.html','rc1-acceptance.html','rc1-acceptance.css','rc1-acceptance.js','final-acceptance.html','final-acceptance.css','final-acceptance.js']){if(!(await exists(path.join(studioDir,f))))throw new Error(`制作中心缺少 ${f}`)}for(const f of ['index.html','reader.css','reader.js','rich-text.js','layout-engine.js']){if(!(await exists(path.join(readerDir,f))))throw new Error(`Reader 缺少 ${f}`)}console.log('V3 制作中心自检通过。');process.exit(0)}
 await restoreBackgroundJobs();
+// 素材库分区：把历史全局库交给管理员后归档（只做一次，之后原文件已不存在）。
+await migrateLegacyLibraries(bootstrapResult.user?.id ?? null);
 server.listen(port,host,()=>{console.log(`${acceptanceOnly?`V3 ${V3_VERSION} Final Acceptance 真实环境验收台`:'V3 制作中心'}：http://${host}:${port}`);console.log(`工程根目录：${root}`);if(acceptanceOnly){for(const url of lanUrls(port))console.log(`局域网设备：http://${url.replace('http://','')}`);console.log('仅建议在可信局域网使用；acceptance-only 模式已禁用编辑 API。')}console.log('按 Ctrl+C 退出。')});

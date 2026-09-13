@@ -135,6 +135,23 @@ export function ensureSchema(db) {
       target   TEXT NOT NULL DEFAULT '',
       detail   TEXT NOT NULL DEFAULT ''
     );
+    -- 忘记密码：用户先提交申请，管理员再签发一次性重置码。
+    -- 系统没有邮件/短信通道，所以重置码必须由管理员当面或电话转达；
+    -- 这也和"注册需要管理员审批"的账号策略保持一致。
+    -- 只存重置码的 sha256，管理员界面之外无法再读出明文码。
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id         INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL,
+      ip         TEXT NOT NULL DEFAULT '',
+      code_hash  TEXT,
+      issued_at  TEXT,
+      issued_by  TEXT NOT NULL DEFAULT '',
+      expires_at INTEGER,
+      used_at    TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_open ON password_resets(used_at);
   `);
 }
 
@@ -166,8 +183,10 @@ export function publicUser(row) {
 export function isAdmin(user) { return Boolean(user && user.role === ROLE_ADMIN); }
 
 // ---------- 用户 ----------
+// 用户名按不区分大小写查找：公开分区用 username.toLowerCase() 作为 slug，
+// 若允许 "Alice" 与 "alice" 并存，两个账号会抢同一个 /u/<slug>/ 命名空间。
 export function findUserByName(db, username) {
-  return db.prepare('SELECT * FROM users WHERE username = ?').get(String(username || '').trim()) || null;
+  return db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(String(username || '').trim()) || null;
 }
 export function findUserById(db, id) {
   return db.prepare('SELECT * FROM users WHERE id = ?').get(Number(id)) || null;
@@ -292,6 +311,117 @@ export function sessionCountForUser(db, userId) {
   return Number(row?.n || 0);
 }
 
+// ---------- 忘记密码 / 一次性重置码 ----------
+// 流程（没有邮件通道时的可行做法）：
+//   1. 用户在登录页提交用户名 → requestPasswordReset() 记一条待处理申请；
+//   2. 管理员在制作中心看到申请 → issueResetCode() 现场签发一次性重置码；
+//   3. 用户拿着码 + 新密码 → consumeResetCode() 校验并改密，旧会话全部失效。
+// 明文码只在签发的那一刻返回给管理员，库里只留 sha256。
+const RESET_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // 去掉 0/O/1/I 等易混字符
+export const RESET_CODE_TTL_MS = 30 * 60 * 1000;
+const RESET_REQUEST_COOLDOWN_MS = 60 * 1000;                  // 同一账号 1 分钟内只记一条申请
+
+function normalizeResetCode(code) {
+  return String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+function newResetCode() {
+  const bytes = crypto.randomBytes(10);
+  let out = '';
+  for (let i = 0; i < 10; i++) out += RESET_ALPHABET[bytes[i] % RESET_ALPHABET.length];
+  return `${out.slice(0, 5)}-${out.slice(5)}`;
+}
+const resetCodeHash = code => sha256(normalizeResetCode(code));
+
+// 永远不暴露"这个用户名是否存在"：不存在、未启用、冷却中都返回同一个结果。
+export function requestPasswordReset(db, { username, ip = '' } = {}) {
+  const key = String(username || '').trim();
+  const user = key ? findUserByName(db, key) : null;
+  if (!user || user.status !== STATUS_ACTIVE) return { requested: false, reason: 'NO_ACTIVE_USER' };
+  const recent = db.prepare('SELECT * FROM password_resets WHERE user_id = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(Number(user.id));
+  if (recent && Date.now() - Date.parse(recent.created_at) < RESET_REQUEST_COOLDOWN_MS) {
+    return { requested: true, id: Number(recent.id), deduplicated: true };
+  }
+  db.prepare('INSERT INTO password_resets(user_id,created_at,ip) VALUES (?,?,?)').run(Number(user.id), now(), String(ip).slice(0, 60));
+  audit(db, { actor: user.username, actorId: Number(user.id), action: 'password.reset.request', target: user.username, detail: String(ip).slice(0, 60) });
+  const row = db.prepare('SELECT id FROM password_resets WHERE user_id = ? ORDER BY id DESC LIMIT 1').get(Number(user.id));
+  return { requested: true, id: Number(row?.id || 0) };
+}
+
+// 管理员视图：一条申请一行，带"是否已签发 / 是否已使用"。
+export function listPasswordResets(db, { limit = 50, includeClosed = false } = {}) {
+  const rows = db.prepare(`SELECT r.*, u.username, u.display_name, u.status AS user_status
+                           FROM password_resets r JOIN users u ON u.id = r.user_id
+                           ${includeClosed ? '' : 'WHERE r.used_at IS NULL'}
+                           ORDER BY r.id DESC LIMIT ?`).all(Math.max(1, Math.min(200, Number(limit) || 50)));
+  return rows.map(row => ({
+    id: Number(row.id),
+    userId: Number(row.user_id),
+    username: String(row.username),
+    displayName: String(row.display_name || ''),
+    userStatus: String(row.user_status || ''),
+    requestedAt: String(row.created_at || ''),
+    issuedAt: row.issued_at || null,
+    issuedBy: String(row.issued_by || ''),
+    expiresAt: row.expires_at ? Number(row.expires_at) : null,
+    expired: row.expires_at ? Number(row.expires_at) <= Date.now() : false,
+    usedAt: row.used_at || null,
+    hasCode: Boolean(row.code_hash),
+  }));
+}
+
+export function issueResetCode(db, userId, actor = '') {
+  const row = findUserById(db, userId);
+  if (!row) throw Object.assign(new Error('用户不存在'), { code: 'USER_NOT_FOUND' });
+  if (row.status !== STATUS_ACTIVE) throw Object.assign(new Error('该账号当前不是启用状态，不能签发重置码'), { code: 'USER_NOT_ACTIVE' });
+  const code = newResetCode();
+  const expiresAt = Date.now() + RESET_CODE_TTL_MS;
+  const stamp = now();
+  db.prepare('UPDATE password_resets SET code_hash = NULL, expires_at = NULL, issued_at = NULL WHERE user_id = ? AND used_at IS NULL').run(Number(userId));
+  const open = db.prepare('SELECT id FROM password_resets WHERE user_id = ? AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(Number(userId));
+  if (open) db.prepare('UPDATE password_resets SET code_hash = ?, issued_at = ?, issued_by = ?, expires_at = ? WHERE id = ?')
+    .run(resetCodeHash(code), stamp, String(actor), expiresAt, Number(open.id));
+  else db.prepare('INSERT INTO password_resets(user_id,created_at,code_hash,issued_at,issued_by,expires_at) VALUES (?,?,?,?,?,?)')
+    .run(Number(userId), stamp, resetCodeHash(code), stamp, String(actor), expiresAt);
+  audit(db, { actor, action: 'password.reset.issue', target: row.username, detail: `expiresAt=${new Date(expiresAt).toISOString()}` });
+  return { code, expiresAt, username: String(row.username), userId: Number(userId) };
+}
+
+export function cancelPasswordReset(db, id, actor = '') {
+  const row = db.prepare('SELECT r.*, u.username FROM password_resets r JOIN users u ON u.id = r.user_id WHERE r.id = ?').get(Number(id));
+  if (!row) throw Object.assign(new Error('重置申请不存在'), { code: 'RESET_NOT_FOUND' });
+  const info = db.prepare('DELETE FROM password_resets WHERE id = ?').run(Number(id));
+  audit(db, { actor, action: 'password.reset.cancel', target: String(row.username) });
+  return Number(info.changes || 0) > 0;
+}
+
+// 用重置码设置新密码：码错、过期、已用过都返回同一个错误，不泄露细节。
+export function consumeResetCode(db, { username, code, newPassword } = {}, actor = '') {
+  const user = findUserByName(db, username);
+  const invalid = () => Object.assign(new Error('重置码无效或已过期，请重新向管理员申请'), { code: 'RESET_CODE_INVALID' });
+  if (!user || user.status !== STATUS_ACTIVE) throw invalid();
+  const normalized = normalizeResetCode(code);
+  if (normalized.length < 8) throw invalid();
+  const row = db.prepare('SELECT * FROM password_resets WHERE user_id = ? AND code_hash IS NOT NULL AND used_at IS NULL ORDER BY id DESC LIMIT 1').get(Number(user.id));
+  if (!row || !row.expires_at || Number(row.expires_at) <= Date.now()) throw invalid();
+  const expected = String(row.code_hash), actual = resetCodeHash(code);
+  let ok = false;
+  // 这里必须用 crypto.timingSafeEqual：本模块只 import 了 crypto 默认导出，
+  // 直接写裸函数名会抛 ReferenceError，被 catch 吞掉后表现成"重置码错误"。
+  try { ok = crypto.timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(actual, 'hex')); } catch (error) { ok = false; }
+  if (!ok) { audit(db, { actor, action: 'password.reset.failed', target: user.username }); throw invalid(); }
+  const badPw = passwordProblem(newPassword);
+  if (badPw) throw Object.assign(new Error(badPw), { code: 'INVALID_PASSWORD' });
+  setUserPassword(db, Number(user.id), newPassword, actor || user.username);
+  db.prepare('UPDATE password_resets SET used_at = ?, code_hash = NULL WHERE id = ?').run(now(), Number(row.id));
+  audit(db, { actor: actor || user.username, actorId: Number(user.id), action: 'password.reset.complete', target: user.username });
+  return { ok: true, user: publicUser(findUserById(db, Number(user.id))) };
+}
+
+export function pendingResetCount(db) {
+  const row = db.prepare('SELECT COUNT(*) AS n FROM password_resets WHERE used_at IS NULL').get();
+  return Number(row?.n || 0);
+}
+
 // ---------- 期刊归属 ----------
 export function issueOwnerId(db, issueId) {
   const row = db.prepare('SELECT owner_id FROM issue_owners WHERE issue_id = ?').get(String(issueId));
@@ -378,6 +508,7 @@ export function dbStats(db, root) {
     active: countUsers(db, { status: STATUS_ACTIVE }),
     disabled: countUsers(db, { status: STATUS_DISABLED }),
     sessions: Number(db.prepare('SELECT COUNT(*) AS n FROM sessions').get()?.n || 0),
+    resetRequests: pendingResetCount(db),
     bytes,
   };
 }
