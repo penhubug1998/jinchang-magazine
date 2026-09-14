@@ -19,7 +19,7 @@
 //   node scripts/storage-maintenance-v3.mjs --apply --prune-trash --retention-days 90
 //   node scripts/storage-maintenance-v3.mjs --json
 import path from 'node:path';
-import { mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
+import { mkdir, readdir, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { V3_VERSION, exists, humanBytes, parseArgs, posix, root } from './lib-v3-production.mjs';
 import { PUBLICATION_OUTPUT_ROOT } from './lib-v3-publication.mjs';
 
@@ -37,6 +37,12 @@ if (!Number.isInteger(retentionRaw) || retentionRaw < 1) {
 }
 const retentionDays = retentionRaw;
 const asJson = Boolean(args.json);
+// --keep-metadata-only：回收隔离区里的"媒体副本"，只留能说明来龙去脉的元数据。
+// 删除期刊时搬进隔离区的派生数据里，媒体占了 95% 以上，而它们都可以从源稿重建；
+// 真正有价值的是 issue.json / release.json / publication-evidence.json / 报告 / 源稿台账。
+const keepMetadataOnly = Boolean(args['keep-metadata-only']);
+const METADATA_KEEP = [/\.json$/i, /\.md$/i, /\.txt$/i, /\.html?$/i];
+const METADATA_MAX_BYTES = 256 * 1024;
 const keepSnapshots = Number(args['keep-snapshots'] || 0);   // 0 = 不动快照
 
 const issuesRoot = path.join(root, 'issues');
@@ -65,6 +71,58 @@ async function entries(dir) {
   return (await readdir(dir, { withFileTypes: true }).catch(() => [])).filter(x => x.isDirectory()).map(x => x.name);
 }
 const isPreview = name => name.startsWith('preview-');
+const isMetadataFile = (name, size) => METADATA_KEEP.some(re => re.test(name)) && size <= METADATA_MAX_BYTES;
+async function scanMediaInEntry(dir) {
+  let bytes = 0, count = 0;
+  const walk = async current => {
+    for (const entry of await readdir(current, { withFileTypes: true }).catch(() => [])) {
+      const file = path.join(current, entry.name);
+      if (entry.isDirectory()) { await walk(file); continue; }
+      if (!entry.isFile()) continue;
+      const info = await stat(file).catch(() => null);
+      if (!info || isMetadataFile(entry.name, info.size)) continue;
+      bytes += info.size; count += 1;
+    }
+  };
+  await walk(dir);
+  return { bytes, count };
+}
+// 真正执行：删掉非元数据文件、清掉空目录，并在批次根目录留下 PRUNED-MEDIA.json 说明删了什么。
+async function pruneMediaInEntry(dir, reason) {
+  const dropped = []; let freed = 0;
+  const walk = async current => {
+    for (const entry of await readdir(current, { withFileTypes: true }).catch(() => [])) {
+      const file = path.join(current, entry.name);
+      if (entry.isDirectory()) { await walk(file); continue; }
+      if (!entry.isFile()) continue;
+      const info = await stat(file).catch(() => null);
+      if (!info || isMetadataFile(entry.name, info.size)) continue;
+      await rm(file, { force: true });
+      freed += info.size;
+      dropped.push({ path: posix(path.relative(dir, file)), bytes: info.size });
+    }
+  };
+  await walk(dir);
+  const removeEmpty = async current => {
+    for (const entry of await readdir(current, { withFileTypes: true }).catch(() => [])) {
+      if (!entry.isDirectory()) continue;
+      const sub = path.join(current, entry.name);
+      await removeEmpty(sub);
+      if ((await readdir(sub).catch(() => [])).length === 0) await rm(sub, { recursive: true, force: true });
+    }
+  };
+  await removeEmpty(dir);
+  if (dropped.length) {
+    await writeFile(path.join(dir, 'PRUNED-MEDIA.json'), `${JSON.stringify({
+      version: V3_VERSION, prunedAt: new Date().toISOString(), reason,
+      rule: '只保留 .json/.md/.txt/.html 且不超过 256 KB 的元数据；媒体副本可从源稿重建',
+      droppedFiles: dropped.length, droppedBytes: freed,
+      keptHint: 'issue.json / release.json / integrity.json / publication-evidence.json / reports / 源稿台账',
+      dropped: dropped.slice(0, 200),
+    }, null, 2)}\n`, 'utf8');
+  }
+  return { dropped: dropped.length, freed };
+}
 
 // 磁盘上真实存在的期号（源稿目录）
 const liveIssues = new Set((await readdir(issuesRoot, { withFileTypes: true }).catch(() => []))
@@ -154,7 +212,16 @@ const ageBuckets = AGE_BUCKETS.map(days => ({
   count: trashEntries.filter(x => x.ageDays >= days).length,
 }));
 
+if (keepMetadataOnly) {
+  for (const row of trashEntries) {
+    const target = path.join(row.side === 'public' ? path.join(publicMagazineRoot, '.v3-trash') : trashRoot, row.group, row.name);
+    const media = await scanMediaInEntry(target);
+    if (media.count) add('media', target, media.bytes, 'prune-media', `${media.count} 个媒体/产物文件，只保留元数据（${row.side}/${row.group}/${row.name}）`, `${row.side}/${row.group}`);
+  }
+}
+
 const totals = {
+  media: plan.filter(x => x.category === 'media').reduce((n, x) => n + x.bytes, 0),
   transient: plan.filter(x => x.category === 'transient').reduce((n, x) => n + x.bytes, 0),
   regenerable: plan.filter(x => x.category === 'regenerable').reduce((n, x) => n + x.bytes, 0),
   orphan: plan.filter(x => x.category === 'orphan').reduce((n, x) => n + x.bytes, 0),
@@ -163,16 +230,16 @@ const totals = {
 };
 
 if (asJson) {
-  console.log(JSON.stringify({ version: V3_VERSION, root: posix(root), apply, pruneTrash, retentionDays, liveIssues: [...liveIssues].sort(), plan, totals, trashEntries, ageBuckets, retentionDays, snapshotCounts }, null, 2));
+  console.log(JSON.stringify({ version: V3_VERSION, root: posix(root), apply, pruneTrash, retentionDays, liveIssues: [...liveIssues].sort(), plan, totals, trashEntries, ageBuckets, retentionDays, keepMetadataOnly, snapshotCounts }, null, 2));
 } else {
   console.log(`存储维护${apply ? '（执行）' : '（预演，未改动任何文件）'} · 工程根目录：${root}`);
   console.log(`源稿期号：${[...liveIssues].sort().join(', ') || '（无）'}`);
   console.log('');
-  const labels = { transient: '原子替换残留（删除/报告）', regenerable: '可再生产物（删除）', orphan: '孤儿产物（进隔离区）', snapshot: '超额快照（进隔离区）', trash: '隔离区过期（保留期回收）' };
-  for (const key of ['transient', 'regenerable', 'orphan', 'snapshot', 'trash']) {
+  const labels = { media: '隔离区媒体副本（只留元数据）', transient: '原子替换残留（删除/报告）', regenerable: '可再生产物（删除）', orphan: '孤儿产物（进隔离区）', snapshot: '超额快照（进隔离区）', trash: '隔离区过期（保留期回收）' };
+  for (const key of ['media', 'transient', 'regenerable', 'orphan', 'snapshot', 'trash']) {
     const rows = plan.filter(x => x.category === key);
     console.log(`${labels[key]}：${rows.length} 项 · ${humanBytes(totals[key])}`);
-    for (const row of rows.slice(0, 12)) console.log(`   ${row.action === 'delete' ? '删除' : row.action === 'quarantine' ? '隔离' : '仅报告'}  ${humanBytes(row.bytes).padStart(9)}  ${row.path}  （${row.reason}）`);
+    for (const row of rows.slice(0, 12)) console.log(`   ${row.action === 'delete' ? '删除' : row.action === 'quarantine' ? '隔离' : row.action === 'prune-media' ? '瘦身' : '仅报告'}  ${humanBytes(row.bytes).padStart(9)}  ${row.path}  （${row.reason}）`);
     if (rows.length > 12) console.log(`   … 其余 ${rows.length - 12} 项`);
   }
   console.log('');
@@ -180,7 +247,7 @@ if (asJson) {
     ageBuckets.map(b => `≥${b.days} 天 ${humanBytes(b.bytes)}/${b.count} 项`).join(' · '));
   const freed = apply ? plan.filter(x => x.action === 'delete').reduce((n, x) => n + x.bytes, 0) : 0;
   console.log('');
-  console.log(`可回收合计：${humanBytes(totals.transient + totals.regenerable + totals.orphan + totals.snapshot + (pruneTrash ? totals.trash : 0))}` +
+  console.log(`可回收合计：${humanBytes(totals.media + totals.transient + totals.regenerable + totals.orphan + totals.snapshot + (pruneTrash ? totals.trash : 0))}` +
     (pruneTrash ? '' : `（另有隔离区过期 ${humanBytes(totals.trash)}，需显式 --prune-trash）`));
   if (apply) console.log(`本次实际释放：${humanBytes(freed)}`);
   else console.log('预演结束。确认后加 --apply 执行；隔离区回收需再加 --prune-trash。');
@@ -190,12 +257,16 @@ if (!apply) process.exit(0);
 
 let freedBytes = 0;
 const quarantineRoot = path.join(trashRoot, 'maintenance', new Date().toISOString().replace(/[:.]/g, '-'));
-const results = { deleted: [], quarantined: [], failed: [] };
+const results = { deleted: [], quarantined: [], prunedMedia: [], failed: [] };
 for (const row of plan) {
   if (row.action === 'report') continue;
   const target = path.join(root, row.path);
   try {
-    if (row.action === 'delete') {
+    if (row.action === 'prune-media') {
+      const pruned = await pruneMediaInEntry(target, '--keep-metadata-only');
+      freedBytes += pruned.freed;
+      results.prunedMedia.push({ path: row.path, files: pruned.dropped, bytes: pruned.freed });
+    } else if (row.action === 'delete') {
       const bytes = row.bytes;
       await rm(target, { recursive: true, force: true });
       freedBytes += bytes;
@@ -212,7 +283,8 @@ for (const row of plan) {
 }
 if (!asJson) {
   console.log('');
-  console.log(`已删除 ${results.deleted.length} 项 · 已隔离 ${results.quarantined.length} 项 · 失败 ${results.failed.length} 项 · 释放 ${humanBytes(freedBytes)}`);
+  const prunedFiles = results.prunedMedia.reduce((n, x) => n + x.files, 0);
+  console.log(`已删除 ${results.deleted.length} 项 · 已隔离 ${results.quarantined.length} 项 · 瘦身 ${results.prunedMedia.length} 个批次（${prunedFiles} 个媒体文件）· 失败 ${results.failed.length} 项 · 释放 ${humanBytes(freedBytes)}`);
   if (results.quarantined.length) console.log(`隔离位置：${posix(path.relative(root, quarantineRoot))}`);
   for (const row of results.failed) console.error(`失败：${row.path} — ${row.error}`);
 } else {

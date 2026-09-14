@@ -4,7 +4,7 @@
 // 用法：node scripts/storage-maintenance-smoke-v3.mjs
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdir, readdir, stat, utimes, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, stat, utimes, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { createTestWorkspace, removeTestWorkspace } from './lib-v3-test-workspace.mjs';
 
@@ -109,7 +109,36 @@ try {
   assert.equal(parsed.ageBuckets[2].bytes, 0, '超过 365 天的分档应为 0');
   console.log('  保留天数参数显式校验（0 / 负数 / 小数 / 非数字都拒绝），并给出 30/90/365 天体积分档 ✓');
 
-  console.log('存储维护回归通过：预演安全、可再生产物回收、孤儿隔离、隔离区保留期与参数校验均符合预期。');
+  // 5) --keep-metadata-only：只回收隔离区里的媒体副本，元数据与 .deleted.json 必须留下
+  const mediaEntry = path.join(dir, '.v3-trash', 'derived', '009-20260913T000000Z');
+  await mk('.v3-trash/derived/009-20260913T000000Z/outputs/web/assets/video.mp4', 4096);
+  await mk('.v3-trash/derived/009-20260913T000000Z/outputs/web/reader.js', 2048);
+  await mk('.v3-trash/derived/009-20260913T000000Z/outputs/publication-evidence.json', 256);
+  await mk('.v3-trash/derived/009-20260913T000000Z/reports/v3-release-audit-009.json', 128);
+  await mk('.v3-trash/issues/009-20260913T000000Z/.deleted.json', 64);
+  await mk('.v3-trash/issues/009-20260913T000000Z/issue.json', 512);
+
+  const previewPlan = JSON.parse(run(['--json', '--keep-metadata-only']).stdout);
+  const mediaRows = previewPlan.plan.filter(x => x.category === 'media');
+  assert.ok(mediaRows.length >= 1, '应识别出隔离区里的媒体副本');
+  assert.ok(mediaRows.some(x => x.path.includes('derived/009-') && x.bytes === 4096 + 2048), `媒体体积应只统计非元数据文件：${JSON.stringify(mediaRows.map(x => [x.path, x.bytes]))}`);
+  assert.equal(await exists(path.join(mediaEntry, 'outputs/web/assets/video.mp4')), true, '预演阶段不得真的瘦身');
+
+  const prunedRun = run(['--apply', '--keep-metadata-only']);
+  assert.equal(prunedRun.status, 0, `瘦身执行失败：${prunedRun.stdout}\n${prunedRun.stderr}`);
+  assert.match(prunedRun.stdout, /瘦身 \d+ 个批次/, '执行结果应报告瘦身批次');
+  assert.equal(await exists(path.join(mediaEntry, 'outputs/web/assets/video.mp4')), false, '媒体副本应被回收');
+  assert.equal(await exists(path.join(mediaEntry, 'outputs/web/reader.js')), false, '构建产物同样属于可回收部分');
+  assert.ok(await exists(path.join(mediaEntry, 'outputs/publication-evidence.json')), '发布证据必须保留');
+  assert.ok(await exists(path.join(mediaEntry, 'reports/v3-release-audit-009.json')), '报告必须保留');
+  assert.ok(await exists(path.join(dir, '.v3-trash/issues/009-20260913T000000Z/.deleted.json')), '删除回执必须保留');
+  assert.ok(await exists(path.join(dir, '.v3-trash/issues/009-20260913T000000Z/issue.json')), '期刊源稿元数据必须保留');
+  const prunedLog = JSON.parse(await readFile(path.join(mediaEntry, 'PRUNED-MEDIA.json'), 'utf8'));
+  assert.equal(prunedLog.droppedFiles, 2, `PRUNED-MEDIA.json 应记录删掉的文件数，实际 ${prunedLog.droppedFiles}`);
+  assert.equal(prunedLog.droppedBytes, 4096 + 2048, 'PRUNED-MEDIA.json 应记录释放字节数');
+  console.log('  --keep-metadata-only：只回收隔离区媒体副本，元数据/回执/报告保留并留 PRUNED-MEDIA.json 记录 ✓');
+
+  console.log('存储维护回归通过：预演安全、可再生产物回收、孤儿隔离、隔离区保留期与参数校验、媒体瘦身均符合预期。');
 } finally {
   await removeTestWorkspace(dir);
 }
